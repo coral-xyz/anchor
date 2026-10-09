@@ -2,78 +2,34 @@
 name = "anchor-cli"
 version.workspace = true
 publish = true
+authors = ["Anchor Maintainers <accounts@200ms.io>"]
 edition = "2021"
-repository.workspace = true
+repository = "https://github.com/otter-sec/anchor"
 description = "Anchor CLI"
 license = "Apache-2.0"
 
 [package.metadata.docs.rs]
-# Not `workspace = true`: `all-features` would enable both `solana-v3` and `solana-v4`.
-all-features = false
-rustdoc-args = ["--cfg", "docsrs"]
+workspace = true
 
 [[bin]]
 name = "anchor"
 path = "src/bin/main.rs"
 
 [features]
-# The CLI is a binary, so it has no downstream API to protect -- but it links
-# anchor-lang/anchor-client and Cargo unifies features across the workspace, so
-# it has to follow the same Solana cohort as everything else. See the comment
-# block in the root Cargo.toml.
-default = ["solana-v3"]
-solana-v3 = [
-    "anchor-client/solana-v3",
-    "anchor-lang/solana-v3",
-    "dep:solana-cli-config-v3",
-    "dep:solana-client-v3",
-    "dep:solana-clock-v3",
-    # non-Windows only (`anchor test --profile` / `anchor debugger`)
-    "dep:solana-compute-budget-v3",
-    "dep:solana-loader-v3-interface-v3",
-    "dep:solana-message-v3",
-    "dep:solana-packet-v3",
-    "dep:solana-pubkey-v3",
-    "dep:solana-pubsub-client-v3",
-    "dep:solana-rpc-client-v3",
-    "dep:solana-rpc-client-api-v3",
-    "dep:solana-transaction-v3",
-    "dep:solana-transaction-status-client-types-v3",
-]
-solana-v4 = [
-    "anchor-client/solana-v4",
-    "anchor-lang/solana-v4",
-    "dep:solana-cli-config-v4",
-    "dep:solana-client-v4",
-    "dep:solana-clock-v4",
-    # non-Windows only (`anchor test --profile` / `anchor debugger`)
-    "dep:solana-compute-budget-v4",
-    "dep:solana-loader-v3-interface-v4",
-    "dep:solana-message-v4",
-    "dep:solana-packet-v4",
-    "dep:solana-pubkey-v4",
-    "dep:solana-pubsub-client-v4",
-    "dep:solana-rpc-client-v4",
-    "dep:solana-rpc-client-api-v4",
-    "dep:solana-transaction-v4",
-    "dep:solana-transaction-status-client-types-v4",
-]
-
 dev = []
 # For development/CI testing purposes only - allows IDL commands to run against localnet
 idl-localnet-testing = []
 
 [dependencies]
 anchor-cli-macros = { workspace = true }
-# The cohort comes from this crate's own `solana-v3`/`solana-v4` feature; the workspace
-# declaration sets `default-features = false` so anchor-lang's default `solana-v3`
-# is not forced on here.
 anchor-client = { workspace = true }
 anchor-lang = { workspace = true }
 anchor-lang-idl = { workspace = true, features = ["build", "convert"] }
 anyhow = "1.0.32"
 base64 = "0.21"
 bincode = "1.3.3"
+borsh = "1.5.7"
+bs58 = "0.5"
 cargo_metadata = "0.23.1"
 cargo_toml.workspace = true
 chrono = "0.4.19"
@@ -84,11 +40,12 @@ console = "0.15"
 dirs = "4.0"
 ed25519-dalek = "2"
 flate2 = "1.0.19"
-heck.workspace = true
+heck = "0.5"
+indicatif = "0.18.2"
 pathdiff = "0.2.0"
 portpicker = "0.1.1"
 regex = "1.8.3"
-reqwest = { workspace = true, default-features = false, features = [
+reqwest = { version = "0.12.23", default-features = false, features = [
   "multipart",
   "blocking",
   "rustls-tls",
@@ -98,59 +55,44 @@ serde = { version = "1.0.130", features = ["derive"] }
 serde_ignored = "0.1.14"
 serde_json = { version = "1.0", features = ["preserve_order"] }
 shellexpand = "2.1.0"
-# Cohort-independent.
+solana-cli-config.workspace = true
+solana-client.workspace = true
+solana-clock.workspace = true
 solana-commitment-config.workspace = true
 solana-compute-budget-interface.workspace = true
-solana-instruction.workspace = true
+solana-instruction = { workspace = true, default-features = true }
 solana-keypair.workspace = true
+solana-loader-v3-interface = { workspace = true, features = ["bincode"] }
+solana-message.workspace = true
+solana-packet.workspace = true
+solana-pubkey = { workspace = true, features = ["borsh"] }
 solana-sdk-ids.workspace = true
 solana-signature.workspace = true
 solana-signer.workspace = true
 solana-system-interface.workspace = true
-
-# Cohort-specific; aliased back to plain names in `src/compat.rs`.
-solana-cli-config-v3 = { workspace = true, optional = true }
-solana-cli-config-v4 = { workspace = true, optional = true }
-solana-client-v3 = { workspace = true, optional = true }
-solana-client-v4 = { workspace = true, optional = true }
-solana-clock-v3 = { workspace = true, optional = true }
-solana-clock-v4 = { workspace = true, optional = true }
-solana-loader-v3-interface-v3 = { workspace = true, optional = true }
-solana-loader-v3-interface-v4 = { workspace = true, optional = true }
-solana-message-v3 = { workspace = true, optional = true }
-solana-message-v4 = { workspace = true, optional = true }
-solana-packet-v3 = { workspace = true, optional = true }
-solana-packet-v4 = { workspace = true, optional = true }
-solana-pubkey-v3 = { workspace = true, optional = true }
-solana-pubkey-v4 = { workspace = true, optional = true }
-solana-pubsub-client-v3 = { workspace = true, optional = true }
-solana-pubsub-client-v4 = { workspace = true, optional = true }
-solana-rpc-client-v3 = { workspace = true, optional = true }
-solana-rpc-client-v4 = { workspace = true, optional = true }
-solana-rpc-client-api-v3 = { workspace = true, optional = true }
-solana-rpc-client-api-v4 = { workspace = true, optional = true }
-solana-transaction-v3 = { workspace = true, optional = true }
-solana-transaction-v4 = { workspace = true, optional = true }
-solana-transaction-status-client-types-v3 = { workspace = true, optional = true }
-solana-transaction-status-client-types-v4 = { workspace = true, optional = true }
+solana-transaction.workspace = true
+solana-rpc-client.workspace = true
+solana-rpc-client-api.workspace = true
+solana-pubsub-client.workspace = true
+solana-transaction-status-client-types = "4.3.0"
 syn = { version = "1.0.60", features = ["full", "extra-traits"] }
-url = "2"
 tempfile = "3"
 tiny-bip39 = "2.0"
+# PBKDF2-HMAC-SHA512 for `anchor keygen recover --skip-seed-phrase-validation`
+# seed derivation. Unifies on the same version already pulled in transitively
+# via `tiny-bip39`, so no new version in the lockfile.
 pbkdf2 = "0.12"
 sha2 = "0.10"
 toml = "0.7.6"
+url = "2"
 walkdir = "2.3.2"
-bs58 = "0.5.1"
-indicatif = "0.18.2"
 
 [target.'cfg(not(windows))'.dependencies]
 # `anchor test --profile` — flamegraph rendering from LiteSVM register traces.
 inferno = { version = "0.12", default-features = false }
 object = { version = "0.37.3", features = ["read_core", "elf"] }
 rustc-demangle = "0.1"
-solana-compute-budget-v3 = { workspace = true, optional = true }
-solana-compute-budget-v4 = { workspace = true, optional = true }
+solana-compute-budget = { workspace = true, features = ["agave-unstable-api"] }
 solana-sbpf.workspace = true
 
 # `anchor debugger` — foundry-style TUI stepper over profile traces.

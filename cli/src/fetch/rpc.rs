@@ -189,15 +189,8 @@ pub(super) fn fetch_transaction(
     signature: &Signature,
     tuning: &FetchTuning,
 ) -> Result<EncodedConfirmedTransactionWithStatusMeta> {
-    // V1 transactions only exist in the `solana-v4` cohort; a `solana-v3` build cannot
-    // decode one, so it must not ask the RPC for them.
-    let max_supported_transaction_version = if cfg!(feature = "solana-v3") {
-        Some(0)
-    } else if cfg!(feature = "solana-v4") {
-        Some(1)
-    } else {
-        unreachable!("exactly one solana cohort must be activated")
-    };
+    // Agave 4.3 RPC types support legacy, v0, and v1 transactions.
+    let max_supported_transaction_version = Some(1);
 
     let config = RpcTransactionConfig {
         encoding: Some(UiTransactionEncoding::Json),

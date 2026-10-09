@@ -14,15 +14,13 @@ use {
     abs_path::AbsolutePath,
     anchor_cli_macros::AbsolutePath,
     anchor_client::Cluster,
-    anchor_lang::{
-        prelude::UpgradeableLoaderState, solana_program::bpf_loader_upgradeable, AnchorDeserialize,
-    },
     anchor_lang_idl::{
-        convert::{convert_idl, convert_idl_to_legacy},
+        convert::convert_idl,
         types::{Idl, IdlArrayLen, IdlDefinedFields, IdlType, IdlTypeDefTy},
     },
     anyhow::{anyhow, bail, Context, Result},
     base64::{engine::general_purpose::STANDARD, Engine},
+    borsh::BorshDeserialize,
     cargo_metadata::{DependencyKind, MetadataCommand},
     checks::{check_anchor_version, check_deps, check_idl_build_feature, check_overflow},
     clap::{CommandFactory, Parser},
@@ -37,6 +35,7 @@ use {
     solana_compute_budget_interface::ComputeBudgetInstruction,
     solana_instruction::Instruction,
     solana_keypair::Keypair,
+    solana_loader_v3_interface::state::UpgradeableLoaderState,
     solana_pubkey::Pubkey,
     solana_pubsub_client::pubsub_client::{PubsubClient, PubsubClientSubscription},
     solana_rpc_client::rpc_client::RpcClient,
@@ -45,6 +44,7 @@ use {
         request::RpcRequest,
         response::{Response as RpcResponse, RpcLogsResponse},
     },
+    solana_sdk_ids::bpf_loader_upgradeable,
     solana_signer::{EncodableKey, Signer},
     std::{
         collections::{BTreeMap, HashMap, HashSet},
@@ -56,7 +56,7 @@ use {
         string::ToString,
         sync::{LazyLock, OnceLock},
     },
-    template::{get_security_metadata_content, AnchorVersion, ProgramTemplate, TestTemplate},
+    template::{get_security_metadata_content, ProgramTemplate, TestTemplate},
     url::Url,
 };
 
@@ -255,8 +255,9 @@ pub enum Command {
         #[clap(long)]
         no_install: bool,
         /// Package Manager to use. If omitted, detection cascades
-        /// `pnpm` -> `yarn` -> `npm` and picks the first one on PATH. When
-        /// set explicitly, the chosen binary must be installed.
+        /// `pnpm` → `yarn` → `npm` and picks the first one on PATH. When
+        /// set explicitly, the chosen binary must be installed — no
+        /// silent fallback.
         #[clap(value_enum, long)]
         package_manager: Option<PackageManager>,
         /// Don't initialize git
@@ -265,9 +266,6 @@ pub enum Command {
         /// Rust program template to use
         #[clap(value_enum, short, long, default_value = "multiple")]
         template: ProgramTemplate,
-        /// Anchor template version to generate
-        #[clap(value_enum, long, default_value = "v1")]
-        anchor_version: AnchorVersion,
         /// Test template to use
         #[clap(value_enum, long, default_value = "litesvm")]
         test_template: TestTemplate,
@@ -409,7 +407,12 @@ pub enum Command {
         /// Validator type to use for local testing
         #[clap(value_enum, long, default_value = "surfpool")]
         validator: ValidatorType,
-        /// Profile each test: record per-test SBF register traces and render flamegraph SVGs under target/anchor-v2-profile.
+        #[cfg(not(windows))]
+        /// Profile each test: record per-test SBF register traces and
+        /// render a flamegraph SVG per test under
+        /// `target/anchor-v2-profile/`. Forces a debug build (DWARF is
+        /// required for symbolication) and activates the `profile`
+        /// cargo feature. Rust tests only.
         #[clap(long)]
         profile: bool,
         args: Vec<String>,
@@ -429,41 +432,57 @@ pub enum Command {
         /// Rust program template to use
         #[clap(value_enum, short, long, default_value = "multiple")]
         template: ProgramTemplate,
-        /// Anchor template version to generate
-        #[clap(value_enum, long, default_value = "v1")]
-        anchor_version: AnchorVersion,
         /// Create new program even if there is already one
         #[clap(long, action)]
         force: bool,
     },
-    /// Run tests under an instruction-level debugger.
     #[cfg(not(windows))]
+    /// Run tests under a foundry-style instruction-level debugger.
+    ///
+    /// Reuses the `anchor test --profile` trace pipeline: rebuilds with DWARF,
+    /// runs the test suite via `anchor-v2-testing` (LiteSVM in-process), then
+    /// opens a ratatui TUI over the captured SBF register traces instead of
+    /// rendering flamegraphs. Never touches a validator — LiteSVM is the only
+    /// runtime that produces the traces this consumes.
     Debugger {
         /// Filter captured traces to tests whose name contains this substring.
+        /// If omitted, the TUI opens with a picker across every captured
+        /// `(test, tx)` pair.
         test_name: Option<String>,
-        /// Skip the build+test phase and open the TUI over existing traces.
+        /// Skip the build+test phase and open the TUI directly over whatever
+        /// traces already exist under `target/anchor-v2-profile/`.
         #[clap(long)]
         skip_run: bool,
-        /// Skip `cargo build-sbf`.
+        /// Skip `cargo build-sbf`. Use when the `.so` is already up to date
+        /// — saves a rebuild but fails if the deploy artifact is missing.
         #[clap(long)]
         skip_build: bool,
         /// Forwarded to the underlying `anchor test` invocation.
         #[clap(long)]
         skip_lint: bool,
-        /// Drive tests over sbpf's gdb-stub instead of reading dumped trace files.
+        /// Drive tests over sbpf's gdb-stub instead of reading dumped trace
+        /// files. Per-step register snapshots + exact CU are collected live
+        /// via the gdb remote serial protocol. 100-1000× slower than the
+        /// default register-tracing path, but needs no fork to emit CU
+        /// values (sbpf exposes `cu_remaining` as register 12).
         #[clap(long)]
         gdb: bool,
         /// Arguments to pass to the underlying `cargo build-sbf` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
     },
-    /// Generate source-level coverage from SBF register traces.
     #[cfg(not(windows))]
+    /// Generate source-level code coverage from SBF register traces.
+    ///
+    /// Builds programs with DWARF debug info, runs the test suite with
+    /// litesvm register tracing enabled, then maps executed PCs to source
+    /// lines via addr2line and outputs LCOV.
     Coverage {
-        /// Skip the build+test phase and generate coverage from existing traces.
+        /// Skip the build+test phase and generate coverage from existing
+        /// traces in `SBF_TRACE_DIR`.
         #[clap(long)]
         skip_run: bool,
-        /// Skip `cargo build-sbf`.
+        /// Skip `cargo build-sbf`. Use when the `.so` is already up to date.
         #[clap(long)]
         skip_build: bool,
         /// Output path for the LCOV file.
@@ -472,9 +491,23 @@ pub enum Command {
         /// Directory containing register trace files.
         #[clap(long, default_value = "target/coverage/traces")]
         trace_dir: String,
-        /// Arguments to pass to the underlying `cargo build-sbf` command.
+        /// Arguments to pass to the underlying `cargo test` command.
         #[clap(required = false, last = true)]
         cargo_args: Vec<String>,
+    },
+    #[cfg(not(windows))]
+    /// Filter host LCOV before merging it with SBF coverage.
+    #[clap(name = "coverage-filter-host", hide = true)]
+    CoverageFilterHost {
+        /// LCOV generated from SBF register traces.
+        #[clap(long)]
+        sbf_lcov: String,
+        /// LCOV generated by cargo-llvm-cov on the host.
+        #[clap(long)]
+        host_lcov: String,
+        /// Output path for the filtered host LCOV.
+        #[clap(long)]
+        output: String,
     },
     /// Commands for interacting with interface definitions.
     Idl {
@@ -1019,11 +1052,6 @@ pub enum IdlCommand {
         /// If not provided, discovers program ID from IDL.
         #[clap(short, long)]
         program_id: Option<Pubkey>,
-        /// Convert a current-spec IDL back to the legacy (pre Anchor
-        /// v0.30) format. Without this flag the converter runs in the
-        /// default direction (legacy -> current).
-        #[clap(long)]
-        to_legacy: bool,
     },
     /// Generate TypeScript type for the IDL
     Type {
@@ -1502,7 +1530,6 @@ fn process_command(opts: Opts) -> Result<()> {
             package_manager,
             no_git,
             template,
-            anchor_version,
             test_template,
             force,
             install_agent_skills,
@@ -1515,7 +1542,6 @@ fn process_command(opts: Opts) -> Result<()> {
             package_manager,
             no_git,
             template,
-            anchor_version,
             test_template,
             force,
             install_agent_skills,
@@ -1525,9 +1551,8 @@ fn process_command(opts: Opts) -> Result<()> {
         Command::New {
             name,
             template,
-            anchor_version,
             force,
-        } => new(&opts.cfg_override, name, template, anchor_version, force),
+        } => new(&opts.cfg_override, name, template, force),
         Command::Build {
             no_idl,
             idl,
@@ -1640,29 +1665,34 @@ fn process_command(opts: Opts) -> Result<()> {
             run,
             script,
             validator,
+            #[cfg(not(windows))]
             profile,
             args,
             env,
             cargo_args,
             skip_lint,
-        } => test(
-            &opts.cfg_override,
-            program_name,
-            skip_deploy,
-            skip_local_validator,
-            skip_build,
-            skip_lint,
-            no_idl,
-            detach,
-            run,
-            script,
-            validator,
-            profile,
-            false,
-            args,
-            env,
-            cargo_args,
-        ),
+        } => {
+            #[cfg(windows)]
+            let profile = false;
+            test(
+                &opts.cfg_override,
+                program_name,
+                skip_deploy,
+                skip_local_validator,
+                skip_build,
+                skip_lint,
+                no_idl,
+                detach,
+                run,
+                script,
+                validator,
+                profile,
+                false,
+                args,
+                env,
+                cargo_args,
+            )
+        }
         #[cfg(not(windows))]
         Command::Debugger {
             test_name,
@@ -1694,6 +1724,16 @@ fn process_command(opts: Opts) -> Result<()> {
             &output,
             &trace_dir,
             cargo_args,
+        ),
+        #[cfg(not(windows))]
+        Command::CoverageFilterHost {
+            sbf_lcov,
+            host_lcov,
+            output,
+        } => coverage::filter_host_lcov(
+            Path::new(&sbf_lcov),
+            Path::new(&host_lcov),
+            Path::new(&output),
         ),
         Command::Airdrop { amount, pubkey } => airdrop(&opts.cfg_override, amount, pubkey),
         Command::Cluster { subcmd } => cluster(subcmd),
@@ -1776,7 +1816,6 @@ fn init(
     package_manager: Option<PackageManager>,
     no_git: bool,
     template: ProgramTemplate,
-    anchor_version: AnchorVersion,
     test_template: TestTemplate,
     force: bool,
     install_agent_skills: bool,
@@ -1839,11 +1878,8 @@ fn init(
         cfg.toolchain.package_manager = package_manager.clone();
     }
 
-    // anchor_version for [toolchain] in Anchor.toml
-    // v2 depends on `anchor-lang` from git, which has no version AVM can read, so use the CLI version.
-    if anchor_version == AnchorVersion::V2 {
-        cfg.toolchain.anchor_version = Some(VERSION.to_string());
-    }
+    // Git dependencies have no version AVM can read, so pin the CLI version.
+    cfg.toolchain.anchor_version = Some(VERSION.to_string());
 
     // Initialize .gitignore file
     fs::write(".gitignore", template::git_ignore())?;
@@ -1862,12 +1898,7 @@ fn init(
     }
 
     // Build the program.
-    template::create_program(
-        &project_name,
-        template,
-        Some(&test_template),
-        anchor_version,
-    )?;
+    template::create_program(&project_name, template, Some(&test_template))?;
 
     let program_id = template::get_or_create_program_id(&rust_name, target_dir()?);
     let mut localnet = BTreeMap::new();
@@ -1894,8 +1925,7 @@ fn init(
         if javascript {
             // Build javascript config
             let mut package_json = File::create("package.json")?;
-            package_json
-                .write_all(template::package_json(jest, license, anchor_version).as_bytes())?;
+            package_json.write_all(template::package_json(jest, license).as_bytes())?;
 
             let mut deploy = File::create(migrations_path.join("deploy.js"))?;
             deploy.write_all(template::deploy_script().as_bytes())?;
@@ -1905,20 +1935,14 @@ fn init(
             ts_config.write_all(template::ts_config(jest).as_bytes())?;
 
             let mut ts_package_json = File::create("package.json")?;
-            ts_package_json
-                .write_all(template::ts_package_json(jest, license, anchor_version).as_bytes())?;
+            ts_package_json.write_all(template::ts_package_json(jest, license).as_bytes())?;
 
             let mut deploy = File::create(migrations_path.join("deploy.ts"))?;
             deploy.write_all(template::ts_deploy_script().as_bytes())?;
         }
     }
 
-    test_template.create_test_files(
-        &project_name,
-        javascript,
-        &program_id.to_string(),
-        anchor_version,
-    )?;
+    test_template.create_test_files(&project_name, javascript, &program_id.to_string())?;
 
     if !no_install && uses_node {
         let package_manager_cmd =
@@ -2009,31 +2033,49 @@ fn install_solana_skill() {
     }
 }
 
+/// Waterfall probed when no package manager is configured. Order matters —
+/// pnpm is preferred (fastest install, disk-efficient), yarn for parity with
+/// older Anchor defaults, npm as the universal fallback since it ships with
+/// Node. Bun stays out of the waterfall: users who want it must opt in
+/// explicitly since it's not commonly installed.
 const PACKAGE_MANAGER_WATERFALL: &[PackageManager] = &[
     PackageManager::PNPM,
     PackageManager::Yarn,
     PackageManager::NPM,
 ];
 
+/// Check whether a package manager binary is on `PATH` without installing
+/// anything. Runs `<cmd> --version` and discards output.
 fn package_manager_available(pm: &PackageManager) -> bool {
     let cmd = pm.to_string();
     let mut command = if cfg!(target_os = "windows") {
-        let mut command = std::process::Command::new("cmd");
-        command.arg(format!("/C {cmd} --version"));
-        command
+        let mut c = std::process::Command::new("cmd");
+        c.arg(format!("/C {cmd} --version"));
+        c
     } else {
-        let mut command = std::process::Command::new(&cmd);
-        command.arg("--version");
-        command
+        let mut c = std::process::Command::new(&cmd);
+        c.arg("--version");
+        c
     };
     command
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
-        .map(|status| status.success())
+        .map(|s| s.success())
         .unwrap_or(false)
 }
 
+/// Pick the concrete package manager to use.
+///
+/// - `Some(pm)`: user stated a preference (CLI flag or `Anchor.toml`). The
+///   binary must be on PATH; missing binary is a hard error so the user isn't
+///   silently redirected to something they didn't pick.
+/// - `None`: probe the `PACKAGE_MANAGER_WATERFALL` in order and take the first
+///   hit. If the first probe in the waterfall was skipped, emit a warning so
+///   the user knows which binaries were missing.
+///
+/// Errors only when nothing in the waterfall is installed (no pnpm, no yarn,
+/// no npm — extremely unusual, but worth a clear message).
 fn resolve_package_manager(explicit: Option<PackageManager>) -> Result<PackageManager> {
     if let Some(pm) = explicit {
         if !package_manager_available(&pm) {
@@ -2090,7 +2132,6 @@ fn new(
     cfg_override: &ConfigOverride,
     name: String,
     template: ProgramTemplate,
-    anchor_version: AnchorVersion,
     force: bool,
 ) -> Result<()> {
     with_workspace(cfg_override, |cfg| -> Result<()> {
@@ -2112,7 +2153,7 @@ fn new(
                     fs::remove_dir_all(std::env::current_dir()?.join("programs").join(&name))?;
                 }
 
-                template::create_program(&name, template, None, anchor_version)?;
+                template::create_program(&name, template, None)?;
 
                 programs.insert(
                     name.clone(),
@@ -2123,9 +2164,8 @@ fn new(
                     },
                 );
 
-                // anchor_version for [toolchain] in Anchor.toml
-                // v2 depends on `anchor-lang` from git, which has no version AVM can read, so use the CLI version.
-                if anchor_version == AnchorVersion::V2 && cfg.toolchain.anchor_version.is_none() {
+                // Git dependencies have no version AVM can read, so pin the CLI version.
+                if cfg.toolchain.anchor_version.is_none() {
                     cfg.toolchain.anchor_version = Some(VERSION.to_string());
                 }
 
@@ -3212,7 +3252,7 @@ pub fn cargo_build_sbf(
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .status()
-        .context("running cargo build-sbf")?;
+        .map_err(|e| anyhow!("spawn `cargo build-sbf`: {e}"))?;
     if !status.success() {
         return Err(anyhow!(
             "`cargo {}` failed with status {status}",
@@ -3409,8 +3449,7 @@ fn idl(cfg_override: &ConfigOverride, subcmd: IdlCommand) -> Result<()> {
             path,
             out,
             program_id,
-            to_legacy,
-        } => idl_convert(path, out, program_id, to_legacy),
+        } => idl_convert(path, out, program_id),
         IdlCommand::Type { path, out } => idl_type(path, out),
         IdlCommand::Close {
             program_id,
@@ -3712,12 +3751,7 @@ fn apply_program_id_override(idl: &[u8], program_id: Pubkey) -> Result<Vec<u8>> 
     serde_json::to_vec(&idl).map_err(Into::into)
 }
 
-fn idl_convert(
-    path: PathBuf,
-    out: Option<PathBuf>,
-    program_id: Option<Pubkey>,
-    to_legacy: bool,
-) -> Result<()> {
+fn idl_convert(path: PathBuf, out: Option<PathBuf>, program_id: Option<Pubkey>) -> Result<()> {
     let idl = fs::read(path)?;
     let idl = match program_id {
         Some(program_id) => apply_program_id_override(&idl, program_id)?,
@@ -3731,20 +3765,7 @@ fn idl_convert(
         None => OutFile::Stdout,
         Some(out) => OutFile::File(out),
     };
-    if to_legacy {
-        let bytes = convert_idl_to_legacy(&parsed)?;
-        match out {
-            OutFile::Stdout => {
-                let s =
-                    std::str::from_utf8(&bytes).context("legacy IDL JSON was not valid UTF-8")?;
-                println!("{s}");
-                Ok(())
-            }
-            OutFile::File(path) => fs::write(path, bytes).map_err(Into::into),
-        }
-    } else {
-        write_idl(&parsed, out)
-    }
+    write_idl(&parsed, out)
 }
 
 fn idl_type(path: PathBuf, out: Option<PathBuf>) -> Result<()> {
@@ -4153,7 +4174,7 @@ fn deserialize_idl_defined_type_to_json(
             }
         }
         IdlTypeDefTy::Enum { variants } => {
-            let repr = <u8 as AnchorDeserialize>::deserialize(data)?;
+            let repr = <u8 as BorshDeserialize>::deserialize(data)?;
 
             let variant = variants
                 .get(repr as usize)
@@ -4193,7 +4214,7 @@ fn deserialize_idl_defined_type_to_json(
     Ok(JsonValue::Object(deserialized_fields))
 }
 
-// Deserializes a primitive type using AnchorDeserialize
+// Deserializes a primitive type using BorshDeserialize
 fn deserialize_idl_type_to_json(
     idl_type: &IdlType,
     data: &mut &[u8],
@@ -4204,50 +4225,50 @@ fn deserialize_idl_type_to_json(
     }
 
     Ok(match idl_type {
-        IdlType::Bool => json!(<bool as AnchorDeserialize>::deserialize(data)?),
+        IdlType::Bool => json!(<bool as BorshDeserialize>::deserialize(data)?),
         IdlType::U8 => {
-            json!(<u8 as AnchorDeserialize>::deserialize(data)?)
+            json!(<u8 as BorshDeserialize>::deserialize(data)?)
         }
         IdlType::I8 => {
-            json!(<i8 as AnchorDeserialize>::deserialize(data)?)
+            json!(<i8 as BorshDeserialize>::deserialize(data)?)
         }
         IdlType::U16 => {
-            json!(<u16 as AnchorDeserialize>::deserialize(data)?)
+            json!(<u16 as BorshDeserialize>::deserialize(data)?)
         }
         IdlType::I16 => {
-            json!(<i16 as AnchorDeserialize>::deserialize(data)?)
+            json!(<i16 as BorshDeserialize>::deserialize(data)?)
         }
         IdlType::U32 => {
-            json!(<u32 as AnchorDeserialize>::deserialize(data)?)
+            json!(<u32 as BorshDeserialize>::deserialize(data)?)
         }
         IdlType::I32 => {
-            json!(<i32 as AnchorDeserialize>::deserialize(data)?)
+            json!(<i32 as BorshDeserialize>::deserialize(data)?)
         }
-        IdlType::F32 => json!(<f32 as AnchorDeserialize>::deserialize(data)?),
+        IdlType::F32 => json!(<f32 as BorshDeserialize>::deserialize(data)?),
         IdlType::U64 => {
-            json!(<u64 as AnchorDeserialize>::deserialize(data)?)
+            json!(<u64 as BorshDeserialize>::deserialize(data)?)
         }
         IdlType::I64 => {
-            json!(<i64 as AnchorDeserialize>::deserialize(data)?)
+            json!(<i64 as BorshDeserialize>::deserialize(data)?)
         }
-        IdlType::F64 => json!(<f64 as AnchorDeserialize>::deserialize(data)?),
+        IdlType::F64 => json!(<f64 as BorshDeserialize>::deserialize(data)?),
         IdlType::U128 => {
-            json!(<u128 as AnchorDeserialize>::deserialize(data)?)
+            json!(<u128 as BorshDeserialize>::deserialize(data)?)
         }
         IdlType::I128 => {
-            json!(<i128 as AnchorDeserialize>::deserialize(data)?)
+            json!(<i128 as BorshDeserialize>::deserialize(data)?)
         }
         IdlType::U256 => todo!("Upon completion of u256 IDL standard"),
         IdlType::I256 => todo!("Upon completion of i256 IDL standard"),
         IdlType::Bytes => JsonValue::Array(
-            <Vec<u8> as AnchorDeserialize>::deserialize(data)?
+            <Vec<u8> as BorshDeserialize>::deserialize(data)?
                 .iter()
                 .map(|i| json!(*i))
                 .collect(),
         ),
-        IdlType::String => json!(<String as AnchorDeserialize>::deserialize(data)?),
+        IdlType::String => json!(<String as BorshDeserialize>::deserialize(data)?),
         IdlType::Pubkey => {
-            json!(<Pubkey as AnchorDeserialize>::deserialize(data)?.to_string())
+            json!(<Pubkey as BorshDeserialize>::deserialize(data)?.to_string())
         }
         IdlType::Array(ty, size) => match size {
             IdlArrayLen::Value(size) => {
@@ -4263,7 +4284,7 @@ fn deserialize_idl_type_to_json(
             IdlArrayLen::Generic(_) => unimplemented!("Generic array length is not yet supported"),
         },
         IdlType::Option(ty) => {
-            let is_present = <u8 as AnchorDeserialize>::deserialize(data)?;
+            let is_present = <u8 as BorshDeserialize>::deserialize(data)?;
 
             if is_present == 0 {
                 JsonValue::Null
@@ -4272,7 +4293,7 @@ fn deserialize_idl_type_to_json(
             }
         }
         IdlType::Vec(ty) => {
-            let size: usize = <u32 as AnchorDeserialize>::deserialize(data)?
+            let size: usize = <u32 as BorshDeserialize>::deserialize(data)?
                 .try_into()
                 .unwrap();
 
@@ -4321,6 +4342,9 @@ fn test(
     env_vars: Vec<String>,
     cargo_args: Vec<String>,
 ) -> Result<()> {
+    #[cfg(windows)]
+    let _ = (profile, gdb);
+
     let test_paths = tests_to_run
         .iter()
         .map(|path| {
@@ -4336,27 +4360,37 @@ fn test(
         let validator_type = validator_type_from_env()?.unwrap_or(validator_type);
         cfg.validator = Some(validator_type);
 
+        // Honor the persistent `skip_local_validator` flag from Anchor.toml
+        // (emitted by `anchor init` for in-process templates) in addition to
+        // the ad-hoc CLI flag.
         let cli_skip_local_validator = skip_local_validator;
         let config_skip_local_validator = cfg.skip_local_validator.unwrap_or(false);
+        let skip_local_validator = cli_skip_local_validator || config_skip_local_validator;
+
+        // --profile setup: clear stale traces + point `anchor-v2-testing`
+        // at our profile directory before the child `cargo test` runs.
+        #[cfg(not(windows))]
         let workspace_root = cfg.path().parent().unwrap().to_owned();
-
-        #[cfg(windows)]
-        if profile {
-            return Err(anyhow!(
-                "`anchor test --profile` is not supported on Windows"
-            ));
-        }
-        #[cfg(windows)]
-        let _ = gdb;
-
         #[cfg(not(windows))]
         let profile_dir = workspace_root.join(crate::profile::DEFAULT_PROFILE_DIR);
         #[cfg(not(windows))]
         let _gdb_guard: Option<crate::debugger::gdb::GdbDriver> = if profile {
             let _ = fs::remove_dir_all(&profile_dir);
             std::env::set_var("ANCHOR_PROFILE_DIR", &profile_dir);
+
+            // Force DWARF into the release profile so the flamegraph
+            // symbolicator can resolve inline frames. `CARGO_PROFILE_*`
+            // is scoped to a specific cargo profile — only `cargo
+            // build-sbf` (release) sees this; the IDL build (test
+            // profile) and other cargo invocations are unaffected, so
+            // the flag can't leak into commands that don't accept it.
             std::env::set_var("CARGO_PROFILE_RELEASE_DEBUG", "2");
 
+            // Rewrite `cargo test` → `cargo test --features profile` so the
+            // user's test project picks up `anchor_v2_testing`'s profile
+            // feature. For gdb mode also append `--test-threads=1` (libtest
+            // flag, must come after `--`) because sbpf's `VM_DEBUG_PORT` is
+            // process-wide env state and parallel tests race on bind.
             if let Some(test_script) = cfg.scripts.get_mut("test") {
                 if test_script.contains("cargo test") {
                     *test_script =
@@ -4394,7 +4428,13 @@ fn test(
             None
         };
 
-        // Build if needed.
+        // Build if needed. Note: we don't inject `--debug` for --profile
+        // because that flag leaks from `cargo_args` into other cargo
+        // invocations that don't accept it (IDL build). The flamegraph
+        // renderer falls back to the unstripped binary in
+        // `target/sbpf-solana-solana/release/` for symbolication, which
+        // works without debug info — users who want inline frames can
+        // add `cargo build-sbf --debug` via their own workflow.
         if !skip_build {
             build(
                 cfg_override,
@@ -4417,12 +4457,16 @@ fn test(
             )?;
         }
 
-        cfg.add_test_config(workspace_root, test_paths)?;
+        let root = cfg.path().parent().unwrap().to_owned();
+        cfg.add_test_config(root, test_paths)?;
 
-        // Deploy to the cluster unless told to skip. For localnet, preserve
-        // explicit `--skip-local-validator` deploys because the validator is
-        // already running, but don't let generated in-process templates force
-        // an RPC deploy through their persisted config.
+        // Deploy to the cluster unless told to skip. Skip the preemptive
+        // `deploy()` (RPC upload via `solana program deploy`) on localnet:
+        // the validator (surfpool / solana-test-validator) hasn't been
+        // started yet — that happens later in `run_test_suite` — and it
+        // loads programs itself via `surfpool_flags` / `validator_flags`.
+        // Note: `skip_deploy` itself is preserved so surfpool's runbook
+        // gating in `surfpool_flags` still respects the user's intent.
         let is_localnet = cfg.provider.cluster == Cluster::Localnet;
         let validator_plan = test_validator_plan(
             skip_deploy,
@@ -4470,7 +4514,7 @@ fn test(
                 cfg,
                 cfg.path(),
                 is_localnet,
-                validator_plan.skip_local_validator,
+                skip_local_validator,
                 skip_deploy,
                 detach,
                 validator_type,
@@ -4501,7 +4545,7 @@ fn test(
                     cfg,
                     test_suite.0,
                     is_localnet,
-                    validator_plan.skip_local_validator,
+                    skip_local_validator,
                     skip_deploy,
                     detach,
                     validator_type,
@@ -4553,9 +4597,15 @@ fn test_validator_plan(
     }
 }
 
-/// Run the test suite with profile tracing enabled and then launch the SBF instruction stepper.
-#[cfg(not(windows))]
+/// Run the test suite (with profile tracing enabled) and then launch the
+/// foundry-style SBF instruction stepper over the traces it produced.
+///
+/// Reuses the `--profile` environment setup so the trace-writing half stays
+/// lock-stepped with the flamegraph renderer. `--skip-run` skips the
+/// `anchor test` phase and opens the TUI directly — useful when iterating
+/// on the TUI itself without paying for a rebuild each time.
 #[allow(clippy::too_many_arguments)]
+#[cfg(not(windows))]
 fn debugger(
     cfg_override: &ConfigOverride,
     test_name: Option<String>,
@@ -4565,10 +4615,23 @@ fn debugger(
     gdb: bool,
     cargo_args: Vec<String>,
 ) -> Result<()> {
+    // Dispatch on workspace shape:
+    //
+    //   - Anchor.toml present  → existing flow (build via `anchor build`,
+    //     test via the `[scripts.test]` script, deploy mapping from
+    //     `[programs.localnet]`).
+    //   - No Anchor.toml       → loose mode: cargo workspace discovery,
+    //     `cargo test --features profile` directly, deploy mapping from
+    //     `target/deploy/*-keypair.json`.
+    //
+    // We probe Config::discover instead of with_workspace because the
+    // latter exits the process on miss.
     let has_anchor_toml = match Config::discover(cfg_override) {
         Ok(Some(_)) => true,
         Ok(None) => false,
-        Err(e) => return Err(anyhow!("failed to probe for Anchor.toml: {e}")),
+        Err(e) => {
+            return Err(anyhow!("failed to probe for Anchor.toml: {e}"));
+        }
     };
 
     if has_anchor_toml {
@@ -4593,8 +4656,8 @@ fn debugger(
     }
 }
 
-#[cfg(not(windows))]
 #[allow(clippy::too_many_arguments)]
+#[cfg(not(windows))]
 fn debugger_anchor_workspace(
     cfg_override: &ConfigOverride,
     test_name: Option<String>,
@@ -4605,6 +4668,10 @@ fn debugger_anchor_workspace(
     cargo_args: Vec<String>,
 ) -> Result<()> {
     if !skip_run {
+        // LiteSVM is the only runtime that emits the register traces the
+        // debugger consumes, so `anchor debugger` hardcodes both
+        // `skip_deploy` and `skip_local_validator` to true — we neither
+        // touch nor require a running validator.
         test(
             cfg_override,
             None,
@@ -4617,10 +4684,10 @@ fn debugger_anchor_workspace(
             Vec::new(),
             None, // script_name — debugger drives test execution itself
             ValidatorType::Surfpool,
-            true,
-            gdb,
-            Vec::new(),
-            Vec::new(),
+            true,       // profile — always on for --debugger
+            gdb,        // gdb — drives traces via sbpf gdb-stub instead of inline
+            Vec::new(), // extra_args
+            Vec::new(), // env_vars
             cargo_args,
         )?;
     }
@@ -4641,7 +4708,7 @@ fn debugger_anchor_workspace(
         println!("\nResolved programs:");
         for (pk, so) in &pubkey_to_so {
             let src = sources.get(pk).copied().unwrap_or("unknown");
-            println!("  {pk}  ->  {}  [{src}]", display_path_relative_to_cwd(so));
+            println!("  {pk}  →  {}  [{src}]", display_path_relative_to_cwd(so));
         }
 
         debugger::run(
@@ -4654,8 +4721,14 @@ fn debugger_anchor_workspace(
     })?
 }
 
-#[cfg(not(windows))]
+/// `anchor debugger` outside an Anchor workspace. Runs in any cargo
+/// workspace whose member crates use `anchor-v2-testing` for tests.
+///
+/// Sanity-checks the workspace shape before doing anything destructive
+/// (clearing the trace dir, running cargo test) so the user gets a clear
+/// error early rather than a "no traces" mystery later.
 #[allow(clippy::too_many_arguments)]
+#[cfg(not(windows))]
 fn debugger_loose(
     _cfg_override: &ConfigOverride,
     test_name: Option<String>,
@@ -4668,26 +4741,53 @@ fn debugger_loose(
     let ws = debugger::loose::LooseWorkspace::discover(cwd)?;
 
     if !skip_run {
+        // Pre-flight checks before destructive ops. Anchor.toml flow
+        // tolerates these because `anchor build` would have caught them;
+        // here we own the contract.
         ws.check_dev_dep()?;
     }
     let profile_feature = ws.detect_profile_feature()?;
+
     let profile_dir = ws.root.join(debugger::loose_profile_dir_name());
 
     if !skip_run {
         debugger::loose::clear_profile_dir(&profile_dir)?;
+        // Force DWARF into the SBF release profile so the source pane can
+        // resolve PC → (file, line) via addr2line. Mirrors the env the
+        // Anchor.toml flow sets in `test()`. Scoped to `CARGO_PROFILE_*`
+        // so only the SBF build sees it — host-mode `cargo test` is
+        // unaffected.
         std::env::set_var("CARGO_PROFILE_RELEASE_DEBUG", "2");
 
+        // The Solana cargo passes `-Zremap-cwd-prefix=` (empty) to rustc,
+        // which strips DW_AT_comp_dir from the DWARF and makes all source
+        // paths relative. This breaks the debugger's source pane when
+        // multiple crates share filenames like `src/lib.rs`. We fix this
+        // by setting RUSTC_WRAPPER to the anchor binary itself — a hidden
+        // wrapper mode (see `debugger::rustc_wrapper`) that rewrites the
+        // flag to `-Zremap-cwd-prefix=$CWD`, preserving absolute paths.
         let anchor_exe =
             std::env::current_exe().context("resolve anchor binary path for RUSTC_WRAPPER")?;
         std::env::set_var("RUSTC_WRAPPER", &anchor_exe);
         std::env::set_var(debugger::rustc_wrapper::WRAPPER_SENTINEL, "1");
 
+        // Build the SBF program first so `target/deploy/<name>.so` exists
+        // (post-linked, sbpf-loadable). Skipping build-sbf is the #1 cause
+        // of "everything runs but the disasm pane is empty" — the test
+        // imports include_bytes!("../target/deploy/X.so") which depends
+        // on this step. `--skip-build` opts out for fast TUI iteration.
         if !skip_build {
+            // Reuse the same cargo-build-sbf invocation `anchor build`
+            // uses (toolchain pinned via `BUILD_SUBCOMMAND`). Invoke from
+            // the package's manifest dir — `cargo build-sbf` doesn't
+            // accept top-level `-p`, so per-package selection is by cwd.
             let build_cwd = ws.cargo_invocation_dir();
             eprintln!("running `cargo build-sbf` from {}", build_cwd.display());
             cargo_build_sbf(Some(build_cwd), &BuildSbfOptions::default(), &cargo_args)?;
         }
 
+        // Clear the wrapper env before `cargo test` — the host-side test
+        // build doesn't need it and RUSTC_WRAPPER would slow it down.
         std::env::remove_var("RUSTC_WRAPPER");
         std::env::remove_var(debugger::rustc_wrapper::WRAPPER_SENTINEL);
 
@@ -4769,8 +4869,20 @@ fn run_coverage(
     let output_path = ws.root.join(output);
 
     if !skip_run {
+        // Force DWARF into the SBF release profile so addr2line can resolve
+        // PC → (file, line). Scoped to `CARGO_PROFILE_*` so only the SBF
+        // build sees it — host-mode `cargo test` is unaffected.
         std::env::set_var("CARGO_PROFILE_RELEASE_DEBUG", "2");
 
+        // Solana's cargo passes `-Zremap-cwd-prefix=` (empty) which strips
+        // `DW_AT_comp_dir`, making DWARF paths ambiguous when multiple
+        // crates share filenames like `src/lib.rs`. The wrapper rewrites
+        // the flag to `-Zremap-cwd-prefix=$CWD` so paths stay absolute.
+        //
+        // Stays set through `cargo test` below because tests-v2's
+        // `build_program()` spawns `cargo build-sbf` from within the test
+        // harness — those subprocess builds must inherit the wrapper to
+        // produce DWARF with preserved paths.
         let anchor_exe =
             std::env::current_exe().context("resolve anchor binary path for RUSTC_WRAPPER")?;
         std::env::set_var("RUSTC_WRAPPER", &anchor_exe);
@@ -4782,11 +4894,26 @@ fn run_coverage(
             cargo_build_sbf(Some(build_cwd), &BuildSbfOptions::default(), &cargo_args)?;
         }
 
+        // Clear previous traces.
         if trace_path.exists() {
             fs::remove_dir_all(&trace_path)?;
         }
         fs::create_dir_all(&trace_path)?;
 
+        // Two register-tracing paths are in play, distinguished by whether
+        // the current crate declares a `profile` feature that flips on
+        // `anchor-v2-testing/profile`:
+        //
+        //   - With profile feature (anchor init template, bench programs):
+        //     `anchor_v2_testing::svm()` installs the TestNameCallback that
+        //     writes per-test nested traces under `ANCHOR_PROFILE_DIR`.
+        //     Same pipeline that `anchor debugger` consumes.
+        //   - Without (tests-v2): litesvm's stock register-tracing, enabled
+        //     in Cargo.toml, fires when `SBF_TRACE_DIR` is set. Flat
+        //     hash-keyed trace files in one dir.
+        //
+        // The coverage tool reads `.regs`/`.program_id` files recursively,
+        // so both layouts work.
         let profile_feature = ws.detect_profile_feature().ok();
         eprintln!("running tests with register tracing...");
         let mut cmd = std::process::Command::new("cargo");
@@ -4801,22 +4928,26 @@ fn run_coverage(
         if let Some(pkg) = &ws.current_package {
             cmd.arg("-p").arg(pkg);
         }
+        cmd.args(&cargo_args);
         let status = cmd.status().context("spawn cargo test")?;
         if !status.success() {
-            return Err(anyhow!("cargo test failed"));
+            return Err(anyhow::anyhow!("cargo test failed"));
         }
     }
 
     if !trace_path.exists() {
-        return Err(anyhow!(
+        return Err(anyhow::anyhow!(
             "no traces at {}. Run without --skip-run first.",
             trace_path.display()
         ));
     }
 
+    // Discover program_id → deployed .so via declare_id! source scan
+    // (same as debugger). The unstripped .so is resolved automatically per
+    // program by walking up to its workspace root.
     let programs = debugger::loose::discover_programs(&ws.root, ws.current_package.as_deref())?;
     if programs.is_empty() {
-        return Err(anyhow!(
+        return Err(anyhow::anyhow!(
             "no programs found. Ensure declare_id!() is present in source.",
         ));
     }
@@ -4824,9 +4955,12 @@ fn run_coverage(
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent)?;
     }
-    coverage::generate_lcov(&trace_path, &programs, Some(&ws.root), &output_path)
+    coverage::generate_lcov(&trace_path, &programs, Some(&ws.root), &output_path)?;
+
+    Ok(())
 }
 
+/// Render path `p` as cwd-relative when possible, falling back to absolute.
 #[cfg(not(windows))]
 fn display_path_relative_to_cwd(p: &Path) -> String {
     std::env::current_dir()
@@ -4837,6 +4971,16 @@ fn display_path_relative_to_cwd(p: &Path) -> String {
         .unwrap_or_else(|| p.display().to_string())
 }
 
+/// Build pubkey → deployed `.so` map for an Anchor.toml workspace.
+///
+/// Two sources, in priority order:
+///   1. `[programs.*]` in `Anchor.toml` — explicit, authoritative.
+///   2. `target/deploy/*-keypair.json` (loose-mode discovery) —
+///      filled-in for projects whose Anchor.toml omits the program
+///      mapping. Anchor.toml always wins on conflict.
+///
+/// Returns `(pubkey_to_so, sources)` where `sources[pk]` is `"Anchor.toml"`
+/// or `"target/deploy"` for diagnostics.
 #[cfg(not(windows))]
 fn resolve_anchor_workspace_programs(
     cfg: &WithPath<Config>,
@@ -4863,6 +5007,13 @@ fn resolve_anchor_workspace_programs(
     (pubkey_to_so, sources)
 }
 
+/// Walks the per-test trace directories left behind by
+/// `anchor-v2-testing`'s profile callback and renders one flamegraph
+/// SVG per transaction under `<profile_dir>/<test>__tx<N>.svg`.
+///
+/// CPIs are symbolicated against the right ELF per invocation — a
+/// tx that calls into spl-token shows spl-token's frames alongside
+/// the program under test, not dropped or lumped under `[unknown]`.
 #[cfg(not(windows))]
 fn render_profile(cfg: &WithPath<Config>, profile_dir: &Path) -> Result<()> {
     let workspace_root = cfg.path().parent().unwrap().to_owned();
@@ -4883,6 +5034,8 @@ fn render_profile(cfg: &WithPath<Config>, profile_dir: &Path) -> Result<()> {
     let mut sorted: Vec<&profile::RenderedTest> = rendered.iter().collect();
     sorted.sort_by(|a, b| a.test_name.cmp(&b.test_name));
 
+    // Column width for the two-column single-tx layout. Multi-tx tests are
+    // rendered nested so they don't influence alignment.
     let max_name = sorted
         .iter()
         .filter(|t| t.svg_paths.len() == 1)
@@ -4894,7 +5047,7 @@ fn render_profile(cfg: &WithPath<Config>, profile_dir: &Path) -> Result<()> {
     for test in &sorted {
         if test.svg_paths.len() == 1 {
             println!(
-                "  {:<width$}  ->  {}",
+                "  {:<width$}  →  {}",
                 test.test_name,
                 display_path_relative_to_cwd(&test.svg_paths[0]),
                 width = max_name,
@@ -4902,7 +5055,7 @@ fn render_profile(cfg: &WithPath<Config>, profile_dir: &Path) -> Result<()> {
         } else {
             println!("  {}", test.test_name);
             for (i, svg) in test.svg_paths.iter().enumerate() {
-                println!("    tx{}  ->  {}", i + 1, display_path_relative_to_cwd(svg));
+                println!("    tx{}  →  {}", i + 1, display_path_relative_to_cwd(svg));
             }
         }
     }
@@ -5820,6 +5973,19 @@ fn surfpool_flags(
         flags.push("--no-studio".to_string());
     }
 
+    // FIXME: drop this once surfpool's bundled mainnet feature defaults
+    // catch up. Surfpool advertises "mainnet defaults" but its baked-in
+    // feature set is stale and missing `deprecate_rent_exemption_threshold`,
+    // which mainnet has had on for some time. Pinocchio's `Rent::get` only
+    // reads `lamports_per_byte_year` and treats it as the post-multiplied
+    // per-byte rate; that's correct under the feature (sysvar stores 6960,
+    // threshold 1.0) but returns half on stale-default surfpool (sysvar
+    // stores 3480, threshold 2.0), surfacing as `InsufficientFundsForRent`
+    // at simulation. Forcing the feature here aligns surfpool with mainnet
+    // until upstream refreshes its defaults.
+    flags.push("--feature".to_string());
+    flags.push("deprecate_rent_exemption_threshold".to_string());
+
     match skip_deploy {
         true => flags.push("--no-deploy".to_string()),
         false => {
@@ -6034,20 +6200,31 @@ fn start_surfpool_validator(
     };
     let rpc_url = surfpool_rpc_url(surfpool_config);
 
+    // Pre-spawn port-in-use detection. If someone is already bound to
+    // `host:port` (stale surfpool, earlier `solana-test-validator`, whatever),
+    // our new `surfpool` process would race for the bind and quietly lose —
+    // then the startup health loop would succeed against the stranger's RPC
+    // and `anchor test` would silently run against a foreign validator with
+    // unknown state. Refuse up front and tell the user how to unblock.
     if std::net::TcpStream::connect_timeout(
         &format!("{host}:{port}")
             .parse()
-            .map_err(|err| anyhow!("invalid surfpool host:port `{host}:{port}`: {err}"))?,
+            .map_err(|e| anyhow!("invalid surfpool host:port `{host}:{port}`: {e}"))?,
         std::time::Duration::from_millis(200),
     )
     .is_ok()
     {
         return Err(anyhow!(
-            "port {port} on {host} is already in use - another validator is running there. Kill \
-             it or set `[surfpool] rpc_port = N` in Anchor.toml to pick a free port."
+            "port {port} on {host} is already in use — another validator is running there. Kill \
+             it (e.g. `pkill -f surfpool`) or set `[surfpool] rpc_port = N` in Anchor.toml to \
+             pick a free port."
         ));
     }
 
+    // Keep surfpool's stderr attached to the user's terminal even in non-
+    // simnet mode so bind failures / panics surface immediately instead of
+    // getting silently swallowed. Stdout stays nulled — surfpool's INFO-level
+    // logs are noisy and not useful during a test run.
     let test_validator_stdout = match full_simnet_mode {
         true => Stdio::inherit(),
         false => Stdio::null(),
@@ -6071,9 +6248,12 @@ fn start_surfpool_validator(
         .unwrap_or(STARTUP_WAIT);
 
     while count < ms_wait {
+        // If surfpool died during startup (most common cause: port bind
+        // failure), bail out instead of letting the health poll fall through
+        // to whatever foreign process happens to be answering on the port.
         if let Ok(Some(status)) = validator_handle.try_wait() {
             return Err(anyhow!(
-                "`surfpool` exited during startup with {status} - see the stderr output above. \
+                "`surfpool` exited during startup with {status} — see the stderr output above. \
                  Common causes: port {port} in use, missing deploy artifacts in `target/deploy/`, \
                  invalid Anchor.toml config."
             ));
@@ -7225,6 +7405,17 @@ fn is_hidden(entry: &walkdir::DirEntry) -> bool {
         .unwrap_or(false)
 }
 
+/// Build the WebSocket URL for `anchor logs` from the cluster URL.
+///
+/// - Non-local clusters (devnet, mainnet, custom hosts): swap scheme only
+///   (`http(s)://…` → `ws(s)://…`).
+/// - Local clusters (`127.0.0.1` / `localhost`): pick the WS port from config
+///   when `[test.surfpool] ws_port` is set explicitly; otherwise default to
+///   the URL's RPC port + 1 (the solana-test-validator convention, which
+///   surfpool also follows when `ws_port` is unset).
+///
+/// Returns a best-effort string — never errors. Malformed URLs fall back to
+/// `DEFAULT_RPC_PORT + 1` for the local path.
 fn logs_websocket_url(cfg_override: &ConfigOverride, cluster_url: &str) -> String {
     let ws_scheme_url = cluster_url
         .replace("https://", "wss://")
@@ -7251,6 +7442,8 @@ fn logs_websocket_url(cfg_override: &ConfigOverride, cluster_url: &str) -> Strin
     replace_url_port(&ws_scheme_url, ws_port)
 }
 
+/// Extract the explicit port from `scheme://host:port[/...]`. Returns `None`
+/// when no port is present or it isn't a valid `u16`.
 fn extract_url_port(url: &str) -> Option<u16> {
     let (_, after_scheme) = url.split_once("://")?;
     let host_port_end = after_scheme.find('/').unwrap_or(after_scheme.len());
@@ -7258,17 +7451,19 @@ fn extract_url_port(url: &str) -> Option<u16> {
     port_str.parse().ok()
 }
 
+/// Replace (or insert) the port in `scheme://host[:port][/path]`. Preserves
+/// the path/query tail.
 fn replace_url_port(url: &str, new_port: u16) -> String {
     let Some((scheme, rest)) = url.split_once("://") else {
         return url.to_string();
     };
     let (host_port_part, tail) = match rest.find('/') {
-        Some(index) => (&rest[..index], &rest[index..]),
+        Some(i) => (&rest[..i], &rest[i..]),
         None => (rest, ""),
     };
     let host = host_port_part
         .rsplit_once(':')
-        .map(|(host, _)| host)
+        .map(|(h, _)| h)
         .unwrap_or(host_port_part);
     format!("{scheme}://{host}:{new_port}{tail}")
 }
@@ -7282,6 +7477,10 @@ fn get_node_version() -> Result<Version> {
     parse_node_version(std::str::from_utf8(&node_version.stdout)?)
 }
 
+/// Parse the stdout of `node --version` into a `Version`. Tolerates both the
+/// canonical `v20.10.0\n` shape and a bare `20.10.0` — the latter shows up in
+/// corporate wrappers / volta shims that strip the `v` prefix. Malformed
+/// output still errors.
 fn parse_node_version(output: &str) -> Result<Version> {
     let trimmed = output.trim();
     let without_v = trimmed.strip_prefix('v').unwrap_or(trimmed);
@@ -7321,6 +7520,15 @@ fn add_recommended_deployment_solana_args(
     Ok(augmented_args)
 }
 
+/// Returns the `NODE_OPTIONS` flag that tells Node to prefer IPv4 in DNS
+/// resolution (needed to avoid a localhost connect-timeout bug on Node 16+).
+///
+/// Returns `""` when `node` is missing or its `--version` output is unparsable.
+/// This lets `anchor test` run on Rust-only test templates (litesvm / mollusk
+/// / rust) without requiring `node` on `PATH` — the env var still gets set,
+/// but `cargo test` ignores it. For JS/TS projects that actually invoke node,
+/// any real node problem will surface cleanly at the point the test script
+/// runs.
 fn get_node_dns_option() -> &'static str {
     let Ok(version) = get_node_version() else {
         return "";
@@ -7680,30 +7888,6 @@ mod tests {
     }
 
     #[test]
-    fn test_init_accepts_anchor_version() {
-        let opts =
-            Opts::try_parse_from(["anchor", "init", "example", "--anchor-version", "v2"]).unwrap();
-
-        let Command::Init { anchor_version, .. } = opts.command else {
-            panic!("expected init command");
-        };
-
-        assert_eq!(anchor_version, AnchorVersion::V2);
-    }
-
-    #[test]
-    fn test_new_accepts_anchor_version() {
-        let opts =
-            Opts::try_parse_from(["anchor", "new", "example", "--anchor-version", "v2"]).unwrap();
-
-        let Command::New { anchor_version, .. } = opts.command else {
-            panic!("expected new command");
-        };
-
-        assert_eq!(anchor_version, AnchorVersion::V2);
-    }
-
-    #[test]
     fn test_build_accepts_build_sbf_options() {
         let opts = Opts::try_parse_from([
             "anchor",
@@ -7878,7 +8062,6 @@ mod tests {
             None,
             false,
             ProgramTemplate::default(),
-            AnchorVersion::default(),
             TestTemplate::default(),
             true,
             true,
@@ -7902,7 +8085,6 @@ mod tests {
             None,
             false,
             ProgramTemplate::default(),
-            AnchorVersion::default(),
             TestTemplate::default(),
             true,
             true,
@@ -7926,7 +8108,6 @@ mod tests {
             None,
             false,
             ProgramTemplate::default(),
-            AnchorVersion::default(),
             TestTemplate::default(),
             true,
             true,
@@ -8045,12 +8226,14 @@ mod tests {
     }
 
     #[test]
-    fn surfpool_flags_do_not_force_runtime_features() {
+    fn surfpool_flags_activate_v2_rent_feature() {
         let dir = tempdir().unwrap();
         let cfg = WithPath::new(Config::default(), dir.path().join("Anchor.toml"));
         let flags = surfpool_flags(&cfg, &None, false, false, None, &[]).unwrap();
 
-        assert!(!flags.iter().any(|flag| flag == "--feature"));
+        assert!(flags
+            .windows(2)
+            .any(|args| args == ["--feature", "deprecate_rent_exemption_threshold"]));
     }
 
     #[test]
@@ -8088,8 +8271,8 @@ mod tests {
     #[test]
     fn test_jest_package_json_pins_uuid_for_commonjs() {
         for package_json in [
-            template::package_json(true, "ISC".to_owned(), AnchorVersion::V1),
-            template::ts_package_json(true, "ISC".to_owned(), AnchorVersion::V1),
+            template::package_json(true, "ISC".to_owned()),
+            template::ts_package_json(true, "ISC".to_owned()),
         ] {
             let package: JsonValue = serde_json::from_str(&package_json).unwrap();
 
@@ -8101,23 +8284,23 @@ mod tests {
 
     #[test]
     fn parse_node_version_with_v_prefix() {
-        let version = parse_node_version("v20.10.0\n").unwrap();
-        assert_eq!(version.major, 20);
-        assert_eq!(version.minor, 10);
-        assert_eq!(version.patch, 0);
+        let v = parse_node_version("v20.10.0\n").unwrap();
+        assert_eq!(v.major, 20);
+        assert_eq!(v.minor, 10);
+        assert_eq!(v.patch, 0);
     }
 
     #[test]
     fn parse_node_version_without_v_prefix() {
-        let version = parse_node_version("20.10.0").unwrap();
-        assert_eq!(version.major, 20);
+        let v = parse_node_version("20.10.0").unwrap();
+        assert_eq!(v.major, 20);
     }
 
     #[test]
     fn parse_node_version_ignores_surrounding_whitespace() {
-        let version = parse_node_version("  v18.17.1  \n").unwrap();
-        assert_eq!(version.major, 18);
-        assert_eq!(version.minor, 17);
+        let v = parse_node_version("  v18.17.1  \n").unwrap();
+        assert_eq!(v.major, 18);
+        assert_eq!(v.minor, 17);
     }
 
     #[test]
@@ -8149,6 +8332,7 @@ mod tests {
             replace_url_port("ws://127.0.0.1:8899/path?q=1", 9050),
             "ws://127.0.0.1:9050/path?q=1"
         );
+        // No original port — the helper still injects one.
         assert_eq!(
             replace_url_port("http://127.0.0.1", 8900),
             "http://127.0.0.1:8900"

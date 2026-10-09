@@ -13,12 +13,9 @@ use {
         create_client, no_dna_enabled, prepend_compute_unit_ix, with_workspace,
     },
     anchor_cli_macros::AbsolutePath,
-    anchor_lang::{
-        idl::{IdlAccount, IdlInstruction, ERASED_AUTHORITY, IDL_IX_TAG},
-        AccountDeserialize, AnchorDeserialize, AnchorSerialize, Discriminator,
-    },
     anchor_lang_idl::types::Idl,
     anyhow::{anyhow, bail, Result},
+    borsh::{BorshDeserialize, BorshSerialize},
     clap::Parser,
     flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression},
     solana_instruction::{AccountMeta, Instruction},
@@ -242,7 +239,7 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<serde_js
 
     // Cut off account discriminator.
     let mut d: &[u8] = &account.data[IdlAccount::DISCRIMINATOR.len()..];
-    let idl_account: IdlAccount = AnchorDeserialize::deserialize(&mut d)?;
+    let idl_account: IdlAccount = BorshDeserialize::deserialize(&mut d)?;
 
     let compressed_len: usize = idl_account.data_len.try_into().unwrap();
     let compressed_bytes = &account.data[44..44 + compressed_len];
@@ -255,7 +252,7 @@ fn fetch_idl(cfg_override: &ConfigOverride, idl_addr: Pubkey) -> Result<serde_js
 fn get_idl_account(client: &RpcClient, idl_address: &Pubkey) -> Result<IdlAccount> {
     let account = client.get_account(idl_address)?;
     let mut data: &[u8] = &account.data;
-    AccountDeserialize::try_deserialize(&mut data).map_err(|e| anyhow!("{:?}", e))
+    IdlAccount::try_deserialize(&mut data).map_err(|e| anyhow!("{:?}", e))
 }
 
 fn idl_close(
@@ -315,9 +312,7 @@ fn idl_set_buffer(
                 AccountMeta::new(idl_authority, true),
             ];
             let mut data = IDL_IX_TAG.to_le_bytes().to_vec();
-            data.append(&mut anchor_lang::prelude::borsh::to_vec(
-                &IdlInstruction::SetBuffer,
-            )?);
+            data.append(&mut borsh::to_vec(&IdlInstruction::SetBuffer)?);
             Instruction {
                 program_id,
                 accounts,
@@ -768,9 +763,7 @@ fn create_idl_buffer(
             AccountMeta::new_readonly(keypair.pubkey(), true),
         ];
         let mut data = IDL_IX_TAG.to_le_bytes().to_vec();
-        data.append(&mut anchor_lang::prelude::borsh::to_vec(
-            &IdlInstruction::CreateBuffer,
-        )?);
+        data.append(&mut borsh::to_vec(&IdlInstruction::CreateBuffer)?);
         Instruction {
             program_id: *program_id,
             accounts,
@@ -854,4 +847,81 @@ fn print_idl_instruction(ix_name: &str, ix: &Instruction, idl_address: &Pubkey) 
     );
 
     Ok(())
+}
+
+// Legacy wire types are kept in the CLI so managing existing v1 deployments
+// does not add the v1 program runtime to the v2 dependency graph.
+const IDL_IX_TAG: u64 = 0x0a69e9a778bcf440;
+const ERASED_AUTHORITY: Pubkey = Pubkey::new_from_array([0; 32]);
+
+#[derive(BorshSerialize)]
+enum IdlInstruction {
+    Create { data_len: u64 },
+    CreateBuffer,
+    Write { data: Vec<u8> },
+    SetBuffer,
+    SetAuthority { new_authority: Pubkey },
+    Close,
+    Resize { data_len: u64 },
+}
+
+#[derive(BorshDeserialize)]
+struct IdlAccount {
+    authority: Pubkey,
+    data_len: u32,
+}
+
+impl IdlAccount {
+    const DISCRIMINATOR: &'static [u8] = &[24, 70, 98, 191, 58, 144, 123, 158];
+
+    fn address(program_id: &Pubkey) -> Pubkey {
+        let signer = Pubkey::find_program_address(&[], program_id).0;
+        Pubkey::create_with_seed(&signer, Self::seed(), program_id).expect("Seed is always valid")
+    }
+
+    fn seed() -> &'static str {
+        "anchor:idl"
+    }
+
+    fn try_deserialize(data: &mut &[u8]) -> Result<Self> {
+        let discriminator = data
+            .get(..Self::DISCRIMINATOR.len())
+            .ok_or_else(|| anyhow!("Legacy IDL account is too short"))?;
+        if discriminator != Self::DISCRIMINATOR {
+            bail!("Legacy IDL account discriminator mismatch");
+        }
+        let mut fields = &data[Self::DISCRIMINATOR.len()..];
+        Self::deserialize(&mut fields).map_err(Into::into)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn legacy_instruction_encoding_matches_deployed_protocol() {
+        let prefix = [0x40, 0xf4, 0xbc, 0x78, 0xa7, 0xe9, 0x69, 0x0a];
+        let encoded = serialize_idl_ix(IdlInstruction::Write {
+            data: vec![1, 2, 3],
+        })
+        .unwrap();
+        assert_eq!(&encoded[..8], &prefix);
+        assert_eq!(&encoded[8..], &[2, 3, 0, 0, 0, 1, 2, 3]);
+        assert_eq!(&serialize_idl_ix(IdlInstruction::Close).unwrap()[8..], &[5]);
+    }
+
+    #[test]
+    fn legacy_account_decoding_checks_discriminator() {
+        let mut data = vec![24, 70, 98, 191, 58, 144, 123, 158];
+        data.extend_from_slice(&[7; 32]);
+        data.extend_from_slice(&123u32.to_le_bytes());
+        data.extend_from_slice(&[0; 10]);
+        let account = IdlAccount::try_deserialize(&mut data.as_slice()).unwrap();
+        assert_eq!(account.authority, Pubkey::new_from_array([7; 32]));
+        assert_eq!(account.data_len, 123);
+        data[0] = 0;
+        assert!(IdlAccount::try_deserialize(&mut data.as_slice()).is_err());
+        assert!(IdlAccount::try_deserialize(&mut &data[..7]).is_err());
+    }
 }
