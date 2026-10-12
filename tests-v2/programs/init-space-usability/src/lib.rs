@@ -1,5 +1,3 @@
-extern crate alloc;
-
 use anchor_lang::prelude::*;
 
 declare_id!("9AbShpmjP5WcQLSBW1NQmczpYVmT2CR2FLFoQdxxk47d");
@@ -22,19 +20,39 @@ pub struct Vector2 {
     pub y: Scalar,
 }
 
+#[cfg(not(target_os = "solana"))]
 #[account(borsh)]
 #[derive(InitSpace)]
 pub struct Profile {
     pub owner: Owner,
     #[max_len(limits::NAME)]
-    pub name: alloc::string::String,
+    pub name: anchor_lang::__idl::string::String,
 }
 
+#[cfg(target_os = "solana")]
+#[account(borsh)]
+#[derive(InitSpace)]
+pub struct Profile {
+    pub owner: Owner,
+    pub name: anchor_lang::FixedVec<u8, { limits::NAME }>,
+}
+
+#[cfg(not(target_os = "solana"))]
 #[account(borsh)]
 #[derive(InitSpace)]
 pub struct Nested {
     #[max_len(limits::ITEMS, limits::NAME)]
-    pub tags: alloc::vec::Vec<alloc::string::String>,
+    pub tags: anchor_lang::__idl::vec::Vec<anchor_lang::__idl::string::String>,
+}
+
+#[cfg(target_os = "solana")]
+#[account(borsh)]
+#[derive(InitSpace)]
+pub struct Nested {
+    pub tags: anchor_lang::FixedVec<
+        anchor_lang::FixedVec<u8, { limits::NAME }>,
+        { limits::ITEMS },
+    >,
 }
 
 #[account(borsh)]
@@ -74,18 +92,24 @@ pub mod init_space_usability {
     #[discrim = 1]
     pub fn init_profile(ctx: &mut Context<InitProfile>) -> Result<()> {
         ctx.accounts.profile.owner = *ctx.accounts.payer.account().address();
-        ctx.accounts.profile.name = alloc::string::String::from("init-space");
+        ctx.accounts.profile.name = bounded_string(b"init-space");
         Ok(())
     }
 
     #[discrim = 2]
     pub fn init_nested(ctx: &mut Context<InitNested>) -> Result<()> {
-        ctx.accounts.nested.tags = alloc::vec![
-            alloc::string::String::from("zero"),
-            alloc::string::String::from("one"),
-            alloc::string::String::from("two"),
-            alloc::string::String::from("three"),
-        ];
+        #[cfg(not(target_os = "solana"))]
+        let mut tags = anchor_lang::__idl::vec::Vec::new();
+        #[cfg(target_os = "solana")]
+        let mut tags = anchor_lang::FixedVec::<
+            anchor_lang::FixedVec<u8, { limits::NAME }>,
+            { limits::ITEMS },
+        >::new();
+        tags.push(bounded_string(b"zero"));
+        tags.push(bounded_string(b"one"));
+        tags.push(bounded_string(b"two"));
+        tags.push(bounded_string(b"three"));
+        ctx.accounts.nested.tags = tags;
         Ok(())
     }
 
@@ -96,6 +120,18 @@ pub mod init_space_usability {
         ctx.accounts.image.pixels = [1, 2, 3, 4];
         Ok(())
     }
+}
+
+#[cfg(not(target_os = "solana"))]
+fn bounded_string(value: &[u8]) -> anchor_lang::__idl::string::String {
+    anchor_lang::__idl::string::String::from(core::str::from_utf8(value).unwrap())
+}
+
+#[cfg(target_os = "solana")]
+fn bounded_string(value: &[u8]) -> anchor_lang::FixedVec<u8, { limits::NAME }> {
+    let mut string = anchor_lang::FixedVec::new();
+    string.extend_from_slice(value);
+    string
 }
 
 fn require_space<T: Space>(expected: usize) -> Result<()> {
