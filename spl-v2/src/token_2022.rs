@@ -1,11 +1,8 @@
 //! Token-2022 CPI helpers and interface re-exports.
 
-extern crate alloc;
-
 use {
     crate::token_shared::multisig_signer_addresses,
-    alloc::{string::String, vec::Vec},
-    anchor_lang::{require_eq, CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
+    anchor_lang::{require_eq, CpiContext, CpiHandle, CpiHandleMut, InstructionDataBuffer, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
 };
@@ -85,7 +82,7 @@ pub struct PermanentDelegateInitialize<'a> {
     pub mint: CpiHandleMut<'a>,
 }
 
-fn return_data_from(program: &Address) -> Result<Vec<u8>, ProgramError> {
+fn return_data_from(program: &Address) -> Result<InstructionDataBuffer, ProgramError> {
     let (return_program, data) = anchor_lang::solana_program::program::get_return_data()
         .ok_or(ProgramError::InvalidInstructionData)?;
     require_eq!(
@@ -139,15 +136,14 @@ pub fn initialize_immutable_owner<'a>(
 pub fn amount_to_ui_amount<'a>(
     ctx: CpiContext<'a, AmountToUiAmount<'a>>,
     amount: u64,
-) -> Result<String, ProgramError> {
+) -> Result<InstructionDataBuffer, ProgramError> {
     let ix = spl_token_2022::instruction::amount_to_ui_amount(
         ctx.program,
         ctx.accounts.account.address(),
         amount,
     )?;
     ctx.invoke_ix(ix)?;
-    String::from_utf8(return_data_from(ctx.program)?)
-        .map_err(|_| ProgramError::InvalidInstructionData)
+    Ok(return_data_from(ctx.program)?)
 }
 
 pub fn ui_amount_to_amount<'a>(
