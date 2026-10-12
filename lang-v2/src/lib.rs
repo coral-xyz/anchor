@@ -9,6 +9,8 @@ extern crate self as anchor_lang;
 extern crate std;
 
 pub mod accounts;
+#[cfg(target_os = "solana")]
+mod account_meta;
 pub mod context;
 mod context_cpi;
 pub mod cpi;
@@ -73,17 +75,48 @@ pub mod __idl {
     }
 }
 
-/// Logs a message via `solana_msg`.
-///
-/// Thin wrapper around `solana_msg::msg!` that always evaluates to
-/// `()`, so it's usable in expression position (match arms, closures, tuples,
-/// etc.).
+/// Format a message into a bounded stack buffer and send it to the Solana log
+/// syscall. This is the no-`alloc` implementation used by the on-chain
+/// `msg!` macro.
+#[cfg(target_os = "solana")]
+pub fn sol_log_fmt(args: core::fmt::Arguments<'_>) {
+    struct LogWriter {
+        bytes: FixedVec<u8, 256>,
+    }
+
+    impl core::fmt::Write for LogWriter {
+        fn write_str(&mut self, value: &str) -> core::fmt::Result {
+            self.bytes
+                .try_extend_from_slice(value.as_bytes())
+                .map_err(|_| core::fmt::Error)
+        }
+    }
+
+    let mut writer = LogWriter {
+        bytes: FixedVec::new(),
+    };
+    let _ = core::fmt::write(&mut writer, args);
+    // Formatting only writes valid UTF-8, so this conversion cannot fail.
+    let message = unsafe { core::str::from_utf8_unchecked(writer.bytes.as_slice()) };
+    solana_msg::sol_log(message);
+}
+
+/// Logs a message without introducing an allocator into the SBF dependency
+/// graph. Host builds retain `solana_msg`'s normal formatting behavior;
+/// on-chain builds format into a bounded stack buffer.
+#[cfg(target_os = "solana")]
 #[macro_export]
 macro_rules! msg {
     ($($arg:tt)*) => {{
-        // bring into scope from re-export as the macro accesses it
-        use $crate::solana_msg;
-        solana_msg::msg!($($arg)*);
+        $crate::sol_log_fmt(core::format_args!($($arg)*));
+    }};
+}
+
+#[cfg(not(target_os = "solana"))]
+#[macro_export]
+macro_rules! msg {
+    ($($arg:tt)*) => {{
+        $crate::solana_msg::msg!($($arg)*);
     }};
 }
 
@@ -142,6 +175,31 @@ pub type BoolBuffer = FixedVec<bool, MAX_ACCOUNT_METAS>;
 pub type InstructionDataBuffer = std::vec::Vec<u8>;
 #[cfg(target_os = "solana")]
 pub type InstructionDataBuffer = FixedVec<u8, MAX_INSTRUCTION_DATA>;
+
+/// Append bytes to an instruction/event buffer without allocating or
+/// panicking on the on-chain target.
+///
+/// Host buffers are still ordinary `Vec<u8>` values. SBF uses the bounded
+/// `FixedVec` implementation and reports capacity exhaustion as
+/// `InvalidInstructionData`, which lets generated serializers expose a
+/// genuinely fallible path while retaining the existing infallible `data()`
+/// compatibility method.
+#[inline]
+pub fn try_extend_instruction_data(
+    buffer: &mut InstructionDataBuffer,
+    bytes: &[u8],
+) -> core::result::Result<(), solana_program_error::ProgramError> {
+    #[cfg(not(target_os = "solana"))]
+    {
+        buffer.extend_from_slice(bytes);
+        Ok(())
+    }
+
+    #[cfg(target_os = "solana")]
+    buffer
+        .try_extend_from_slice(bytes)
+        .map_err(|_| solana_program_error::ProgramError::InvalidInstructionData)
+}
 
 #[doc(hidden)]
 #[macro_export]
@@ -255,7 +313,10 @@ pub use cpi::create_account_with_signers;
 /// `solana_program::pubkey::Pubkey` to [`Address`], but external Solana crates
 /// may still expose nominally distinct `Pubkey` newtypes with the same 32-byte
 /// representation.
+#[cfg(not(target_os = "solana"))]
 pub use solana_instruction::account_meta::AccountMeta;
+#[cfg(target_os = "solana")]
+pub use account_meta::AccountMeta;
 pub use {
     accounts::{AccountInitialize, SlabInit},
     anchor_derive_accounts::{
@@ -295,11 +356,15 @@ pub mod solana_program {
     }
 
     pub mod instruction {
+        #[cfg(not(target_os = "solana"))]
         pub use solana_instruction::*;
+        #[cfg(target_os = "solana")]
+        pub use crate::account_meta::AccountMeta;
     }
 
     #[cfg(feature = "compat")]
     pub use crate::pubkey;
+    #[cfg(not(target_os = "solana"))]
     pub use solana_system_interface::instruction as system_instruction;
 
     #[cfg(feature = "compat")]
@@ -307,6 +372,7 @@ pub mod solana_program {
         pub type Pubkey = crate::Address;
     }
 
+    #[cfg(not(target_os = "solana"))]
     pub mod rent {
         pub use solana_sysvar::rent::*;
     }
@@ -328,6 +394,15 @@ pub trait ToAccountMetas {
 /// Serializes instruction data: discriminator prefix + LE-encoded args.
 pub trait InstructionData: Discriminator {
     fn data(&self) -> InstructionDataBuffer;
+
+    /// Fallible instruction serialization for allocator-free runtime paths.
+    ///
+    /// Existing implementations that only provide `data()` remain source
+    /// compatible. Generated V2 instruction types override this method so a
+    /// full buffer reports `InvalidInstructionData` instead of panicking.
+    fn try_data(&self) -> core::result::Result<InstructionDataBuffer, solana_program_error::ProgramError> {
+        Ok(self.data())
+    }
 }
 
 /// Compile-time account-size calculation. Derived via `#[derive(InitSpace)]`.

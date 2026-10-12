@@ -1,7 +1,8 @@
 //! Small, fixed-capacity vectors for transient on-chain data.
 //!
-//! These buffers deliberately panic on overflow, matching the failure mode of
-//! the old heap-backed `Vec` while keeping the storage inline and bounded.
+//! These buffers provide both compatibility methods that panic on overflow and
+//! fallible methods for runtime paths that must turn capacity exhaustion into a
+//! normal program error.
 
 use core::{
     fmt,
@@ -105,6 +106,21 @@ impl<T, const N: usize> FixedVec<T, N> {
     }
 
     #[inline]
+    pub fn try_resize(&mut self, len: usize, value: T) -> Result<(), T>
+    where
+        T: Clone,
+    {
+        if len > N {
+            return Err(value);
+        }
+        while self.len < len {
+            self.push(value.clone());
+        }
+        self.truncate(len);
+        Ok(())
+    }
+
+    #[inline]
     pub fn as_slice(&self) -> &[T] {
         unsafe { slice::from_raw_parts(self.data.as_ptr().cast(), self.len) }
     }
@@ -162,6 +178,10 @@ impl<T, const N: usize> FixedVec<T, N> {
     {
         self.as_slice().to_vec()
     }
+}
+
+impl<T: crate::Space, const N: usize> crate::Space for FixedVec<T, N> {
+    const INIT_SPACE: usize = 4 + T::INIT_SPACE * N;
 }
 
 impl<const N: usize> FixedVec<u8, N> {
