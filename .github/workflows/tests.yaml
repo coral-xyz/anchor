@@ -61,6 +61,9 @@ jobs:
           key: solana-platform-tools-${{ runner.os }}-${{ env.SBF_TOOLS_VERSION }}
       - run: cargo build-sbf --tools-version "$SBF_TOOLS_VERSION" --install-only
 
+      - name: Check V2 SBF dependency graph is alloc-free
+        run: ./.github/scripts/check-v2-no-alloc.sh
+
       # Tools for `make coverage-v2`:
       #   - lcov for merging sbf.lcov + host.lcov and generating the report.
       #   - cargo-llvm-cov for host-side instrumentation coverage.
