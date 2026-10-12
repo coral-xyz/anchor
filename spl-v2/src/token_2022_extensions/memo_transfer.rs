@@ -1,6 +1,6 @@
 use {
     super::common::validate_token_2022_program,
-    crate::{token_2022::spl_token_2022, token_shared::multisig_signer_addresses},
+    crate::token_shared::token_data_subinstruction,
     anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     solana_program_error::ProgramError,
 };
@@ -16,29 +16,14 @@ pub fn memo_transfer_initialize<'a>(
     ctx: CpiContext<'a, MemoTransfer<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::extension::memo_transfer::instruction::enable_required_transfer_memos(
-        &program,
-        ctx.accounts.account.address(),
-        ctx.accounts.owner.address(),
-        &signer_addresses,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_subinstruction(30, 0);
+    ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }
 
 pub fn memo_transfer_disable<'a>(
     ctx: CpiContext<'a, MemoTransfer<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix =
-        spl_token_2022::extension::memo_transfer::instruction::disable_required_transfer_memos(
-            &program,
-            ctx.accounts.account.address(),
-            ctx.accounts.owner.address(),
-            &signer_addresses,
-        )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_subinstruction(30, 1);
+    ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }

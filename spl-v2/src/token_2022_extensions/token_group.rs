@@ -1,9 +1,15 @@
 use {
     super::common::validate_token_2022_program,
+    crate::token_shared::{extend_token_data, push_optional_zero_address, TokenInstructionData},
     anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
 };
+
+const INITIALIZE_GROUP_DISCRIMINATOR: [u8; 8] =
+    [0x79, 0x71, 0x6c, 0x27, 0x36, 0x33, 0x00, 0x04];
+const INITIALIZE_MEMBER_DISCRIMINATOR: [u8; 8] =
+    [0x98, 0x20, 0xde, 0xb0, 0xdf, 0xed, 0x74, 0x86];
 
 #[derive(ToCpiAccounts)]
 pub struct TokenGroupInitialize<'a> {
@@ -30,30 +36,16 @@ pub fn token_group_initialize<'a>(
     max_size: u64,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let ix = spl_token_group_interface::instruction::initialize_group(
-        &program,
-        ctx.accounts.group.address(),
-        ctx.accounts.mint.address(),
-        ctx.accounts.mint_authority.address(),
-        update_authority.copied(),
-        max_size,
-    );
-    ctx.invoke_ix(ix)
+    let mut data = TokenInstructionData::new();
+    extend_token_data(&mut data, &INITIALIZE_GROUP_DISCRIMINATOR)?;
+    push_optional_zero_address(&mut data, update_authority);
+    extend_token_data(&mut data, &max_size.to_le_bytes())?;
+    ctx.invoke(&data)
 }
 
 pub fn token_member_initialize<'a>(
     ctx: CpiContext<'a, TokenMemberInitialize<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let ix = spl_token_group_interface::instruction::initialize_member(
-        &program,
-        ctx.accounts.member.address(),
-        ctx.accounts.member_mint.address(),
-        ctx.accounts.member_mint_authority.address(),
-        ctx.accounts.group.address(),
-        ctx.accounts.group_update_authority.address(),
-    );
-    ctx.invoke_ix(ix)
+    ctx.invoke(&INITIALIZE_MEMBER_DISCRIMINATOR)
 }

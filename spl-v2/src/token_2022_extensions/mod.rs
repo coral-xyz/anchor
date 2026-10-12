@@ -1,6 +1,6 @@
 //! Token-2022 extension CPI helpers.
 
-mod common;
+pub(crate) mod common;
 
 pub mod confidential_transfer;
 pub mod confidential_transfer_fee;
@@ -23,8 +23,8 @@ pub mod transfer_hook;
 pub use {
     default_account_state::*, group_member_pointer::*, group_pointer::*,
     immutable_owner::*, interest_bearing_mint::*, memo_transfer::*, metadata_pointer::*,
-    mint_close_authority::*, non_transferable::*, pausable::*, permanent_delegate::*, spl_pod,
-    spl_token_metadata_interface, token_group::*, token_metadata::*, transfer_fee::*,
+    mint_close_authority::*, non_transferable::*, pausable::*, permanent_delegate::* ,
+    token_group::*, token_metadata::*, transfer_fee::*,
     transfer_hook::*,
 };
 

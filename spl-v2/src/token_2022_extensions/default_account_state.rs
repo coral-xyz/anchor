@@ -1,6 +1,9 @@
 use {
     super::common::validate_token_2022_program,
-    crate::{token_2022::spl_token_2022, token_shared::multisig_signer_addresses},
+    crate::{
+        token_2022::spl_token_2022,
+        token_shared::{token_data_subinstruction, TokenInstructionData},
+    },
     anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     solana_program_error::ProgramError,
 };
@@ -22,14 +25,14 @@ pub fn default_account_state_initialize<'a>(
     state: &spl_token_2022::state::AccountState,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let ix =
-        spl_token_2022::extension::default_account_state::instruction::initialize_default_account_state(
-            &program,
-            ctx.accounts.mint.address(),
-            state,
-        )?;
-    ctx.invoke_ix(ix)
+    let state = match state {
+        spl_token_2022::state::AccountState::Uninitialized => 0,
+        spl_token_2022::state::AccountState::Initialized => 1,
+        spl_token_2022::state::AccountState::Frozen => 2,
+    };
+    let mut data: TokenInstructionData = token_data_subinstruction(28, 0);
+    data.push(state);
+    ctx.invoke(&data)
 }
 
 pub fn default_account_state_update<'a>(
@@ -37,15 +40,12 @@ pub fn default_account_state_update<'a>(
     state: &spl_token_2022::state::AccountState,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix =
-        spl_token_2022::extension::default_account_state::instruction::update_default_account_state(
-            &program,
-            ctx.accounts.mint.address(),
-            ctx.accounts.freeze_authority.address(),
-            &signer_addresses,
-            state,
-        )?;
-    ctx.invoke_ix(ix)
+    let state = match state {
+        spl_token_2022::state::AccountState::Uninitialized => 0,
+        spl_token_2022::state::AccountState::Initialized => 1,
+        spl_token_2022::state::AccountState::Frozen => 2,
+    };
+    let mut data: TokenInstructionData = token_data_subinstruction(28, 1);
+    data.push(state);
+    ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }

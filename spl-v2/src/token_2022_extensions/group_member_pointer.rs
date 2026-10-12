@@ -1,6 +1,10 @@
 use {
     super::common::validate_token_2022_program,
-    crate::{token_2022::spl_token_2022, token_shared::multisig_signer_addresses},
+    crate::{
+        token_shared::{
+            push_optional_zero_address, token_data_subinstruction, TokenInstructionData,
+        },
+    },
     anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
@@ -24,13 +28,10 @@ pub fn group_member_pointer_initialize<'a>(
     member_address: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let ix = spl_token_2022::extension::group_member_pointer::instruction::initialize(
-        ctx.program,
-        ctx.accounts.mint.address(),
-        authority.copied(),
-        member_address.copied(),
-    )?;
-    ctx.invoke_ix(ix)
+    let mut data: TokenInstructionData = token_data_subinstruction(41, 0);
+    push_optional_zero_address(&mut data, authority);
+    push_optional_zero_address(&mut data, member_address);
+    ctx.invoke(&data)
 }
 
 pub fn group_member_pointer_update<'a>(
@@ -38,13 +39,7 @@ pub fn group_member_pointer_update<'a>(
     member_address: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::extension::group_member_pointer::instruction::update(
-        ctx.program,
-        ctx.accounts.mint.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-        member_address.copied(),
-    )?;
-    ctx.invoke_ix(ix)
+    let mut data: TokenInstructionData = token_data_subinstruction(41, 1);
+    push_optional_zero_address(&mut data, member_address);
+    ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }

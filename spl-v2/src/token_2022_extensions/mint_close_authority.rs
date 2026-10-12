@@ -1,6 +1,6 @@
 use {
     super::common::validate_token_2022_program,
-    crate::token_2022::spl_token_2022,
+    crate::token_shared::token_data_option_address,
     anchor_lang::{CpiContext, CpiHandleMut, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
@@ -16,12 +16,6 @@ pub fn mint_close_authority_initialize<'a>(
     close_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let close_authority = close_authority.copied();
-    let ix = spl_token_2022::instruction::initialize_mint_close_authority(
-        &program,
-        ctx.accounts.mint.address(),
-        close_authority.as_ref(),
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_option_address(25, close_authority);
+    ctx.invoke(&data)
 }

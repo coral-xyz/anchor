@@ -1,6 +1,6 @@
 use {
     super::common::validate_token_2022_program,
-    crate::token_2022::spl_token_2022,
+    crate::token_shared::token_data,
     anchor_lang::{CpiContext, CpiHandleMut, ToCpiAccounts},
     solana_program_error::ProgramError,
 };
@@ -14,10 +14,6 @@ pub fn immutable_owner_initialize<'a>(
     ctx: CpiContext<'a, ImmutableOwnerInitialize<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let ix = spl_token_2022::instruction::initialize_immutable_owner(
-        &program,
-        ctx.accounts.token_account.address(),
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data(22);
+    ctx.invoke(&data)
 }

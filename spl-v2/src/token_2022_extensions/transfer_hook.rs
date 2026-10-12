@@ -1,6 +1,11 @@
 use {
     super::common::validate_token_2022_program,
-    crate::{token_2022::spl_token_2022, token_shared::multisig_signer_addresses},
+    crate::{
+        token_shared::{
+            push_optional_zero_address, token_data_subinstruction,
+            TokenInstructionData,
+        },
+    },
     anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
@@ -24,14 +29,10 @@ pub fn transfer_hook_initialize<'a>(
     transfer_hook_program_id: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let ix = spl_token_2022::extension::transfer_hook::instruction::initialize(
-        &program,
-        ctx.accounts.mint.address(),
-        authority.copied(),
-        transfer_hook_program_id.copied(),
-    )?;
-    ctx.invoke_ix(ix)
+    let mut data: TokenInstructionData = token_data_subinstruction(36, 0);
+    push_optional_zero_address(&mut data, authority);
+    push_optional_zero_address(&mut data, transfer_hook_program_id);
+    ctx.invoke(&data)
 }
 
 pub fn transfer_hook_update<'a>(
@@ -39,14 +40,7 @@ pub fn transfer_hook_update<'a>(
     transfer_hook_program_id: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::extension::transfer_hook::instruction::update(
-        &program,
-        ctx.accounts.mint.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-        transfer_hook_program_id.copied(),
-    )?;
-    ctx.invoke_ix(ix)
+    let mut data = token_data_subinstruction(36, 1);
+    push_optional_zero_address(&mut data, transfer_hook_program_id);
+    ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }
