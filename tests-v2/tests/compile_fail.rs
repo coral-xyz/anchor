@@ -1571,6 +1571,52 @@ fn declare_program_accepts_bytemuck_nested_type() {
 }
 
 #[test]
+fn declare_program_accepts_bytemuck_pod_wrapper_fields() {
+    declare_program_case(
+        "declare_program_bytemuck_pod_wrapper_fields",
+        r#"{
+  "address": "11111111111111111111111111111111",
+  "metadata": { "name": "pod_wrappers", "version": "0.1.0", "spec": "0.1.0" },
+  "instructions": [],
+  "types": [
+    { "name": "PodBool", "type": { "kind": "type", "alias": "bool" } },
+    { "name": "PodU16", "type": { "kind": "type", "alias": "u16" } },
+    { "name": "PodU32", "type": { "kind": "type", "alias": "u32" } },
+    { "name": "PodU64", "type": { "kind": "type", "alias": "u64" } },
+    {
+      "name": "Nested",
+      "serialization": "bytemuck",
+      "repr": { "kind": "c" },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "bump", "type": "u8" },
+          { "name": "next", "type": { "defined": { "name": "PodU32" } } }
+        ]
+      }
+    },
+    {
+      "name": "Holder",
+      "serialization": "bytemuck",
+      "repr": { "kind": "c" },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "owner", "type": "pubkey" },
+          { "name": "pause", "type": { "defined": { "name": "PodBool" } } },
+          { "name": "min", "type": { "defined": { "name": "PodU64" } } },
+          { "name": "len", "type": { "defined": { "name": "PodU16" } } },
+          { "name": "nested", "type": { "defined": { "name": "Nested" } } }
+        ]
+      }
+    }
+  ]
+}"#,
+    )
+    .expect_pass();
+}
+
+#[test]
 fn idl_bytemuck_requires_repr_c() {
     CompileCase::new(
         "idl_bytemuck_requires_repr_c",

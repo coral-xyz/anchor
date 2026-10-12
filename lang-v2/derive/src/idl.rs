@@ -107,9 +107,7 @@ impl<'a> TypeLowerer<'a> {
             "u8" | "u16" | "u32" | "u64" | "u128" | "i8" | "i16" | "i32" | "i64" | "i128"
             | "f32" | "f64" | "bool" => json!(path),
             "PodU16" | "PodU32" | "PodU64" | "PodU128" | "PodI16" | "PodI32" | "PodI64"
-            | "PodI128" | "PodBool" => {
-                json!(path.trim_start_matches("Pod").to_ascii_lowercase())
-            }
+            | "PodI128" | "PodBool" => json!({ "defined": { "name": path } }),
             "String" | "string" | "str" => json!("string"),
             "Pubkey" | "Address" | "pubkey" => json!("pubkey"),
             "Vec" => {
@@ -257,7 +255,7 @@ fn pod_vec_type_to_idl_value(ty: &Type) -> Option<Value> {
                     "generics": [
                         {
                             "kind": "type",
-                            "type": pod_vec_element_type_to_idl_value(inner_ty),
+                            "type": TypeLowerer::default().lower(inner_ty),
                         },
                         {
                             "kind": "const",
@@ -268,26 +266,6 @@ fn pod_vec_type_to_idl_value(ty: &Type) -> Option<Value> {
             }))
         }
         _ => None,
-    }
-}
-
-fn pod_vec_element_type_to_idl_value(ty: &Type) -> Value {
-    match ty {
-        Type::Path(type_path) => {
-            let Some(segment) = type_path.path.segments.last() else {
-                return TypeLowerer::default().lower(ty);
-            };
-            match normalize_builtin_path(&segment.ident.to_string()) {
-                "PodBool" | "PodU16" | "PodU32" | "PodU64" | "PodU128" | "PodI16" | "PodI32"
-                | "PodI64" | "PodI128" => json!({
-                    "defined": {
-                        "name": segment.ident.to_string(),
-                    }
-                }),
-                _ => TypeLowerer::default().lower(ty),
-            }
-        }
-        _ => TypeLowerer::default().lower(ty),
     }
 }
 
@@ -1556,6 +1534,24 @@ mod tests {
         assert_eq!(
             rust_type_to_idl_value(&primitive_named_user_ty),
             json!({ "defined": { "name": "u8" } })
+        );
+    }
+
+    #[test]
+    fn pod_scalar_wrappers_lower_to_defined_names() {
+        let ty: Type = syn::parse_quote!(PodU64);
+        assert_eq!(rust_type_to_idl_value(&ty), json!({ "defined": { "name": "PodU64" } }));
+
+        let ty: Type = syn::parse_quote!(PodBool);
+        assert_eq!(rust_type_to_idl_value(&ty), json!({ "defined": { "name": "PodBool" } }));
+
+        let ty: Type = syn::parse_quote!(anchor_lang::pod::PodU16);
+        assert_eq!(rust_type_to_idl_value(&ty), json!({ "defined": { "name": "PodU16" } }));
+
+        let ty: Type = syn::parse_quote!([PodI32; 2]);
+        assert_eq!(
+            rust_type_to_idl_value(&ty),
+            json!({ "array": [{ "defined": { "name": "PodI32" } }, 2] })
         );
     }
 
