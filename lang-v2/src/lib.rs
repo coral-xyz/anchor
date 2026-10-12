@@ -3,8 +3,10 @@
 //! `#![no_std]` compatible.
 
 #![no_std]
-extern crate alloc;
 extern crate self as anchor_lang;
+
+#[cfg(not(target_os = "solana"))]
+extern crate std;
 
 pub mod accounts;
 pub mod context;
@@ -13,8 +15,11 @@ pub mod cpi;
 pub mod cursor;
 mod dispatch;
 pub mod event;
+mod fixed_vec;
 pub mod hash;
+mod idl;
 #[doc(hidden)]
+#[cfg(not(target_os = "solana"))]
 pub mod idl_build;
 pub mod loader;
 pub mod pod;
@@ -38,16 +43,20 @@ pub use solana_address::{address, declare_id};
 /// Implementation detail of [`solana_msg`] - re-exported for macro access only.
 #[doc(hidden)]
 pub use solana_msg;
-// Re-export for `debug!` macro — routes through this crate's namespace so
-// user programs don't need `solana-program-log` or `extern crate alloc;`.
-#[cfg(feature = "compat")]
+#[cfg(not(target_os = "solana"))]
 #[doc(hidden)]
-pub use solana_program_log::log as __log_str;
-
-// Ungated re-export so generated macro code (`#[event]`, `debug!`, etc.)
-// can reach `Vec` without std or `extern crate alloc;` in user crates.
-#[doc(hidden)]
-pub extern crate alloc as __alloc;
+pub mod __idl {
+    pub use std::{
+        boxed,
+        boxed::Box,
+        collections,
+        format,
+        string,
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+}
 
 /// Logs a message via `solana_msg`.
 ///
@@ -63,10 +72,7 @@ macro_rules! msg {
     }};
 }
 
-/// v1-compat logger with full `format!` support (`{:?}`, `{:x}`, etc.).
-///
-/// Heap-allocates via `alloc::format!`. Prefer [`msg!`] for production
-/// (cheaper CUs). Gated behind `compat`.
+/// v1-compat logger. Gated behind `compat`.
 ///
 /// # Example
 ///
@@ -76,15 +82,49 @@ macro_rules! msg {
 #[cfg(feature = "compat")]
 #[macro_export]
 macro_rules! debug {
-    ($msg:expr) => {{
-        $crate::__log_str($msg)
-    }};
-    ($($arg:tt)*) => {{
-        $crate::__log_str(&$crate::__alloc::format!($($arg)*))
-    }};
+    ($($arg:tt)*) => {{ $crate::msg!($($arg)*) }};
 }
 // Re-export wincode for instruction data serialization
 pub use wincode;
+
+pub use fixed_vec::FixedVec;
+pub use idl::{IdlAccountType, IdlEntries};
+pub const MAX_ACCOUNT_METAS: usize = pinocchio::MAX_TX_ACCOUNTS;
+pub const MAX_INSTRUCTION_DATA: usize = 1232;
+#[cfg(not(target_os = "solana"))]
+pub type AccountMetaBuffer = std::vec::Vec<AccountMeta>;
+#[cfg(target_os = "solana")]
+pub type AccountMetaBuffer = FixedVec<AccountMeta, MAX_ACCOUNT_METAS>;
+#[cfg(not(target_os = "solana"))]
+pub type InstructionAccountBuffer<'a> =
+    std::vec::Vec<pinocchio::instruction::InstructionAccount<'a>>;
+#[cfg(target_os = "solana")]
+pub type InstructionAccountBuffer<'a> =
+    FixedVec<pinocchio::instruction::InstructionAccount<'a>, MAX_ACCOUNT_METAS>;
+#[cfg(not(target_os = "solana"))]
+pub type AccountViewBuffer = std::vec::Vec<pinocchio::account::AccountView>;
+#[cfg(target_os = "solana")]
+pub type AccountViewBuffer = FixedVec<pinocchio::account::AccountView, MAX_ACCOUNT_METAS>;
+#[cfg(not(target_os = "solana"))]
+pub type CpiHandleBuffer<'a> = std::vec::Vec<CpiHandle<'a>>;
+#[cfg(target_os = "solana")]
+pub type CpiHandleBuffer<'a> = FixedVec<CpiHandle<'a>, MAX_ACCOUNT_METAS>;
+#[cfg(not(target_os = "solana"))]
+pub type BoolBuffer = std::vec::Vec<bool>;
+#[cfg(target_os = "solana")]
+pub type BoolBuffer = FixedVec<bool, MAX_ACCOUNT_METAS>;
+#[cfg(not(target_os = "solana"))]
+pub type InstructionDataBuffer = std::vec::Vec<u8>;
+#[cfg(target_os = "solana")]
+pub type InstructionDataBuffer = FixedVec<u8, MAX_INSTRUCTION_DATA>;
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __anchor_program_allocator {
+    () => {
+        $crate::pinocchio::no_allocator!();
+    };
+}
 
 /// Borsh-compatible wincode config: u8 enum tags + fixed u32 LE length
 /// prefixes. Used for borsh-compatible v2 serialization paths (instruction
@@ -179,7 +219,6 @@ pub use cpi::create_account_with_signers;
 /// its associated items — they are implementation details of the IDL
 /// build pipeline and will change without notice. See [`idl_build`] for
 /// the trait definition.
-pub use idl_build::IdlAccountType;
 /// Metadata for a single account in a transaction instruction.
 ///
 /// Re-exported from `solana-instruction` so tests and CPI builders can pass
@@ -257,12 +296,12 @@ pub mod solana_program {
 
 /// Converts a struct of account addresses into a list of [`AccountMeta`]s.
 pub trait ToAccountMetas {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> alloc::vec::Vec<AccountMeta>;
+    fn to_account_metas(&self, is_signer: Option<bool>) -> AccountMetaBuffer;
 }
 
 /// Serializes instruction data: discriminator prefix + LE-encoded args.
 pub trait InstructionData: Discriminator {
-    fn data(&self) -> alloc::vec::Vec<u8>;
+    fn data(&self) -> InstructionDataBuffer;
 }
 
 /// Compile-time account-size calculation. Derived via `#[derive(InitSpace)]`.
