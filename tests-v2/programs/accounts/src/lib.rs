@@ -2,10 +2,7 @@
 //! seeds, and CPI suites: Sysvar, Box<Account>, SystemAccount, and bare
 //! UncheckedAccount values.
 
-extern crate alloc;
-
 use {
-    alloc::string::String,
     anchor_lang::{
         accounts::Slab,
         prelude::*,
@@ -384,7 +381,7 @@ pub mod accounts_test {
         let cpi_ctx = CpiContext::new(ctx.accounts.system_program.address(), cpi_accounts);
         system_program::transfer_with_seed(
             cpi_ctx,
-            String::from(SYSTEM_TRANSFER_SEED),
+            SYSTEM_TRANSFER_SEED,
             &system_program::ID,
             amount,
         )?;
@@ -603,7 +600,7 @@ pub mod accounts_test {
                         to: ctx.accounts.c.cpi_handle_mut(),
                     },
                 ),
-                String::from(SYSTEM_TRANSFER_SEED),
+                SYSTEM_TRANSFER_SEED,
                 &system_program::ID,
                 1,
             ),
