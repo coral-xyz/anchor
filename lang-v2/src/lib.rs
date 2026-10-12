@@ -89,7 +89,14 @@ pub use wincode;
 
 pub use fixed_vec::FixedVec;
 pub use idl::{IdlAccountType, IdlEntries};
-pub const MAX_ACCOUNT_METAS: usize = pinocchio::MAX_TX_ACCOUNTS;
+/// Maximum number of account metas held by an on-chain V2 inline buffer.
+///
+/// Pinocchio permits up to 255 transaction accounts, but using that value for
+/// every allocator-free CPI buffer would place large `CpiAccount` arrays on
+/// the SBF stack. Keep the inline runtime bound deliberately small so common
+/// CPI paths remain within Solana's stack limit; callers needing more account
+/// metas must split the operation into smaller instructions.
+pub const MAX_ACCOUNT_METAS: usize = 16;
 pub const MAX_INSTRUCTION_DATA: usize = 1232;
 #[cfg(not(target_os = "solana"))]
 pub type AccountMetaBuffer = std::vec::Vec<AccountMeta>;
