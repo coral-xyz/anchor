@@ -18,7 +18,10 @@ use {
     },
 };
 
-const ANCHOR_MSRV: &str = "1.97.1";
+// SBF programs use the compiler bundled with platform-tools.
+const ANCHOR_MSRV: &str = "1.89.0";
+// Host-side tests depend on Agave and LiteSVM, which require newer Rust.
+const HOST_RUST_VERSION: &str = "1.97.1";
 
 /// Program initialization template
 #[derive(Clone, Debug, Default, Eq, PartialEq, Parser, ValueEnum, AbsolutePath)]
@@ -79,7 +82,7 @@ pub fn create_program(
 fn rust_toolchain_toml() -> String {
     format!(
         r#"[toolchain]
-channel = "{ANCHOR_MSRV}"
+channel = "{HOST_RUST_VERSION}"
 components = ["rustfmt","clippy"]
 profile = "minimal"
 "#
@@ -893,7 +896,7 @@ name = "tests"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
-rust-version = "{ANCHOR_MSRV}"
+rust-version = "{HOST_RUST_VERSION}"
 
 [dependencies]
 # Once anchor-client v2 is published to crates.io, swap to: anchor-client = "{VERSION}"
