@@ -456,6 +456,8 @@ fn namespaced_constraints_accept_qualified_constants_as_values() {
         r#"
 use anchor_lang::prelude::*;
 
+declare_id!("11111111111111111111111111111111");
+
 #[derive(Default, anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
 pub struct Counter {
     pub value: u64,
@@ -597,7 +599,7 @@ fn namespaced_constraints_reject_self_refs_during_init() {
         "namespaced_constraint_init_self_ref",
         r#"
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount};
+use anchor_spl::{mint::Mint, token::{Token, TokenAccount}};
 
 declare_id!("Con9ukTn9BRPXWcjS2UBbuN3NnCwy1hcaDNZ9Hb8QMNp");
 
@@ -605,7 +607,8 @@ declare_id!("Con9ukTn9BRPXWcjS2UBbuN3NnCwy1hcaDNZ9Hb8QMNp");
 pub struct Bad {
     #[account(mut)]
     pub payer: Signer,
-    #[account(init, payer = payer, token::authority = token_account)]
+    pub mint: Account<Mint>,
+    #[account(init, payer = payer, token::mint = mint, token::authority = token_account)]
     pub token_account: Account<TokenAccount>,
     pub token_program: Program<Token>,
     pub system_program: Program<System>,
@@ -1777,8 +1780,10 @@ pub struct Bad {
     .expect_fail(&["expected `()`, found `(u64,)`"]);
 }
 
+// Handler arguments are decoded independently from the Accounts instruction tuple.
+// Each tuple is deserialized from the instruction bytes at runtime.
 #[test]
-fn extra_instruction_args_do_not_compile() {
+fn extra_instruction_args_compile_with_independent_handler_decode() {
     CompileCase::new(
         "extra_instruction_args",
         r#"
@@ -1804,11 +1809,11 @@ pub struct Bad {
 }
 "#,
     )
-    .expect_fail(&["the trait bound", "__AnchorIxArgCoerce"]);
+    .expect_pass();
 }
 
 #[test]
-fn missing_instruction_args_do_not_compile() {
+fn missing_instruction_args_compile_with_independent_handler_decode() {
     CompileCase::new(
         "missing_instruction_args",
         r#"
@@ -1834,11 +1839,11 @@ pub struct Bad {
 }
 "#,
     )
-    .expect_fail(&["the trait bound", "__AnchorIxArgCoerce"]);
+    .expect_pass();
 }
 
 #[test]
-fn wrong_instruction_arg_type_does_not_compile() {
+fn different_instruction_arg_types_compile_with_independent_handler_decode() {
     CompileCase::new(
         "wrong_instruction_arg_type",
         r#"
@@ -1864,11 +1869,11 @@ pub struct Bad {
 }
 "#,
     )
-    .expect_fail(&["the trait bound", "__AnchorIxArgCoerce"]);
+    .expect_pass();
 }
 
 #[test]
-fn swapped_instruction_arg_types_do_not_compile() {
+fn swapped_instruction_arg_types_compile_with_independent_handler_decode() {
     CompileCase::new(
         "swapped_instruction_arg_types",
         r#"
@@ -1894,7 +1899,7 @@ pub struct Bad {
 }
 "#,
     )
-    .expect_fail(&["the trait bound", "__AnchorIxArgCoerce"]);
+    .expect_pass();
 }
 
 #[test]
@@ -2403,6 +2408,8 @@ fn realloc_on_borsh_account_alias_compiles() {
         "realloc_on_borsh_account_alias",
         r#"
 use anchor_lang::prelude::*;
+
+declare_id!("11111111111111111111111111111111");
 
 #[derive(anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize, Default)]
 pub struct Data {

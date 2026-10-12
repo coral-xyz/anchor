@@ -59,6 +59,8 @@ impl Deref for FakeMintAccount {
     }
 }
 
+impl anchor_lang::IdlAccountType for FakeMintAccount {}
+
 impl AnchorAccount for FakeMintAccount {
     type Data = FakeMintData;
     const MIN_DATA_LEN: usize = FAKE_MINT_LEN;
@@ -130,6 +132,8 @@ impl Deref for FakeTokenAccount {
         &self.data
     }
 }
+
+impl anchor_lang::IdlAccountType for FakeTokenAccount {}
 
 impl AnchorAccount for FakeTokenAccount {
     type Data = FakeTokenData;
