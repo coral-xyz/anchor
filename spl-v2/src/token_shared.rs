@@ -4,13 +4,10 @@
 //! multisigs. For a multisig, pass the member signer handles in canonical
 //! order through [`CpiContext::with_remaining_accounts`].
 
-extern crate alloc;
-
 #[cfg(feature = "guardrails")]
 use anchor_lang::{require, Id};
 use {
-    alloc::vec::Vec,
-    anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
+    anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, FixedVec, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
     spl_token_2022_interface as spl_token_2022,
@@ -19,8 +16,14 @@ use {
 /// SPL Token encodes a multisig authority by marking the authority account
 /// non-signer and appending each member signer to the instruction. Token CPI
 /// callers provide those member handles through `remaining_accounts`.
-pub(crate) fn multisig_signer_addresses<'a>(accounts: &[CpiHandle<'a>]) -> Vec<&'a Address> {
-    accounts.iter().map(CpiHandle::address).collect()
+pub(crate) fn multisig_signer_addresses<'a>(
+    accounts: &[CpiHandle<'a>],
+) -> FixedVec<&'a Address, { anchor_lang::MAX_ACCOUNT_METAS }> {
+    let mut addresses = FixedVec::new();
+    for account in accounts {
+        addresses.push(account.address());
+    }
+    addresses
 }
 
 #[cfg(feature = "guardrails")]
