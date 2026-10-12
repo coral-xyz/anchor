@@ -85,7 +85,7 @@ use {
 ///     bar: AccountLoader<'info, Bar>,
 ///     #[account(mut)]
 ///     authority: Signer<'info>,
-///     system_program: AccountInfo<'info>,
+///     system_program: UncheckedAccount<'info>,
 /// }
 ///
 /// #[derive(Accounts)]
