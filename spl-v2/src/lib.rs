@@ -13,17 +13,16 @@
 
 #![no_std]
 
-extern crate alloc;
-
 pub mod associated_token;
 pub mod extensions;
-#[cfg(feature = "metadata")]
+#[cfg(all(feature = "metadata", not(target_os = "solana")))]
 pub mod metadata;
 pub mod mint;
 pub mod token;
 pub mod token_2022;
 pub mod token_2022_extensions;
 pub mod token_interface;
+mod protocol;
 mod token_shared;
 
 pub mod prelude {

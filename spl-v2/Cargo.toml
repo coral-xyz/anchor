@@ -21,17 +21,8 @@ pinocchio = { workspace = true }
 pinocchio-token = "0.6"
 pinocchio-token-2022 = "0.3"
 bytemuck = { version = "1", features = ["derive"] }
-borsh = "1.6.1"
-solana-address = { workspace = true, features = ["bytemuck"] }
-solana-instruction = { workspace = true, default-features = true }
+solana-address = { workspace = true, default-features = false, features = ["bytemuck"] }
 solana-program-error.workspace = true
-solana-pubkey.workspace = true
-spl-pod = "0.7"
-spl-token-interface = "2"
-spl-token-2022-interface = "2"
-spl-token-group-interface = "0.7"
-spl-token-metadata-interface = "0.8"
-mpl-token-metadata = { version = "=5.1.2-alpha.2", optional = true }
 
 [dev-dependencies]
 anchor-lang = { workspace = true, features = ["testing"] }
@@ -39,6 +30,13 @@ borsh = "1.6.1"
 # Cross-checks `Mint` / `TokenAccount` layout against the canonical
 # `spl-token-interface` types (see `tests/miri_spl_pod.rs`). Dev-only.
 solana-program-pack.workspace = true
+spl-token-interface = "2.0"
+
+[target.'cfg(not(target_os = "solana"))'.dependencies]
+borsh = "1.6.1"
+solana-instruction = { workspace = true, default-features = true }
+solana-pubkey.workspace = true
+mpl-token-metadata = { version = "=5.1.2-alpha.2", optional = true }
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
