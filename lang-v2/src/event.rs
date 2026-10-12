@@ -25,6 +25,13 @@ pub const EVENT_IX_TAG_LE: &[u8] = &EVENT_IX_TAG.to_le_bytes();
 pub trait Event: Discriminator {
     /// Serialize the event: discriminator bytes followed by event data.
     fn data(&self) -> InstructionDataBuffer;
+
+    /// Fallible event serialization for allocator-free runtime paths.
+    /// Generated V2 events override this method; the default preserves the
+    /// legacy infallible implementation contract for custom events.
+    fn try_data(&self) -> Result<InstructionDataBuffer, solana_program_error::ProgramError> {
+        Ok(self.data())
+    }
 }
 
 /// Log event data via the `sol_log_data` syscall.
