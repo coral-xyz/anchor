@@ -1,0 +1,63 @@
+#[cfg(target_os = "solana")]
+use crate::FixedVec;
+
+#[cfg(not(target_os = "solana"))]
+pub type IdlEntries = std::vec::Vec<&'static str>;
+#[cfg(target_os = "solana")]
+pub type IdlEntries = FixedVec<&'static str, { crate::MAX_ACCOUNT_METAS }>;
+
+/// Compile-time IDL metadata hooks. The registration surface is bounded so
+/// the runtime crate does not require a heap even when IDL support is disabled.
+pub trait IdlAccountType {
+    const __IDL_ACCOUNT_ENTRY: Option<&'static str> = None;
+    const __IDL_TYPE_DEF: Option<&'static str> = None;
+    const __IDL_IS_SIGNER: bool = false;
+    const __IDL_ADDRESS: Option<&'static str> = None;
+
+    fn __idl_account_entry() -> Option<&'static str> {
+        Self::__IDL_ACCOUNT_ENTRY
+    }
+
+    fn __idl_type_def() -> Option<&'static str> {
+        Self::__IDL_TYPE_DEF
+    }
+
+    fn __register_idl_deps(_accounts: &mut IdlEntries, _types: &mut IdlEntries) {}
+}
+
+macro_rules! impl_leaf_idl_types {
+    ($($ty:ty),* $(,)?) => {
+        $(impl IdlAccountType for $ty {})*
+    };
+}
+
+impl_leaf_idl_types!(
+    (), bool, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128,
+    crate::Address,
+);
+
+impl<T: IdlAccountType + ?Sized> IdlAccountType for &T {
+    fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+        T::__register_idl_deps(accounts, types);
+    }
+}
+impl<T: IdlAccountType> IdlAccountType for &mut T {
+    fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+        T::__register_idl_deps(accounts, types);
+    }
+}
+impl<T: IdlAccountType> IdlAccountType for Option<T> {
+    fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+        T::__register_idl_deps(accounts, types);
+    }
+}
+impl<T: IdlAccountType, const N: usize> IdlAccountType for [T; N] {
+    fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+        T::__register_idl_deps(accounts, types);
+    }
+}
+impl<T: IdlAccountType> IdlAccountType for [T] {
+    fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+        T::__register_idl_deps(accounts, types);
+    }
+}
