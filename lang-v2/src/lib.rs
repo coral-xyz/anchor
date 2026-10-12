@@ -65,11 +65,11 @@ pub mod __idl {
 #[doc(hidden)]
 pub mod __idl {
     pub mod string {
-        pub type String = crate::FixedVec<u8, crate::MAX_IDL_SEQUENCE>;
+        pub type String = crate::FixedVec<u8, { crate::MAX_IDL_SEQUENCE }>;
     }
 
     pub mod vec {
-        pub type Vec<T> = crate::FixedVec<T, crate::MAX_IDL_SEQUENCE>;
+        pub type Vec<T> = crate::FixedVec<T, { crate::MAX_IDL_SEQUENCE }>;
     }
 }
 
