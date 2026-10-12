@@ -49,13 +49,28 @@ pub mod __idl {
     pub use std::{
         boxed,
         boxed::Box,
-        collections,
-        format,
-        string,
+        collections, format, string,
         string::{String, ToString},
         vec,
         vec::Vec,
     };
+}
+
+/// No-alloc compatibility namespace used by generated `declare_program!`
+/// bindings. Host builds keep the standard library's owned collections so
+/// client APIs remain unchanged. On-chain generated bindings use bounded
+/// transient buffers instead; callers must stay within this explicit limit or
+/// split the instruction.
+#[cfg(target_os = "solana")]
+#[doc(hidden)]
+pub mod __idl {
+    pub mod string {
+        pub type String = crate::FixedVec<u8, crate::MAX_IDL_SEQUENCE>;
+    }
+
+    pub mod vec {
+        pub type Vec<T> = crate::FixedVec<T, crate::MAX_IDL_SEQUENCE>;
+    }
 }
 
 /// Logs a message via `solana_msg`.
@@ -98,6 +113,9 @@ pub use idl::{IdlAccountType, IdlEntries};
 /// metas must split the operation into smaller instructions.
 pub const MAX_ACCOUNT_METAS: usize = 16;
 pub const MAX_INSTRUCTION_DATA: usize = 1232;
+/// Maximum number of elements in an allocator-free collection emitted by
+/// generated on-chain IDL bindings.
+pub const MAX_IDL_SEQUENCE: usize = 256;
 #[cfg(not(target_os = "solana"))]
 pub type AccountMetaBuffer = std::vec::Vec<AccountMeta>;
 #[cfg(target_os = "solana")]
@@ -241,8 +259,9 @@ pub use solana_instruction::account_meta::AccountMeta;
 pub use {
     accounts::{AccountInitialize, SlabInit},
     anchor_derive_accounts::{
-        access_control, account, constant, declare_program, emit, error_code, event, pod_wrapper,
-        program, Accounts, AnchorDeserialize, AnchorSerialize, InitSpace, ToCpiAccounts, __erase,
+        __erase, access_control, account, constant, declare_program, emit, error_code, event,
+        pod_wrapper, program, Accounts, AnchorDeserialize, AnchorSerialize, InitSpace,
+        ToCpiAccounts,
     },
     bytemuck,
     context::{Bumps, Context, MutMask},
