@@ -6,7 +6,7 @@
 pub use {
     crate::mint::Mint,
     anchor_lang::programs::Token,
-    spl_token_interface::{self as spl_token, ID},
+    crate::protocol::token::{self as spl_token, ID},
 };
 use {
     anchor_lang::{
@@ -17,7 +17,7 @@ use {
     pinocchio::account::AccountView,
     solana_address::Address,
     solana_program_error::ProgramError,
-    spl_token_2022_interface as spl_token_2022,
+    crate::protocol::token_2022::{self as spl_token_2022},
 };
 
 pub(crate) const COPTION_NONE: [u8; 4] = [0, 0, 0, 0];

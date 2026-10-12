@@ -32,16 +32,184 @@ use {
     bytemuck::{Pod, Zeroable},
     core::ops::Deref,
     pinocchio::account::AccountView,
+    crate::protocol::token_2022::extension::{
+        BaseState, ExtensionType as Token2022ExtensionType, PodAccount, PodMint,
+    },
     solana_address::Address,
     solana_program_error::ProgramError,
-    spl_token_2022_interface::{
-        extension::{
-            BaseStateWithExtensions, ExtensionType as Token2022ExtensionType,
-            PodStateWithExtensions,
-        },
-        pod::{PodAccount, PodMint},
-    },
 };
+
+const TLV_HEADER_LEN: usize = 4;
+const TOKEN_ACCOUNT_LEN: usize = 165;
+const MULTISIG_LEN: usize = 355;
+
+/// Return the Token-2022 TLV area without using the allocator-backed SPL
+/// `PodStateWithExtensions` parser.
+///
+/// The SPL parser currently checks the padding with `vec![0; ...]`. That is
+/// fine for host code, but panics on SBF in an `alloc`-free program. Keep the
+/// equivalent checks local so interface accounts remain usable on-chain.
+#[inline(always)]
+fn interface_tlv_data<S: BaseState>(data: &[u8]) -> Result<&[u8], ProgramError> {
+    if data.len() == MULTISIG_LEN || data.len() < S::SIZE_OF {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let rest = &data[S::SIZE_OF..];
+    if rest.is_empty() {
+        return Ok(&[]);
+    }
+
+    let account_type_index = TOKEN_ACCOUNT_LEN.saturating_sub(S::SIZE_OF);
+    let tlv_start_index = account_type_index.saturating_add(1);
+    if rest.len() < tlv_start_index
+        || rest[..account_type_index].iter().any(|byte| *byte != 0)
+        || rest[account_type_index] != S::ACCOUNT_TYPE as u8
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    Ok(&rest[tlv_start_index..])
+}
+
+#[inline(always)]
+fn interface_extension<'a, S, T>(data: &'a [u8]) -> Result<&'a T, ProgramError>
+where
+    S: BaseState,
+    T: crate::extensions::ExtensionType,
+{
+    if T::TYPE.get_account_type() != S::ACCOUNT_TYPE {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let tlv_data = interface_tlv_data::<S>(data)?;
+    let wanted = u16::from(T::TYPE);
+    let mut offset = 0usize;
+    while offset < tlv_data.len() {
+        let header_end = offset
+            .checked_add(TLV_HEADER_LEN)
+            .ok_or(ProgramError::InvalidAccountData)?;
+        if header_end > tlv_data.len() {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        let extension_type = u16::from_le_bytes([tlv_data[offset], tlv_data[offset + 1]]);
+        let extension_len =
+            u16::from_le_bytes([tlv_data[offset + 2], tlv_data[offset + 3]]) as usize;
+        let value_end = header_end
+            .checked_add(extension_len)
+            .ok_or(ProgramError::InvalidAccountData)?;
+        if value_end > tlv_data.len() {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if extension_type == wanted {
+            return bytemuck::try_from_bytes(&tlv_data[header_end..value_end])
+                .map_err(|_| ProgramError::InvalidArgument);
+        }
+        if extension_type == u16::from(Token2022ExtensionType::Uninitialized) {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        offset = value_end;
+    }
+
+    Err(ProgramError::InvalidAccountData)
+}
+
+#[inline(always)]
+fn account_extension_tlv_len(payload_len: usize) -> usize {
+    TLV_HEADER_LEN + payload_len
+}
+
+/// Calculate the account size required by the mint's account extensions.
+///
+/// This is the no-alloc equivalent of
+/// `ExtensionType::get_required_init_account_extensions` followed by
+/// `try_calculate_account_len` for the fixed-size extensions supported by the
+/// interface initializer.
+#[inline(always)]
+fn token_account_init_space_from_mint(tlv_data: &[u8]) -> Result<usize, ProgramError> {
+    let mut needs_transfer_fee_amount = false;
+    let mut needs_non_transferable = false;
+    let mut needs_immutable_owner = false;
+    let mut needs_transfer_hook = false;
+    let mut needs_pausable = false;
+    let mut offset = 0usize;
+
+    while offset < tlv_data.len() {
+        let header_end = offset
+            .checked_add(TLV_HEADER_LEN)
+            .ok_or(ProgramError::InvalidAccountData)?;
+        if header_end > tlv_data.len() {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        let extension_type = Token2022ExtensionType::try_from(u16::from_le_bytes([
+            tlv_data[offset],
+            tlv_data[offset + 1],
+        ]))
+        .map_err(|_| ProgramError::InvalidAccountData)?;
+        if extension_type == Token2022ExtensionType::Uninitialized {
+            break;
+        }
+
+        let extension_len =
+            u16::from_le_bytes([tlv_data[offset + 2], tlv_data[offset + 3]]) as usize;
+        let value_end = header_end
+            .checked_add(extension_len)
+            .ok_or(ProgramError::InvalidAccountData)?;
+        if value_end > tlv_data.len() {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        match extension_type {
+            Token2022ExtensionType::TransferFeeConfig => needs_transfer_fee_amount = true,
+            Token2022ExtensionType::NonTransferable => {
+                needs_non_transferable = true;
+                needs_immutable_owner = true;
+            }
+            Token2022ExtensionType::TransferHook => needs_transfer_hook = true,
+            Token2022ExtensionType::Pausable => needs_pausable = true,
+            _ => {}
+        }
+        offset = value_end;
+    }
+
+    let mut space = TOKEN_ACCOUNT_LEN;
+    if needs_transfer_fee_amount
+        || needs_non_transferable
+        || needs_immutable_owner
+        || needs_transfer_hook
+        || needs_pausable
+    {
+        space += 1;
+    }
+    if needs_transfer_fee_amount {
+        space +=
+            account_extension_tlv_len(core::mem::size_of::<crate::extensions::TransferFeeAmount>());
+    }
+    if needs_non_transferable {
+        space += account_extension_tlv_len(core::mem::size_of::<
+            crate::extensions::NonTransferableAccount,
+        >());
+    }
+    if needs_immutable_owner {
+        space += account_extension_tlv_len(0);
+    }
+    if needs_transfer_hook {
+        space += account_extension_tlv_len(core::mem::size_of::<
+            crate::extensions::TransferHookAccount,
+        >());
+    }
+    if needs_pausable {
+        space +=
+            account_extension_tlv_len(core::mem::size_of::<crate::extensions::PausableAccount>());
+    }
+
+    if space == MULTISIG_LEN {
+        space += 2;
+    }
+    Ok(space)
+}
 
 // ---------------------------------------------------------------------------
 // Interface<T> — transparent wrapper that changes validation to accept both
@@ -94,15 +262,7 @@ impl TokenInterfaceAccountExtensions for InterfaceAccount<Mint> {
         );
 
         let data = unsafe { account.borrow_unchecked() };
-        let state = PodStateWithExtensions::<PodMint>::unpack(data)?;
-        let extension = state.get_extension::<T>()?;
-        let extension_ptr = extension as *const T;
-
-        // SAFETY: `PodStateWithExtensions` stores only references into `data`,
-        // and `extension_ptr` points into that account data, not into the
-        // temporary wrapper value. `data` is borrowed from `account`, which
-        // outlives the returned reference.
-        Ok(unsafe { &*extension_ptr })
+        interface_extension::<PodMint, T>(data)
     }
 }
 
@@ -116,15 +276,7 @@ impl TokenInterfaceAccountExtensions for InterfaceAccount<TokenAccount> {
         );
 
         let data = unsafe { account.borrow_unchecked() };
-        let state = PodStateWithExtensions::<PodAccount>::unpack(data)?;
-        let extension = state.get_extension::<T>()?;
-        let extension_ptr = extension as *const T;
-
-        // SAFETY: `PodStateWithExtensions` stores only references into `data`,
-        // and `extension_ptr` points into that account data, not into the
-        // temporary wrapper value. `data` is borrowed from `account`, which
-        // outlives the returned reference.
-        Ok(unsafe { &*extension_ptr })
+        interface_extension::<PodAccount, T>(data)
     }
 }
 
@@ -156,8 +308,8 @@ impl SlabSchema for Interface<crate::TokenAccount> {
             view.owned_by(&Token::id()) || view.owned_by(&Token2022Program::id()),
             ProgramError::IllegalOwner
         );
-        PodStateWithExtensions::<PodAccount>::unpack(data)?;
         crate::token::validate_token_account_initialized(data)?;
+        interface_tlv_data::<PodAccount>(data)?;
         Ok(())
     }
 }
@@ -176,8 +328,8 @@ impl SlabSchema for Interface<crate::Mint> {
             view.owned_by(&Token::id()) || view.owned_by(&Token2022Program::id()),
             ProgramError::IllegalOwner
         );
-        PodStateWithExtensions::<PodMint>::unpack(data)?;
         crate::mint::validate_mint_initialized(data)?;
+        interface_tlv_data::<PodMint>(data)?;
         Ok(())
     }
 }
@@ -265,12 +417,9 @@ fn token_account_init_space(
     }
 
     let mint_data = unsafe { mint.borrow_unchecked() };
-    let mint_state = PodStateWithExtensions::<PodMint>::unpack(mint_data)?;
-    let mint_extensions = mint_state.get_extension_types()?;
-    let required_extensions =
-        Token2022ExtensionType::get_required_init_account_extensions(&mint_extensions);
-
-    Token2022ExtensionType::try_calculate_account_len::<PodAccount>(&required_extensions)
+    crate::mint::validate_mint_initialized(mint_data)?;
+    let mint_tlv_data = interface_tlv_data::<PodMint>(mint_data)?;
+    token_account_init_space_from_mint(mint_tlv_data)
 }
 
 // ---------------------------------------------------------------------------
