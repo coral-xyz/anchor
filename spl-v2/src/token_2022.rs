@@ -90,7 +90,9 @@ fn return_data_from(program: &Address) -> Result<InstructionDataBuffer, ProgramE
         program.as_ref(),
         ProgramError::IncorrectProgramId
     );
-    Ok(data)
+    let mut out = InstructionDataBuffer::new();
+    out.extend_from_slice(data.as_slice());
+    Ok(out)
 }
 
 pub fn get_account_data_size<'a>(

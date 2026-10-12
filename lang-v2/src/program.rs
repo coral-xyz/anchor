@@ -16,17 +16,12 @@ pub use pinocchio::cpi::{set_return_data, MAX_RETURN_DATA};
 /// This preserves the v1-shaped `program::get_return_data()` return value while
 /// sourcing the data from Pinocchio's `AccountView`-native CPI module.
 ///
-/// The owned compatibility wrapper is host-only. On SBF, use the generated
-/// `declare_program!` return wrapper (or `pinocchio::cpi::get_return_data()`)
-/// directly so the runtime does not create a second 1 KiB return-data frame on
-/// the stack.
-#[cfg(not(target_os = "solana"))]
-pub fn get_return_data() -> Option<(crate::Address, crate::InstructionDataBuffer)> {
-    pinocchio::cpi::get_return_data().map(|data| {
-        let mut out = crate::InstructionDataBuffer::new();
-        out.extend_from_slice(data.as_slice());
-        (*data.program_id(), out)
-    })
+/// The returned Pinocchio buffer is bounded by Solana's 1 KiB return-data
+/// limit, avoiding a second large stack allocation on SBF. Callers that need
+/// an owned instruction-data buffer should copy `ReturnData::as_slice()` into
+/// their own bounded buffer.
+pub fn get_return_data() -> Option<(crate::Address, pinocchio::cpi::ReturnData)> {
+    pinocchio::cpi::get_return_data().map(|data| (*data.program_id(), data))
 }
 
 /// Invoke a cross-program instruction using Anchor v2 CPI handles.
