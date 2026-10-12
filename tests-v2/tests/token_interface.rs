@@ -63,7 +63,7 @@ fn check_token_program(
     svm: &mut LiteSVM,
     payer: &Keypair,
     token_program: Pubkey,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![AccountMeta::new_readonly(token_program, false)];
     send_instruction(svm, program_id(), vec![0], metas, payer, &[])
 }
@@ -74,7 +74,7 @@ fn init_mint(
     mint: &Keypair,
     authority: &Pubkey,
     token_program: Pubkey,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![
         AccountMeta::new(payer.pubkey(), true),
         AccountMeta::new_readonly(*authority, false),
@@ -91,7 +91,7 @@ fn init_mint_decimals_9(
     mint: &Keypair,
     authority: &Pubkey,
     token_program: Pubkey,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![
         AccountMeta::new(payer.pubkey(), true),
         AccountMeta::new_readonly(*authority, false),
@@ -109,7 +109,7 @@ fn init_mint_with_freeze_authority(
     authority: &Pubkey,
     freeze_authority: &Pubkey,
     token_program: Pubkey,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![
         AccountMeta::new(payer.pubkey(), true),
         AccountMeta::new_readonly(*authority, false),
@@ -128,7 +128,7 @@ fn init_token_account(
     token_account: &Keypair,
     authority: &Pubkey,
     token_program: Pubkey,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![
         AccountMeta::new(payer.pubkey(), true),
         AccountMeta::new_readonly(*mint, false),
@@ -146,7 +146,7 @@ fn init_mint_pda(
     mint: Pubkey,
     authority: Pubkey,
     token_program: Pubkey,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![
         AccountMeta::new(payer.pubkey(), true),
         AccountMeta::new_readonly(authority, false),
@@ -164,7 +164,7 @@ fn init_token_account_pda(
     token_account: Pubkey,
     authority: Pubkey,
     token_program: Pubkey,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![
         AccountMeta::new(payer.pubkey(), true),
         AccountMeta::new_readonly(mint, false),
@@ -183,7 +183,7 @@ fn check_token_constraints(
     authority: Pubkey,
     token_program: Pubkey,
     token_account: Pubkey,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![
         AccountMeta::new_readonly(mint, false),
         AccountMeta::new_readonly(authority, false),
@@ -199,7 +199,7 @@ fn check_mint_constraints(
     authority: Pubkey,
     token_program: Pubkey,
     mint: Pubkey,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![
         AccountMeta::new_readonly(authority, false),
         AccountMeta::new_readonly(token_program, false),
@@ -213,7 +213,7 @@ fn check_mint_freeze_authority(
     payer: &Keypair,
     expected: Pubkey,
     mint: Pubkey,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![
         AccountMeta::new_readonly(expected, false),
         AccountMeta::new_readonly(mint, false),
@@ -229,7 +229,7 @@ fn mint_to(
     authority: &Keypair,
     token_program: Pubkey,
     amount: u64,
-) -> anyhow::Result<litesvm::types::TransactionMetadata> {
+) -> anyhow::Result<anchor_v2_testing::litesvm::types::TransactionMetadata> {
     let metas = vec![
         AccountMeta::new(mint, false),
         AccountMeta::new(token_account, false),
