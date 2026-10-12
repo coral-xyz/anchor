@@ -1,8 +1,5 @@
-extern crate alloc;
-
 use {
     crate::{address_eq, require, CpiHandle, ToCpiAccounts},
-    alloc::vec::Vec,
     core::mem::MaybeUninit,
     pinocchio::{
         address::Address,
@@ -29,7 +26,7 @@ use {
 /// ```
 pub struct CpiContext<'a, T: ToCpiAccounts<'a>> {
     pub accounts: T,
-    pub remaining_accounts: Vec<CpiHandle<'a>>,
+    pub remaining_accounts: crate::CpiHandleBuffer<'a>,
     pub program: &'a Address,
     pub signer_seeds: &'a [&'a [&'a [u8]]],
 }
@@ -40,7 +37,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         Self {
             accounts,
             program,
-            remaining_accounts: Vec::new(),
+            remaining_accounts: crate::CpiHandleBuffer::new(),
             signer_seeds: &[],
         }
     }
@@ -54,7 +51,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         Self {
             accounts,
             program,
-            remaining_accounts: Vec::new(),
+            remaining_accounts: crate::CpiHandleBuffer::new(),
             signer_seeds,
         }
     }
@@ -66,7 +63,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     }
 
     #[must_use]
-    pub fn with_remaining_accounts(mut self, ra: Vec<CpiHandle<'a>>) -> Self {
+    pub fn with_remaining_accounts(mut self, ra: crate::CpiHandleBuffer<'a>) -> Self {
         self.remaining_accounts = ra;
         self
     }
@@ -111,31 +108,32 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         // SAFETY: pinocchio::cpi::Seed is repr(C) { *const u8, u64, PhantomData }
         // which has the same layout as &[u8] on SBF. This is verified by the
         // static assertion in cpi.rs.
-        let signers: Vec<pinocchio::cpi::Signer> = self
-            .signer_seeds
-            .iter()
-            .map(|seeds| {
-                let cpi_seeds: &[pinocchio::cpi::Seed] = unsafe {
-                    core::slice::from_raw_parts(
-                        seeds.as_ptr() as *const pinocchio::cpi::Seed,
-                        seeds.len(),
-                    )
-                };
-                pinocchio::cpi::Signer::from(cpi_seeds)
-            })
-            .collect();
+        let mut signers: crate::FixedVec<
+            pinocchio::cpi::Signer<'a, 'a>,
+            { crate::MAX_ACCOUNT_METAS },
+        > = crate::FixedVec::new();
+        for seeds in self.signer_seeds {
+            let cpi_seeds: &[pinocchio::cpi::Seed] = unsafe {
+                core::slice::from_raw_parts(
+                    seeds.as_ptr() as *const pinocchio::cpi::Seed,
+                    seeds.len(),
+                )
+            };
+            signers.push(pinocchio::cpi::Signer::from(cpi_seeds));
+        }
 
         // Build CpiAccounts and invoke. Account count matches handles (optional
         // None sentinels have metas but no handles); pinocchio skips program-id
         // placeholder metas that lack a paired CpiAccount.
         let n = handles.len();
-        let mut cpi_accounts: Vec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount>> =
-            Vec::with_capacity(n);
-        // SAFETY: MaybeUninit does not require initialization.
-        unsafe { cpi_accounts.set_len(n) };
-
-        for (handle, slot) in handles.iter().zip(cpi_accounts.iter_mut()) {
-            pinocchio::cpi::CpiAccount::init_from_account_view(handle.account_view(), slot);
+        let mut cpi_accounts: crate::FixedVec<
+            MaybeUninit<pinocchio::cpi::CpiAccount<'a>>,
+            { crate::MAX_ACCOUNT_METAS },
+        > = crate::FixedVec::new();
+        for handle in &handles {
+            let mut slot = MaybeUninit::uninit();
+            pinocchio::cpi::CpiAccount::init_from_account_view(handle.account_view(), &mut slot);
+            cpi_accounts.push(slot);
         }
 
         // SAFETY:
@@ -255,10 +253,13 @@ pub fn unchecked_invoke_signed_fixed<'a, const N: usize>(
             }
         }
         _ => {
-            let signers: Vec<pinocchio::cpi::Signer<'a, 'a>> = signer_seeds
-                .iter()
-                .map(|seeds| signer_from_seeds(seeds))
-                .collect();
+            let mut signers: crate::FixedVec<
+                pinocchio::cpi::Signer<'a, 'a>,
+                { crate::MAX_ACCOUNT_METAS },
+            > = crate::FixedVec::new();
+            for seeds in signer_seeds {
+                signers.push(signer_from_seeds(seeds));
+            }
             unsafe {
                 pinocchio::cpi::invoke_signed_unchecked(&instruction, cpi_accounts, &signers);
             }
