@@ -474,8 +474,6 @@ describe("{}", () => {{
     )
 }
 
-// TODO(anchor-next): bump to `^2.0.0` once the TS package is published.
-// Pinned at `^1.0.0` because 2.0.0 isn't on npm yet.
 pub fn package_json(jest: bool, license: String) -> String {
     if jest {
         format!(
@@ -486,7 +484,7 @@ pub fn package_json(jest: bool, license: String) -> String {
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
   }},
   "dependencies": {{
-    "@anchor-lang/core": "^1.0.0"
+    "@anchor-lang/core": "{VERSION}"
   }},
   "devDependencies": {{
     "jest": "^30.3.0",
@@ -515,7 +513,7 @@ pub fn package_json(jest: bool, license: String) -> String {
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
   }},
   "dependencies": {{
-    "@anchor-lang/core": "^1.0.0"
+    "@anchor-lang/core": "{VERSION}"
   }},
   "devDependencies": {{
     "chai": "^4.5.0",
@@ -528,7 +526,6 @@ pub fn package_json(jest: bool, license: String) -> String {
     }
 }
 
-// TODO(anchor-next): bump to `^2.0.0` once published (same as `package_json`).
 pub fn ts_package_json(jest: bool, license: String) -> String {
     if jest {
         format!(
@@ -539,7 +536,7 @@ pub fn ts_package_json(jest: bool, license: String) -> String {
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
   }},
   "dependencies": {{
-    "@anchor-lang/core": "^1.0.0"
+    "@anchor-lang/core": "{VERSION}"
   }},
   "devDependencies": {{
     "@types/bn.js": "^5.2.0",
@@ -572,7 +569,7 @@ pub fn ts_package_json(jest: bool, license: String) -> String {
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
   }},
   "dependencies": {{
-    "@anchor-lang/core": "^1.0.0"
+    "@anchor-lang/core": "{VERSION}"
   }},
   "devDependencies": {{
     "chai": "^4.5.0",
