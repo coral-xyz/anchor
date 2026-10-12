@@ -5,9 +5,11 @@ use {
         cpi::{CpiAccount, Seed, Signer},
         instruction::{InstructionAccount, InstructionView},
     },
-    solana_instruction::Instruction,
     solana_program_error::{ProgramError, ProgramResult},
 };
+
+#[cfg(not(target_os = "solana"))]
+use solana_instruction::Instruction;
 
 pub use pinocchio::cpi::{set_return_data, MAX_RETURN_DATA};
 
@@ -35,13 +37,74 @@ pub fn get_return_data() -> Option<(crate::Address, pinocchio::cpi::ReturnData)>
 /// [`invoke_with_optional_sentinels`] / [`invoke_signed_with_optional_sentinels`]
 /// (or [`crate::CpiContext`]) so required readonly program-id accounts still
 /// require matching handles.
+#[cfg(not(target_os = "solana"))]
 pub fn invoke<'a>(instruction: &Instruction, account_handles: &[CpiHandle<'a>]) -> ProgramResult {
     invoke_signed(instruction, account_handles, &[])
+}
+
+/// Invoke a borrowed instruction view using borrowed account handles.
+///
+/// This is the allocator-free CPI entry point. It accepts Pinocchio's
+/// borrowed instruction representation directly, validates account ordering,
+/// writability, signer requirements, and borrow state, then uses only
+/// fixed-capacity stack buffers for the syscall arguments.
+#[inline]
+pub fn invoke_view<'a, 'b, 'c, 'd, 'seeds>(
+    instruction: &InstructionView<'a, 'b, 'c, 'd>,
+    account_handles: &[CpiHandle<'a>],
+    signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
+) -> ProgramResult {
+    invoke_view_with_optional_sentinels(instruction, account_handles, signer_seeds, &[])
+}
+
+/// Borrowed CPI entry point with an explicit mask for optional program-id
+/// sentinel accounts.
+#[inline]
+pub fn invoke_view_with_optional_sentinels<'a, 'b, 'c, 'd, 'seeds>(
+    instruction: &InstructionView<'a, 'b, 'c, 'd>,
+    account_handles: &[CpiHandle<'a>],
+    signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
+    optional_sentinel_flags: &[bool],
+) -> ProgramResult {
+    validate_instruction_accounts(
+        instruction.accounts,
+        instruction.program_id,
+        account_handles,
+        optional_sentinel_flags,
+        signer_seeds.is_empty(),
+    )?;
+
+    let cpi_account_count = required_cpi_account_count(
+        instruction.accounts,
+        instruction.program_id,
+        account_handles,
+        optional_sentinel_flags,
+    )?;
+    let signers = signers(signer_seeds);
+    let _borrow_guards = crate::enter_cpi(account_handles);
+    let cpi_accounts = cpi_accounts(account_handles);
+
+    // SAFETY: validation proves that the handles correspond to the non-
+    // sentinel instruction accounts, and every CpiAccount was initialized
+    // from its corresponding AccountView before the syscall.
+    unsafe {
+        pinocchio::cpi::invoke_signed_unchecked(
+            instruction,
+            from_raw_parts(
+                cpi_accounts.as_ptr() as *const CpiAccount,
+                cpi_account_count,
+            ),
+            &signers,
+        );
+    }
+
+    Ok(())
 }
 
 /// Like [`invoke`], but marks instruction-account indices that are intentional
 /// optional `None` program-id sentinels (parallel to
 /// [`crate::ToCpiAccounts::optional_account_sentinel_flags`]).
+#[cfg(not(target_os = "solana"))]
 pub fn invoke_with_optional_sentinels<'a>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -52,6 +115,7 @@ pub fn invoke_with_optional_sentinels<'a>(
 
 /// Invoke a cross-program instruction with PDA signer seeds using Anchor v2
 /// CPI handles.
+#[cfg(not(target_os = "solana"))]
 pub fn invoke_signed<'a, 'seeds>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -61,6 +125,7 @@ pub fn invoke_signed<'a, 'seeds>(
 }
 
 /// Like [`invoke_signed`], with an explicit optional-sentinel mask.
+#[cfg(not(target_os = "solana"))]
 pub fn invoke_signed_with_optional_sentinels<'a, 'seeds>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -96,6 +161,7 @@ pub fn invoke_signed_with_optional_sentinels<'a, 'seeds>(
 /// The caller must ensure no live Rust references or stale `AccountView` data
 /// borrows can be invalidated by the callee. Prefer [`invoke`] unless this is
 /// being used through a higher-level API that already enforces those lifetimes.
+#[cfg(not(target_os = "solana"))]
 pub unsafe fn invoke_unchecked<'a>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -112,6 +178,7 @@ pub unsafe fn invoke_unchecked<'a>(
 /// borrows can be invalidated by the callee. Prefer [`invoke_signed`] unless
 /// this is being used through a higher-level API that already enforces those
 /// lifetimes.
+#[cfg(not(target_os = "solana"))]
 pub unsafe fn invoke_signed_unchecked<'a, 'seeds>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -125,6 +192,7 @@ pub unsafe fn invoke_signed_unchecked<'a, 'seeds>(
 /// # Safety
 ///
 /// Same as [`invoke_signed_unchecked`].
+#[cfg(not(target_os = "solana"))]
 pub unsafe fn invoke_signed_unchecked_with_optional_sentinels<'a, 'seeds>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -353,6 +421,7 @@ fn instruction_account_matches_handle(
         && (!account.is_writable || handle.is_writable())
 }
 
+#[cfg(not(target_os = "solana"))]
 fn instruction_accounts(instruction: &Instruction) -> crate::InstructionAccountBuffer<'_> {
     let mut accounts = crate::InstructionAccountBuffer::new();
     for meta in &instruction.accounts {

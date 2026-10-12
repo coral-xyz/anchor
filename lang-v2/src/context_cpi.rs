@@ -1,13 +1,17 @@
 use {
-    crate::{address_eq, require, CpiHandle, ToCpiAccounts},
+    crate::{CpiHandle, ToCpiAccounts},
     core::mem::MaybeUninit,
     pinocchio::{
         address::Address,
         instruction::{InstructionAccount, InstructionView},
     },
-    solana_instruction::Instruction,
     solana_program_error::{ProgramError, ProgramResult},
 };
+
+#[cfg(not(target_os = "solana"))]
+use crate::{address_eq, require};
+#[cfg(not(target_os = "solana"))]
+use solana_instruction::Instruction;
 
 /// Context for cross-program invocations.
 ///
@@ -72,7 +76,29 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     /// from [`ToCpiAccounts`], appends remaining accounts, validates borrow
     /// state, then calls `invoke_signed_unchecked`.
     pub fn invoke(&self, data: &[u8]) -> ProgramResult {
+        self.invoke_with_signer_override(data, None)
+    }
+
+    /// Invoke with one account's signer bit overridden at runtime.
+    ///
+    /// SPL multisig instructions encode the authority account as readonly and
+    /// put the member signers in the remaining-account list. Generated CPI
+    /// account metadata quite reasonably marks the authority as a signer for
+    /// the single-authority case, so this small override keeps the no-alloc
+    /// path compatible with both layouts.
+    pub fn invoke_with_signer_override(
+        &self,
+        data: &[u8],
+        signer_override: Option<(usize, bool)>,
+    ) -> ProgramResult {
         let mut instruction_accounts = self.accounts.to_instruction_accounts();
+        if let Some((index, is_signer)) = signer_override {
+            let account = instruction_accounts
+                .as_mut_slice()
+                .get_mut(index)
+                .ok_or(ProgramError::InvalidArgument)?;
+            account.is_signer = is_signer;
+        }
         let mut handles = self.accounts.to_cpi_handles();
         let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags();
 
@@ -165,6 +191,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     /// Optional `None` sentinel slots must appear in the same positions as in
     /// [`ToCpiAccounts::to_instruction_accounts`]; only those indices may omit
     /// handles for readonly program-id metas.
+    #[cfg(not(target_os = "solana"))]
     pub fn invoke_ix(&self, ix: Instruction) -> ProgramResult {
         require!(
             address_eq(self.program, &ix.program_id),
