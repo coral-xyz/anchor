@@ -4064,32 +4064,40 @@ fn gen_declare_program_events(idl: &serde_json::Value) -> syn::Result<TokenStrea
         let event_impl = if serialization.is_bytemuck() {
             quote! {
                 impl anchor_lang::Event for #ident {
-                    fn data(&self) -> anchor_lang::InstructionDataBuffer {
+                    fn try_data(&self) -> anchor_lang::Result<anchor_lang::InstructionDataBuffer> {
                         let disc = <Self as anchor_lang::Discriminator>::DISCRIMINATOR;
                         let payload = anchor_lang::bytemuck::bytes_of(self);
                         let mut data =
                             anchor_lang::InstructionDataBuffer::new();
-                        data.extend_from_slice(disc);
-                        data.extend_from_slice(payload);
-                        data
+                        anchor_lang::try_extend_instruction_data(&mut data, disc)?;
+                        anchor_lang::try_extend_instruction_data(&mut data, payload)?;
+                        Ok(data)
+                    }
+
+                    fn data(&self) -> anchor_lang::InstructionDataBuffer {
+                        self.try_data().expect("event serialization exceeded the fixed buffer")
                     }
                 }
             }
         } else {
             quote! {
                 impl anchor_lang::Event for #ident {
-                    fn data(&self) -> anchor_lang::InstructionDataBuffer {
+                    fn try_data(&self) -> anchor_lang::Result<anchor_lang::InstructionDataBuffer> {
                         let disc = <Self as anchor_lang::Discriminator>::DISCRIMINATOR;
                         let mut data =
                             anchor_lang::InstructionDataBuffer::new();
-                        data.extend_from_slice(disc);
+                        anchor_lang::try_extend_instruction_data(&mut data, disc)?;
                         anchor_lang::wincode::config::serialize_into(
                             &mut data,
                             self,
                             anchor_lang::BORSH_CONFIG,
                         )
-                        .expect("declared event serialization cannot fail for derived AnchorSerialize types");
-                        data
+                        .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
+                        Ok(data)
+                    }
+
+                    fn data(&self) -> anchor_lang::InstructionDataBuffer {
+                        self.try_data().expect("event serialization exceeded the fixed buffer")
                     }
                 }
             }
@@ -5466,20 +5474,25 @@ fn process_handler(
         }
         #(#handler_cfg_attrs)*
         impl #ix_lt_decl anchor_lang::InstructionData for #ix_struct_name #ix_lt_use {
-            fn data(&self) -> anchor_lang::InstructionDataBuffer {
+            fn try_data(&self) -> anchor_lang::Result<anchor_lang::InstructionDataBuffer> {
                 let mut data = anchor_lang::InstructionDataBuffer::new();
-                data.extend_from_slice(Self::DISCRIMINATOR);
+                anchor_lang::try_extend_instruction_data(&mut data, Self::DISCRIMINATOR)?;
                 anchor_lang::wincode::config::serialize_into(
                     &mut data,
                     self,
                     anchor_lang::BORSH_CONFIG,
                 )
-                    .expect("instruction serialization failed");
-                data
+                    .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
+                Ok(data)
+            }
+
+            fn data(&self) -> anchor_lang::InstructionDataBuffer {
+                self.try_data().expect("instruction serialization exceeded the fixed buffer")
             }
         }
         #(#handler_cfg_attrs)*
         impl #ix_lt_decl #ix_struct_name #ix_lt_use {
+            #[cfg(not(target_os = "solana"))]
             pub fn to_instruction(
                 self,
                 accounts: impl anchor_lang::ToAccountMetas,
@@ -6330,22 +6343,25 @@ pub fn event(attr: TokenStream, item: TokenStream) -> TokenStream {
             #discriminator_impl
 
             impl anchor_lang::Event for #name {
-                fn data(&self) -> anchor_lang::InstructionDataBuffer {
+                fn try_data(&self) -> anchor_lang::Result<anchor_lang::InstructionDataBuffer> {
                     let disc = <Self as anchor_lang::Discriminator>::DISCRIMINATOR;
                     // 256-byte preallocation matches instruction-data
                     // emission. Wincode has no `encoded_size()` yet, so this
                     // is a best-guess that avoids a reallocation for typical
                     // event shapes.
                     let mut buf = anchor_lang::InstructionDataBuffer::new();
-                    buf.extend_from_slice(disc);
+                    anchor_lang::try_extend_instruction_data(&mut buf, disc)?;
                     anchor_lang::wincode::config::serialize_into(
                         &mut buf,
                         self,
                         anchor_lang::BORSH_CONFIG,
                     )
-                        .expect("`#[event]` wincode serialization cannot fail for \
-                                 derived AnchorSerialize types");
-                    buf
+                        .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
+                    Ok(buf)
+                }
+
+                fn data(&self) -> anchor_lang::InstructionDataBuffer {
+                    self.try_data().expect("event serialization exceeded the fixed buffer")
                 }
             }
 
@@ -6491,13 +6507,13 @@ pub fn event(attr: TokenStream, item: TokenStream) -> TokenStream {
                 #discriminator_impl
 
                 impl anchor_lang::Event for #name {
-                    fn data(&self) -> anchor_lang::InstructionDataBuffer {
+                    fn try_data(&self) -> anchor_lang::Result<anchor_lang::InstructionDataBuffer> {
                         const SIZE: usize = ::core::mem::size_of::<#name>();
                         let disc = <Self as anchor_lang::Discriminator>::DISCRIMINATOR;
                         let mut buf = anchor_lang::InstructionDataBuffer::new();
-                        buf.extend_from_slice(disc);
+                        anchor_lang::try_extend_instruction_data(&mut buf, disc)?;
                         let start = buf.len();
-                        buf.resize(start + SIZE, 0);
+                        anchor_lang::try_extend_instruction_data(&mut buf, &[0u8; SIZE])?;
                         unsafe {
                             ::core::ptr::copy_nonoverlapping(
                                 self as *const Self as *const u8,
@@ -6505,7 +6521,11 @@ pub fn event(attr: TokenStream, item: TokenStream) -> TokenStream {
                                 SIZE,
                             );
                         }
-                        buf
+                        Ok(buf)
+                    }
+
+                    fn data(&self) -> anchor_lang::InstructionDataBuffer {
+                        self.try_data().expect("event serialization exceeded the fixed buffer")
                     }
                 }
 
