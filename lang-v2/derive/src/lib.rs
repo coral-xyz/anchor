@@ -478,8 +478,7 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
         CpiFieldKind::Nested => quote! {
             __flags.extend(
                 anchor_lang::ToCpiAccounts::optional_account_sentinel_flags(&self.#ident)
-                    .iter()
-                    .copied(),
+                    .iter(),
             );
         },
         CpiFieldKind::Readonly | CpiFieldKind::Writable => quote! {

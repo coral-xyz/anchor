@@ -127,10 +127,9 @@ fn derive_to_cpi_accounts_emits_metas_and_erased_handles() {
     assert!(handles[6].is_writable());
 
     let flags = accounts.optional_account_sentinel_flags();
-    assert_eq!(
-        flags,
-        vec![false, false, false, false, false, false, false, true]
-    );
+    assert_eq!(flags.len(), 8);
+    assert!(!(0..7).any(|index| flags.get(index)));
+    assert!(flags.get(7));
 }
 
 #[test]

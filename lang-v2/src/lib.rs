@@ -132,7 +132,7 @@ macro_rules! debug {
 // Re-export wincode for instruction data serialization
 pub use wincode;
 
-pub use fixed_vec::FixedVec;
+pub use fixed_vec::{AccountFlags, AccountFlagsIter, FixedVec};
 pub use idl::{IdlAccountType, IdlEntries};
 /// Maximum number of account metas held by an on-chain V2 inline buffer.
 ///
@@ -164,14 +164,43 @@ pub type AccountViewBuffer = FixedVec<pinocchio::account::AccountView, MAX_ACCOU
 pub type CpiHandleBuffer<'a> = std::vec::Vec<CpiHandle<'a>>;
 #[cfg(target_os = "solana")]
 pub type CpiHandleBuffer<'a> = FixedVec<CpiHandle<'a>, MAX_ACCOUNT_METAS>;
-#[cfg(not(target_os = "solana"))]
-pub type BoolBuffer = std::vec::Vec<bool>;
-#[cfg(target_os = "solana")]
-pub type BoolBuffer = FixedVec<bool, MAX_ACCOUNT_METAS>;
+pub type BoolBuffer = AccountFlags;
 #[cfg(not(target_os = "solana"))]
 pub type InstructionDataBuffer = std::vec::Vec<u8>;
 #[cfg(target_os = "solana")]
 pub type InstructionDataBuffer = FixedVec<u8, MAX_INSTRUCTION_DATA>;
+
+/// Read-only view of optional-account sentinel flags used by CPI validation.
+/// The compact [`AccountFlags`] representation is used by generated V2 code,
+/// while slices remain accepted by the lower-level public CPI helpers.
+pub trait OptionalSentinelFlags {
+    fn len(&self) -> usize;
+    fn get(&self, index: usize) -> bool;
+}
+
+impl OptionalSentinelFlags for [bool] {
+    #[inline]
+    fn len(&self) -> usize {
+        <[bool]>::len(self)
+    }
+
+    #[inline]
+    fn get(&self, index: usize) -> bool {
+        <[bool]>::get(self, index).copied().unwrap_or(false)
+    }
+}
+
+impl OptionalSentinelFlags for AccountFlags {
+    #[inline]
+    fn len(&self) -> usize {
+        AccountFlags::len(self)
+    }
+
+    #[inline]
+    fn get(&self, index: usize) -> bool {
+        AccountFlags::get(self, index)
+    }
+}
 
 /// Append bytes to an instruction/event buffer without allocating or
 /// panicking on the on-chain target.

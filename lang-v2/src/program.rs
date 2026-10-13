@@ -54,18 +54,22 @@ pub fn invoke_view<'a, 'b, 'c, 'd, 'seeds>(
     account_handles: &[CpiHandle<'a>],
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
 ) -> ProgramResult {
-    invoke_view_with_optional_sentinels(instruction, account_handles, signer_seeds, &[])
+    let empty_flags: &[bool] = &[];
+    invoke_view_with_optional_sentinels(instruction, account_handles, signer_seeds, empty_flags)
 }
 
 /// Borrowed CPI entry point with an explicit mask for optional program-id
 /// sentinel accounts.
 #[inline]
-pub fn invoke_view_with_optional_sentinels<'a, 'b, 'c, 'd, 'seeds>(
+pub fn invoke_view_with_optional_sentinels<'a, 'b, 'c, 'd, 'seeds, F>(
     instruction: &InstructionView<'a, 'b, 'c, 'd>,
     account_handles: &[CpiHandle<'a>],
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
-    optional_sentinel_flags: &[bool],
-) -> ProgramResult {
+    optional_sentinel_flags: &F,
+) -> ProgramResult
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+{
     validate_instruction_accounts(
         instruction.accounts,
         instruction.program_id,
@@ -105,12 +109,20 @@ pub fn invoke_view_with_optional_sentinels<'a, 'b, 'c, 'd, 'seeds>(
 /// optional `None` program-id sentinels (parallel to
 /// [`crate::ToCpiAccounts::optional_account_sentinel_flags`]).
 #[cfg(not(target_os = "solana"))]
-pub fn invoke_with_optional_sentinels<'a>(
+pub fn invoke_with_optional_sentinels<'a, F>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
-    optional_sentinel_flags: &[bool],
-) -> ProgramResult {
-    invoke_signed_with_optional_sentinels(instruction, account_handles, &[], optional_sentinel_flags)
+    optional_sentinel_flags: &F,
+) -> ProgramResult
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+{
+    invoke_signed_with_optional_sentinels(
+        instruction,
+        account_handles,
+        &[],
+        optional_sentinel_flags,
+    )
 }
 
 /// Invoke a cross-program instruction with PDA signer seeds using Anchor v2
@@ -121,17 +133,21 @@ pub fn invoke_signed<'a, 'seeds>(
     account_handles: &[CpiHandle<'a>],
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
 ) -> ProgramResult {
-    invoke_signed_with_optional_sentinels(instruction, account_handles, signer_seeds, &[])
+    let empty_flags: &[bool] = &[];
+    invoke_signed_with_optional_sentinels(instruction, account_handles, signer_seeds, empty_flags)
 }
 
 /// Like [`invoke_signed`], with an explicit optional-sentinel mask.
 #[cfg(not(target_os = "solana"))]
-pub fn invoke_signed_with_optional_sentinels<'a, 'seeds>(
+pub fn invoke_signed_with_optional_sentinels<'a, 'seeds, F>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
-    optional_sentinel_flags: &[bool],
-) -> ProgramResult {
+    optional_sentinel_flags: &F,
+) -> ProgramResult
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+{
     let instruction_accounts = instruction_accounts(instruction);
     validate_instruction_accounts(
         &instruction_accounts,
@@ -184,7 +200,15 @@ pub unsafe fn invoke_signed_unchecked<'a, 'seeds>(
     account_handles: &[CpiHandle<'a>],
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
 ) -> ProgramResult {
-    unsafe { invoke_signed_unchecked_with_optional_sentinels(instruction, account_handles, signer_seeds, &[]) }
+    let empty_flags: &[bool] = &[];
+    unsafe {
+        invoke_signed_unchecked_with_optional_sentinels(
+            instruction,
+            account_handles,
+            signer_seeds,
+            empty_flags,
+        )
+    }
 }
 
 /// Like [`invoke_signed_unchecked`], with an explicit optional-sentinel mask.
@@ -193,12 +217,15 @@ pub unsafe fn invoke_signed_unchecked<'a, 'seeds>(
 ///
 /// Same as [`invoke_signed_unchecked`].
 #[cfg(not(target_os = "solana"))]
-pub unsafe fn invoke_signed_unchecked_with_optional_sentinels<'a, 'seeds>(
+pub unsafe fn invoke_signed_unchecked_with_optional_sentinels<'a, 'seeds, F>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
-    optional_sentinel_flags: &[bool],
-) -> ProgramResult {
+    optional_sentinel_flags: &F,
+) -> ProgramResult
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+{
     let instruction_accounts = instruction_accounts(instruction);
     let cpi_account_count = required_cpi_account_count(
         &instruction_accounts,
@@ -263,13 +290,16 @@ pub(crate) fn validate_fixed_instruction_accounts<'a, const N: usize>(
     Ok(())
 }
 
-pub(crate) fn validate_instruction_accounts<'a>(
+pub(crate) fn validate_instruction_accounts<'a, F>(
     instruction_accounts: &[InstructionAccount<'a>],
     program_id: &Address,
     account_handles: &[CpiHandle<'a>],
-    optional_sentinel_flags: &[bool],
+    optional_sentinel_flags: &F,
     enforce_signers: bool,
-) -> ProgramResult {
+) -> ProgramResult
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+{
     let bindings = resolve_instruction_account_bindings(
         instruction_accounts,
         program_id,
@@ -309,24 +339,21 @@ fn is_optional_instruction_account_sentinel_candidate(
     !account.is_writable && !account.is_signer && address_eq(account.address, program_id)
 }
 
-fn is_skippable_optional_sentinel(
+fn is_skippable_optional_sentinel<F: crate::OptionalSentinelFlags + ?Sized>(
     program_id: &Address,
     account: &InstructionAccount<'_>,
-    optional_sentinel_flags: &[bool],
+    optional_sentinel_flags: &F,
     instruction_index: usize,
 ) -> bool {
-    optional_sentinel_flags
-        .get(instruction_index)
-        .copied()
-        .unwrap_or(false)
+    optional_sentinel_flags.get(instruction_index)
         && is_optional_instruction_account_sentinel_candidate(program_id, account)
 }
 
-fn required_cpi_account_count<'a>(
+fn required_cpi_account_count<'a, F: crate::OptionalSentinelFlags + ?Sized>(
     instruction_accounts: &[InstructionAccount<'a>],
     program_id: &Address,
     account_handles: &[CpiHandle<'a>],
-    optional_sentinel_flags: &[bool],
+    optional_sentinel_flags: &F,
 ) -> Result<usize, ProgramError> {
     Ok(resolve_instruction_account_bindings(
         instruction_accounts,
@@ -339,11 +366,11 @@ fn required_cpi_account_count<'a>(
     .count())
 }
 
-fn resolve_instruction_account_bindings<'a>(
+fn resolve_instruction_account_bindings<'a, F: crate::OptionalSentinelFlags + ?Sized>(
     instruction_accounts: &[InstructionAccount<'a>],
     program_id: &Address,
     account_handles: &[CpiHandle<'a>],
-    optional_sentinel_flags: &[bool],
+    optional_sentinel_flags: &F,
 ) -> Result<crate::FixedVec<Option<usize>, { crate::MAX_ACCOUNT_METAS }>, ProgramError> {
     let mut bindings = crate::FixedVec::new();
     let mut handle_index = 0;
@@ -373,23 +400,26 @@ fn resolve_instruction_account_bindings<'a>(
         }
 
         let can_consume = handle_index < account_handles.len()
-            && instruction_account_matches_handle(account, &account_handles[handle_index])
-            ;
+            && instruction_account_matches_handle(account, &account_handles[handle_index]);
         if can_consume {
             bindings.push(Some(handle_index));
             handle_index += 1;
             continue;
         }
 
-        return Err(if handle_index < minimum_required_handle_count(
-            instruction_accounts,
-            program_id,
-            optional_sentinel_flags,
-        ) {
-            ProgramError::NotEnoughAccountKeys
-        } else {
-            ProgramError::InvalidArgument
-        });
+        return Err(
+            if handle_index
+                < minimum_required_handle_count(
+                    instruction_accounts,
+                    program_id,
+                    optional_sentinel_flags,
+                )
+            {
+                ProgramError::NotEnoughAccountKeys
+            } else {
+                ProgramError::InvalidArgument
+            },
+        );
     }
 
     if handle_index != account_handles.len() {
@@ -399,10 +429,10 @@ fn resolve_instruction_account_bindings<'a>(
     Ok(bindings)
 }
 
-fn minimum_required_handle_count(
+fn minimum_required_handle_count<F: crate::OptionalSentinelFlags + ?Sized>(
     instruction_accounts: &[InstructionAccount<'_>],
     program_id: &Address,
-    optional_sentinel_flags: &[bool],
+    optional_sentinel_flags: &F,
 ) -> usize {
     instruction_accounts
         .iter()
@@ -417,8 +447,7 @@ fn instruction_account_matches_handle(
     account: &InstructionAccount<'_>,
     handle: &CpiHandle<'_>,
 ) -> bool {
-    address_eq(account.address, handle.address())
-        && (!account.is_writable || handle.is_writable())
+    address_eq(account.address, handle.address()) && (!account.is_writable || handle.is_writable())
 }
 
 #[cfg(not(target_os = "solana"))]
