@@ -6,11 +6,24 @@ set -euo pipefail
 # This is a graph check, not a replacement for the SBF build or runtime tests.
 
 target="${SBF_TARGET:-sbpf-solana-solana}"
-toolchain="$(rustup toolchain list 2>/dev/null | awk '$1 ~ /-sbpf-solana-/ { print $1; exit }')"
+toolchain="$(rustup toolchain list 2>/dev/null | awk '$1 ~ /-sbpf-solana-/ { print $1; exit }' || true)"
 if [[ -n "$toolchain" ]]; then
     cargo_tree=(rustup run "$toolchain" cargo tree)
 else
-    cargo_tree=(cargo tree)
+    # `cargo build-sbf --install-only` may install platform-tools without
+    # registering a rustup SBF toolchain. In that setup, the default stable
+    # rustc cannot resolve the Solana target specification, even though the
+    # platform-tools compiler can. Prefer the compiler installed for the
+    # requested SBF tools version before falling back to the host toolchain.
+    platform_rustc="${SBF_RUSTC:-}"
+    if [[ -z "$platform_rustc" && -n "${SBF_TOOLS_VERSION:-}" ]]; then
+        platform_rustc="$HOME/.cache/solana/${SBF_TOOLS_VERSION}/platform-tools/rust/bin/rustc"
+    fi
+    if [[ -x "$platform_rustc" ]]; then
+        cargo_tree=(env RUSTC="$platform_rustc" cargo tree)
+    else
+        cargo_tree=(cargo tree)
+    fi
 fi
 
 tmp_dir="$(mktemp -d)"
