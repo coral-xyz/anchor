@@ -2,11 +2,8 @@
 //!
 //! `#![no_std]` compatible.
 
-#![no_std]
+#![cfg_attr(target_os = "solana", no_std)]
 extern crate self as anchor_lang;
-
-#[cfg(not(target_os = "solana"))]
-extern crate std;
 
 pub mod accounts;
 #[cfg(target_os = "solana")]
