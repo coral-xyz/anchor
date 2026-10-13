@@ -146,9 +146,9 @@ pub const MAX_INSTRUCTION_DATA: usize = 1232;
 /// Maximum number of elements in an allocator-free collection emitted by
 /// generated on-chain IDL bindings.
 pub const MAX_IDL_SEQUENCE: usize = 256;
-#[cfg(not(target_os = "solana"))]
-pub type AccountMetaBuffer = std::vec::Vec<AccountMeta>;
-#[cfg(target_os = "solana")]
+/// Bounded account-meta storage shared by host and on-chain code. Client
+/// builders can call [`FixedVec::to_vec`] at the instruction-construction
+/// boundary when an owned SDK instruction is required.
 pub type AccountMetaBuffer = FixedVec<AccountMeta, MAX_ACCOUNT_METAS>;
 #[cfg(not(target_os = "solana"))]
 pub type InstructionAccountBuffer<'a> =
