@@ -114,7 +114,20 @@ describe("Events", () => {
       try {
         await program.provider.sendAndConfirm(tx, [], confirmOptions);
       } catch (e) {
-        if (e.logs.some((log) => log.includes("ConstraintSigner"))) return;
+        // `sendAndConfirm` only attaches the logs when it can fetch the failed
+        // transaction right after confirming it. When it can't, it rethrows
+        // the confirmation error, whose message has the transaction status
+        // instead, so check the error code there.
+        if (e.logs) {
+          if (e.logs.some((log) => log.includes("ConstraintSigner"))) return;
+        } else {
+          const code = anchor.LangErrorCode.ConstraintSigner;
+          if (
+            e.message?.includes(`"InstructionError":[0,{"Custom":${code}}]`)
+          ) {
+            return;
+          }
+        }
         console.log(e);
       }
 
