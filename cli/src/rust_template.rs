@@ -425,6 +425,7 @@ module.exports = async function (provider: anchor.AnchorProvider) {
 pub fn mocha(name: &str) -> String {
     format!(
         r#"const anchor = require("@anchor-lang/core");
+const {{ generateKeyPairSigner }} = require("@solana/kit");
 
 describe("{}", () => {{
   // Configure the client to use the local cluster.
@@ -433,10 +434,10 @@ describe("{}", () => {{
   it("Is initialized!", async () => {{
     // Add your test here.
     const program = anchor.workspace.{};
-    const counter = anchor.web3.Keypair.generate();
+    const counter = await generateKeyPairSigner();
     const tx = await program.methods
       .initialize()
-      .accounts({{ counter: counter.publicKey }})
+      .accounts({{ counter: counter.address }})
       .signers([counter])
       .rpc();
     console.log("Your transaction signature", tx);
@@ -451,6 +452,7 @@ describe("{}", () => {{
 pub fn js_jest(name: &str) -> String {
     format!(
         r#"const anchor = require("@anchor-lang/core");
+const {{ generateKeyPairSigner }} = require("@solana/kit");
 
 describe("{}", () => {{
   // Configure the client to use the local cluster.
@@ -459,10 +461,10 @@ describe("{}", () => {{
   it("Is initialized!", async () => {{
     // Add your test here.
     const program = anchor.workspace.{};
-    const counter = anchor.web3.Keypair.generate();
+    const counter = await generateKeyPairSigner();
     const tx = await program.methods
       .initialize()
-      .accounts({{ counter: counter.publicKey }})
+      .accounts({{ counter: counter.address }})
       .signers([counter])
       .rpc();
     console.log("Your transaction signature", tx);
@@ -484,7 +486,8 @@ pub fn package_json(jest: bool, license: String) -> String {
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
   }},
   "dependencies": {{
-    "@anchor-lang/core": "{VERSION}"
+    "@anchor-lang/core": "{VERSION}",
+    "@solana/kit": "^8.3.0"
   }},
   "devDependencies": {{
     "jest": "^30.3.0",
@@ -513,7 +516,8 @@ pub fn package_json(jest: bool, license: String) -> String {
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
   }},
   "dependencies": {{
-    "@anchor-lang/core": "{VERSION}"
+    "@anchor-lang/core": "{VERSION}",
+    "@solana/kit": "^8.3.0"
   }},
   "devDependencies": {{
     "chai": "^4.5.0",
@@ -536,7 +540,8 @@ pub fn ts_package_json(jest: bool, license: String) -> String {
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
   }},
   "dependencies": {{
-    "@anchor-lang/core": "{VERSION}"
+    "@anchor-lang/core": "{VERSION}",
+    "@solana/kit": "^8.3.0"
   }},
   "devDependencies": {{
     "@types/bn.js": "^5.2.0",
@@ -569,7 +574,8 @@ pub fn ts_package_json(jest: bool, license: String) -> String {
     "lint": "prettier */*.js \"*/**/*{{.js,.ts}}\" --check"
   }},
   "dependencies": {{
-    "@anchor-lang/core": "{VERSION}"
+    "@anchor-lang/core": "{VERSION}",
+    "@solana/kit": "^8.3.0"
   }},
   "devDependencies": {{
     "chai": "^4.5.0",
@@ -593,6 +599,7 @@ pub fn ts_mocha(name: &str) -> String {
     format!(
         r#"import * as anchor from "@anchor-lang/core";
 import {{ Program }} from "@anchor-lang/core";
+import {{ generateKeyPairSigner }} from "@solana/kit";
 import {{ {} }} from "../target/types/{}";
 
 describe("{}", () => {{
@@ -603,10 +610,10 @@ describe("{}", () => {{
 
   it("Is initialized!", async () => {{
     // Add your test here.
-    const counter = anchor.web3.Keypair.generate();
+    const counter = await generateKeyPairSigner();
     const tx = await program.methods
       .initialize()
-      .accounts({{ counter: counter.publicKey }})
+      .accounts({{ counter: counter.address }})
       .signers([counter])
       .rpc();
     console.log("Your transaction signature", tx);
@@ -625,6 +632,7 @@ pub fn ts_jest(name: &str) -> String {
     format!(
         r#"import * as anchor from "@anchor-lang/core";
 import {{ Program }} from "@anchor-lang/core";
+import {{ generateKeyPairSigner }} from "@solana/kit";
 import {{ {} }} from "../target/types/{}";
 
 describe("{}", () => {{
@@ -635,10 +643,10 @@ describe("{}", () => {{
 
   it("Is initialized!", async () => {{
     // Add your test here.
-    const counter = anchor.web3.Keypair.generate();
+    const counter = await generateKeyPairSigner();
     const tx = await program.methods
       .initialize()
-      .accounts({{ counter: counter.publicKey }})
+      .accounts({{ counter: counter.address }})
       .signers([counter])
       .rpc();
     console.log("Your transaction signature", tx);
