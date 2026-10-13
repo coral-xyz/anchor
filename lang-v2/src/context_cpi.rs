@@ -130,24 +130,6 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
 
         let _borrow_guards = crate::enter_cpi(&handles);
 
-        // Convert signer seeds to pinocchio Signers.
-        // SAFETY: pinocchio::cpi::Seed is repr(C) { *const u8, u64, PhantomData }
-        // which has the same layout as &[u8] on SBF. This is verified by the
-        // static assertion in cpi.rs.
-        let mut signers: crate::FixedVec<
-            pinocchio::cpi::Signer<'a, 'a>,
-            { crate::MAX_ACCOUNT_METAS },
-        > = crate::FixedVec::new();
-        for seeds in self.signer_seeds {
-            let cpi_seeds: &[pinocchio::cpi::Seed] = unsafe {
-                core::slice::from_raw_parts(
-                    seeds.as_ptr() as *const pinocchio::cpi::Seed,
-                    seeds.len(),
-                )
-            };
-            signers.push(pinocchio::cpi::Signer::from(cpi_seeds));
-        }
-
         // Build CpiAccounts and invoke. Account count matches handles (optional
         // None sentinels have metas but no handles); pinocchio skips program-id
         // placeholder metas that lack a paired CpiAccount.
@@ -168,15 +150,43 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         // - Mutable handles carry the borrow state established by their
         //   account wrappers, blocking conflicting raw borrows on stale
         //   AccountView copies.
-        unsafe {
-            pinocchio::cpi::invoke_signed_unchecked(
-                &instruction,
-                core::slice::from_raw_parts(
-                    cpi_accounts.as_ptr() as *const pinocchio::cpi::CpiAccount,
-                    n,
-                ),
-                &signers,
-            );
+        let cpi_accounts = unsafe {
+            core::slice::from_raw_parts(
+                cpi_accounts.as_ptr() as *const pinocchio::cpi::CpiAccount,
+                n,
+            )
+        };
+
+        match self.signer_seeds {
+            [] => unsafe {
+                pinocchio::cpi::invoke_signed_unchecked(&instruction, cpi_accounts, &[]);
+            },
+            [seeds] => {
+                let signer = signer_from_seeds(seeds);
+                unsafe {
+                    pinocchio::cpi::invoke_signed_unchecked(
+                        &instruction,
+                        cpi_accounts,
+                        &[signer],
+                    );
+                }
+            }
+            signer_seeds => {
+                let mut signers: crate::FixedVec<
+                    pinocchio::cpi::Signer<'a, 'a>,
+                    { crate::MAX_ACCOUNT_METAS },
+                > = crate::FixedVec::new();
+                for seeds in signer_seeds {
+                    signers.push(signer_from_seeds(seeds));
+                }
+                unsafe {
+                    pinocchio::cpi::invoke_signed_unchecked(
+                        &instruction,
+                        cpi_accounts,
+                        &signers,
+                    );
+                }
+            }
         }
 
         Ok(())

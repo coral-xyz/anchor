@@ -84,22 +84,38 @@ where
         account_handles,
         optional_sentinel_flags,
     )?;
-    let signers = signers(signer_seeds);
     let _borrow_guards = crate::enter_cpi(account_handles);
     let cpi_accounts = cpi_accounts(account_handles);
+    let cpi_accounts = unsafe {
+        from_raw_parts(
+            cpi_accounts.as_ptr() as *const CpiAccount,
+            cpi_account_count,
+        )
+    };
 
     // SAFETY: validation proves that the handles correspond to the non-
     // sentinel instruction accounts, and every CpiAccount was initialized
     // from its corresponding AccountView before the syscall.
-    unsafe {
-        pinocchio::cpi::invoke_signed_unchecked(
-            instruction,
-            from_raw_parts(
-                cpi_accounts.as_ptr() as *const CpiAccount,
-                cpi_account_count,
-            ),
-            &signers,
-        );
+    match signer_seeds {
+        [] => unsafe {
+            pinocchio::cpi::invoke_signed_unchecked(instruction, cpi_accounts, &[]);
+        },
+        [seeds] => {
+            let signer = signer_from_seeds(seeds);
+            unsafe {
+                pinocchio::cpi::invoke_signed_unchecked(
+                    instruction,
+                    cpi_accounts,
+                    &[signer],
+                );
+            }
+        }
+        signer_seeds => {
+            let signers = signers(signer_seeds);
+            unsafe {
+                pinocchio::cpi::invoke_signed_unchecked(instruction, cpi_accounts, &signers);
+            }
+        }
     }
 
     Ok(())
@@ -238,22 +254,42 @@ where
         accounts: &instruction_accounts,
         data: &instruction.data,
     };
-    let signers = signers(signer_seeds);
     let _borrow_guards = crate::enter_cpi(account_handles);
     let cpi_accounts = cpi_accounts(account_handles);
+    let cpi_accounts = unsafe {
+        from_raw_parts(
+            cpi_accounts.as_ptr() as *const CpiAccount,
+            cpi_account_count,
+        )
+    };
 
     // SAFETY:
     // - `cpi_accounts` was fully initialized from the provided handles.
     // - This function's caller upholds the unchecked CPI aliasing contract.
-    unsafe {
-        pinocchio::cpi::invoke_signed_unchecked(
-            &instruction_view,
-            from_raw_parts(
-                cpi_accounts.as_ptr() as *const CpiAccount,
-                cpi_account_count,
-            ),
-            &signers,
-        );
+    match signer_seeds {
+        [] => unsafe {
+            pinocchio::cpi::invoke_signed_unchecked(&instruction_view, cpi_accounts, &[]);
+        },
+        [seeds] => {
+            let signer = signer_from_seeds(seeds);
+            unsafe {
+                pinocchio::cpi::invoke_signed_unchecked(
+                    &instruction_view,
+                    cpi_accounts,
+                    &[signer],
+                );
+            }
+        }
+        signer_seeds => {
+            let signers = signers(signer_seeds);
+            unsafe {
+                pinocchio::cpi::invoke_signed_unchecked(
+                    &instruction_view,
+                    cpi_accounts,
+                    &signers,
+                );
+            }
+        }
     }
 
     Ok(())
@@ -468,13 +504,17 @@ fn signers<'seeds>(
 ) -> crate::FixedVec<Signer<'seeds, 'seeds>, { crate::MAX_ACCOUNT_METAS }> {
     let mut out = crate::FixedVec::new();
     for seeds in signer_seeds {
-        // SAFETY: `Seed` has the same in-memory representation as `&[u8]`;
-        // this is the conversion used by `CpiContext::invoke` as well.
-        let cpi_seeds: &[Seed] =
-            unsafe { from_raw_parts(seeds.as_ptr() as *const Seed, seeds.len()) };
-        out.push(Signer::from(cpi_seeds));
+        out.push(signer_from_seeds(seeds));
     }
     out
+}
+
+#[inline(always)]
+fn signer_from_seeds<'seeds>(seeds: &'seeds [&'seeds [u8]]) -> Signer<'seeds, 'seeds> {
+    // SAFETY: `Seed` has the same in-memory representation as `&[u8]`.
+    let cpi_seeds: &[Seed] =
+        unsafe { from_raw_parts(seeds.as_ptr() as *const Seed, seeds.len()) };
+    Signer::from(cpi_seeds)
 }
 
 fn cpi_accounts<'a>(
