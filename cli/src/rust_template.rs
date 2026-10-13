@@ -307,7 +307,7 @@ default = []
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-log-ix-name = []
-idl-build = []
+idl-build = ["anchor-lang/idl-build"]
 {2}
 
 [dependencies]
