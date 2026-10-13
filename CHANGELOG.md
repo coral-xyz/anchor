@@ -16,9 +16,20 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Fixes
 
+- lang-v2: Restore `AnchorSerialize` and `AnchorDeserialize` as traits for generic bounds alongside the derive macros ([#5078](https://github.com/otter-sec/anchor/pull/5078)).
+
+### Breaking
+
+- lang-v2: Default `#[event]` structs now derive `AnchorDeserialize` as well as `AnchorSerialize`. Remove any explicit `AnchorDeserialize` derive from these structs to avoid conflicting implementations; `#[event(bytemuck)]` is unchanged ([#5078](https://github.com/otter-sec/anchor/pull/5078)).
+
+## [2.0.0-rc.2] - 2026-10-06
+
+### Features
+
+### Fixes
+
 - ts: Resolve every event CPI account pair of an instruction, not just the first ([#5117](https://github.com/otter-sec/anchor/pull/5117)).
 - ts: Encode signed integer PDA seeds as two's complement ([#5114](https://github.com/otter-sec/anchor/pull/5114)).
-- lang-v2: Restore `AnchorSerialize` and `AnchorDeserialize` as traits for generic bounds alongside the derive macros ([#5078](https://github.com/otter-sec/anchor/pull/5078)).
 - lang-v2: Restore compatibility for `BTreeMap`, `BTreeSet`, tuples, and `IdlType` values, and document intentional Wincode differences from v1 Borsh, including NaN acceptance and `HashMap`/`HashSet` iteration ordering. Native Map/Set IDL and TypeScript SDK support remains future work.
 
 ### Breaking
@@ -35,7 +46,6 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: Remove `Provider.connection` and `Provider.publicKey` in favour of `rpc`, `rpcSubscriptions` and `wallet.address` ([#5103](https://github.com/otter-sec/anchor/pull/5103)).
 - ts: Rewrite the account namespace on `@solana/kit` ([#5088](https://github.com/otter-sec/anchor/pull/5088)).
 - ts: Default the provider commitment to `confirmed` ([#5088](https://github.com/otter-sec/anchor/pull/5088)).
-- lang-v2: Default `#[event]` structs now derive `AnchorDeserialize` as well as `AnchorSerialize`. Remove any explicit `AnchorDeserialize` derive from these structs to avoid conflicting implementations; `#[event(bytemuck)]` is unchanged ([#5078](https://github.com/otter-sec/anchor/pull/5078)).
 - ts: Rewrite the program namespaces on `@solana/kit` ([#5060](https://github.com/otter-sec/anchor/pull/5060)).
 - ts: Rewrite the provider on `@solana/kit` ([#5008](https://github.com/otter-sec/anchor/pull/5008)).
 - ts: Require Node.js >=22.12 ([#5005](https://github.com/otter-sec/anchor/pull/5005)).
