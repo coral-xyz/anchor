@@ -21,7 +21,7 @@ pinocchio = { workspace = true }
 pinocchio-token = "0.6"
 pinocchio-token-2022 = "0.3"
 bytemuck = { version = "1", features = ["derive"] }
-solana-address = { workspace = true, default-features = false, features = ["bytemuck"] }
+solana-address = { workspace = true, features = ["bytemuck"] }
 solana-program-error.workspace = true
 
 [dev-dependencies]

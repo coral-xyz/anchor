@@ -44,14 +44,11 @@ anchor-derive-accounts = { workspace = true }
 pinocchio = { workspace = true, features = ["copy", "account-resize"] }
 pinocchio-system = "0.6.1"
 solana-address = { workspace = true, features = ["bytemuck", "syscalls", "curve25519", "wincode"] }
-solana-instruction = { workspace = true, default-features = false }
 solana-program-error.workspace = true
 solana-msg = { workspace = true, default-features = false }
 solana-program-memory.workspace = true
 solana-program-log = { workspace = true, features = ["macro"], optional = true }
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
-solana-system-interface = { workspace = true, features = ["bincode"] }
-solana-sysvar.workspace = true
 bytemuck = { version = "1", features = ["derive"] }
 wincode = { version = "0.6", default-features = false, features = ["derive"] }
 
@@ -60,9 +57,10 @@ sha2 = "0.10"
 # Owned instruction builders, system-instruction compatibility, rent helpers,
 # and collection-backed serialization are host/client APIs. Keeping these
 # features target-local prevents them from entering an SBF dependency graph.
-solana-instruction = { version = "3", default-features = false, features = ["std"] }
-solana-system-interface = { version = "2.0", features = ["bincode"] }
-solana-sysvar = "3.1.1"
+solana-instruction = { workspace = true, features = ["std"] }
+solana-msg = { workspace = true, features = ["alloc"] }
+solana-system-interface = { workspace = true, features = ["bincode"] }
+solana-sysvar.workspace = true
 wincode = { version = "0.6", default-features = false, features = ["derive", "std"] }
 
 [lints.rust.unexpected_cfgs]
