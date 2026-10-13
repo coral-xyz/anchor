@@ -18,7 +18,7 @@ mod fixed_vec;
 pub mod hash;
 mod idl;
 #[doc(hidden)]
-#[cfg(not(target_os = "solana"))]
+#[cfg(feature = "idl-build")]
 pub mod idl_build;
 pub mod loader;
 pub mod pod;
