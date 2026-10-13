@@ -8,6 +8,10 @@ pub type IdlEntries = FixedVec<&'static str, { crate::MAX_ACCOUNT_METAS }>;
 
 /// Compile-time IDL metadata hooks. The registration surface is bounded so
 /// the runtime crate does not require a heap even when IDL support is disabled.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` has no IDL type information",
+    note = "plain structs used as instruction arguments or nested fields need `#[derive(IdlType)]`; account and event types get this automatically from `#[account]` / `#[event]`"
+)]
 pub trait IdlAccountType {
     const __IDL_ACCOUNT_ENTRY: Option<&'static str> = None;
     const __IDL_TYPE_DEF: Option<&'static str> = None;
