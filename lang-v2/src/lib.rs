@@ -190,6 +190,18 @@ impl OptionalSentinelFlags for [bool] {
     }
 }
 
+impl<const N: usize> OptionalSentinelFlags for [bool; N] {
+    #[inline]
+    fn len(&self) -> usize {
+        N
+    }
+
+    #[inline]
+    fn get(&self, index: usize) -> bool {
+        self.as_slice().get(index).copied().unwrap_or(false)
+    }
+}
+
 impl OptionalSentinelFlags for AccountFlags {
     #[inline]
     fn len(&self) -> usize {

@@ -443,19 +443,14 @@ fn resolve_instruction_account_bindings<'a, F: crate::OptionalSentinelFlags + ?S
             continue;
         }
 
-        return Err(
-            if handle_index
-                < minimum_required_handle_count(
-                    instruction_accounts,
-                    program_id,
-                    optional_sentinel_flags,
-                )
-            {
-                ProgramError::NotEnoughAccountKeys
-            } else {
-                ProgramError::InvalidArgument
-            },
-        );
+        return Err(if handle_index < account_handles.len() {
+            // A handle is available, but it does not match this instruction
+            // account's address or mutability. This is an invalid CPI shape,
+            // not a missing account.
+            ProgramError::InvalidArgument
+        } else {
+            ProgramError::NotEnoughAccountKeys
+        });
     }
 
     if handle_index != account_handles.len() {
@@ -463,20 +458,6 @@ fn resolve_instruction_account_bindings<'a, F: crate::OptionalSentinelFlags + ?S
     }
 
     Ok(bindings)
-}
-
-fn minimum_required_handle_count<F: crate::OptionalSentinelFlags + ?Sized>(
-    instruction_accounts: &[InstructionAccount<'_>],
-    program_id: &Address,
-    optional_sentinel_flags: &F,
-) -> usize {
-    instruction_accounts
-        .iter()
-        .enumerate()
-        .filter(|(index, account)| {
-            !is_skippable_optional_sentinel(program_id, account, optional_sentinel_flags, *index)
-        })
-        .count()
 }
 
 fn instruction_account_matches_handle(
