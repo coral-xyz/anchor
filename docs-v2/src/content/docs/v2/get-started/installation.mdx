@@ -20,9 +20,9 @@ $ <blue>cargo</blue> install <dim>--git</dim> https://github.com/otter-sec/ancho
 ```
 
 <Callout variant="warning" title="Overwrites the anchor binary">
-  `$ <blue>cargo</blue> install` overwrites the `anchor` binary on your `PATH`. To keep another
-  Anchor install available, run this binary from a source checkout instead of putting it first on
-  `PATH`.
+  `$ <blue>cargo</blue> install` overwrites the `anchor` binary on your `PATH`. To keep an
+  AVM-managed v1 install available, use [Anchor v1 and v2 side by
+  side](#use-anchor-v1-and-v2-side-by-side) instead.
 </Callout>
 
 AVM tracks published Anchor releases. Until v2 has published releases, use `$ <blue>cargo</blue> install <dim>--git</dim> ... <dim>--branch</dim> anchor-next` for the CLI you use with these docs.
@@ -32,6 +32,46 @@ On macOS, the final link can fail with an error like `ld: could not parse bitcod
 ```console showLineNumbers=false
 $ CARGO_PROFILE_RELEASE_LTO=off <blue>cargo</blue> install <dim>--git</dim> https://github.com/otter-sec/anchor.git <dim>--branch</dim> anchor-next anchor-cli <dim>--locked</dim> <dim>--force</dim>
 ```
+
+## Use Anchor v1 and v2 side by side
+
+To keep working on existing Anchor v1 projects while you build new ones with v2, install v2 next to your AVM setup instead of replacing it. Use `anchor` in v1 projects and `anchor2` in v2 projects:
+
+<Steps>
+<Step title="Install into a separate root">
+
+```console showLineNumbers=false
+$ <blue>cargo</blue> install <dim>--git</dim> https://github.com/otter-sec/anchor.git <dim>--branch</dim> anchor-next anchor-cli <dim>--locked</dim> <dim>--force</dim> <dim>--root</dim> ~/.anchor-v2
+```
+
+</Step>
+<Step title="Add an alias">
+
+Add the alias to `~/.zshrc{:file}` (or `~/.bashrc{:file}` for bash):
+
+```bash showLineNumbers=false
+alias anchor2="$HOME/.anchor-v2/bin/anchor"
+```
+
+</Step>
+<Step title="Verify both versions">
+
+Open a new shell or run `$ <blue>source</blue> ~/.zshrc`, then check both:
+
+```console showLineNumbers=false
+$ <blue>anchor2</blue> <dim>--version</dim>
+$ <blue>anchor</blue> <dim>--version</dim>
+```
+
+`anchor2` should print a `2.0.0` release candidate, and `anchor` should still print the AVM-selected version.
+
+</Step>
+</Steps>
+
+<Callout variant="warning" title="Do not add ~/.anchor-v2/bin to PATH">
+  The binary in that directory is also named `anchor`. If `~/.anchor-v2/bin{:file}` comes first on
+  `PATH`, `anchor` runs v2 and hides AVM.
+</Callout>
 
 ## Local checkout
 
