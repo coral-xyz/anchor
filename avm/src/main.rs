@@ -223,7 +223,6 @@ pub fn entry(opts: Cli) -> Result<()> {
         Commands::SelfUpdate { .. } | Commands::Nightly { .. } | Commands::Completions { .. }
     ) {
         avm::check_avm_version_and_warn();
-        avm::check_latest_cargo_build_sbf_and_warn();
     }
 
     match opts.command {
@@ -388,10 +387,10 @@ fn anchor_proxy() -> Result<()> {
     let args = std::env::args().skip(1).collect::<Vec<String>>();
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
 
-    avm::check_latest_cargo_build_sbf_and_warn();
+    avm::build_sbf::ensure_cargo_build_sbf()?;
 
     if avm::ensure_nightly_active()?.is_some() {
-        prepend_solana_bin_to_path()?;
+        prepend_toolchain_bins_to_path()?;
         let platform_tools_guard = ensure_resolved_solana(&cwd, None)?
             .map(|solana| ensure_resolved_platform_tools(&cwd, &solana))
             .transpose()?;
@@ -412,7 +411,7 @@ fn anchor_proxy() -> Result<()> {
     })?;
 
     let binary_path = ensure_resolved_binary(&resolution)?;
-    prepend_solana_bin_to_path()?;
+    prepend_toolchain_bins_to_path()?;
     let platform_tools_guard = ensure_resolved_solana(&cwd, Some(&resolution))?
         .map(|solana| ensure_resolved_platform_tools(&cwd, &solana))
         .transpose()?;
@@ -438,12 +437,8 @@ fn spawn_anchor(
 ) -> Result<()> {
     let cargo_proxy = CargoProxy::new()?;
     let path = env::join_paths(
-        [
-            cargo_proxy.dir.path().to_path_buf(),
-            avm::get_bin_dir_path(),
-        ]
-        .into_iter()
-        .chain(env::split_paths(&env::var_os("PATH").unwrap_or_default())),
+        std::iter::once(cargo_proxy.dir.path().to_path_buf())
+            .chain(env::split_paths(&env::var_os("PATH").unwrap_or_default())),
     )?;
 
     let mut command = Command::new(binary_path);
@@ -582,12 +577,17 @@ fn ensure_idl_nightly_installed(idl_nightly: &str) -> Result<()> {
     Ok(())
 }
 
-/// Make freshly installed Solana executables visible to AVM and the Anchor
-/// process without relying on shell-profile changes.
-fn prepend_solana_bin_to_path() -> Result<()> {
+/// Make managed executables visible without shell-profile changes. The
+/// standalone SBF builder must precede the Solana release's bundled builder,
+/// both during toolchain preparation and when Anchor spawns Cargo.
+fn prepend_toolchain_bins_to_path() -> Result<()> {
     let path = env::join_paths(
-        std::iter::once(avm::solana::active_release_bin_path()?)
-            .chain(env::split_paths(&env::var_os("PATH").unwrap_or_default())),
+        [
+            avm::get_bin_dir_path(),
+            avm::solana::active_release_bin_path()?,
+        ]
+        .into_iter()
+        .chain(env::split_paths(&env::var_os("PATH").unwrap_or_default())),
     )?;
     env::set_var("PATH", path);
     Ok(())

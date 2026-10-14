@@ -147,10 +147,26 @@ requirement, AVM considers hosted Solana CLI versions satisfying that
 requirement and prefers one whose platform-tools rustc can compile the locked
 program dependency graph.
 
-AVM also queries the latest platform-tools release at most once every 24 hours
-and checks whether it is present in `cargo build-sbf`'s cache. If it is
-missing, AVM prints the exact `cargo build-sbf --install-only` command needed
-to install it; it never installs the toolchain automatically.
+## SBF builder
+
+Before launching Anchor, AVM ensures that the latest stable, non-yanked
+`cargo-build-sbf` release from crates.io is installed in `$AVM_HOME/bin`
+(`~/.avm/bin` by default). It uses `cargo install --locked --root "$AVM_HOME"`
+with the resolved exact version, so a working Cargo/Rust installation is
+required. The first invocation may take time to compile the builder.
+
+Update checks are cached for 24 hours. If an update check or installation
+fails, AVM warns and continues with an existing managed builder when available.
+Without a working managed builder, setup fails instead of silently selecting
+the Solana release's bundled builder. Other copies on the user's `PATH` are
+not updated.
+
+AVM puts its own bin directory ahead of the selected Solana release on the
+child's `PATH`. The standalone builder is therefore selected independently
+of the project's Solana CLI version. Build architecture and platform-tools
+arguments passed by Anchor are preserved; when omitted, the builder's defaults
+apply. Platform-tools still use their existing cache, and Solana activation
+and Rustup toolchain setup are unchanged.
 
 ## Self-update
 

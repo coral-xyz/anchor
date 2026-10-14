@@ -101,7 +101,13 @@ Resolve or manage the platform-tools version used by Solana's SBF toolchain. Whe
 
 `$ <blue>avm</blue> platform-tools resolve` also accepts `<dim>--solana-version</dim>` or `<dim>--anchor-version</dim>` to resolve without inspecting the current project.
 
-AVM also queries the latest platform-tools release at most once every 24 hours and checks whether it is present in `cargo build-sbf`'s cache. If it is missing, AVM prints the exact `$ <blue>cargo</blue> build-sbf <dim>--install-only</dim>` command needed to install it; it never installs that cached toolchain automatically.
+## SBF builder
+
+Before launching Anchor, AVM checks for the latest stable, non-yanked `cargo-build-sbf` release from crates.io and installs it into `$AVM_HOME/bin` (`~/.avm/bin` by default). Installation uses Cargo with `--locked`, the exact resolved version, and `--root "$AVM_HOME"`. A working Cargo/Rust installation is required; the first invocation may take time to compile the builder.
+
+Checks are cached for 24 hours. Failed update checks or installations warn and reuse an existing managed builder when available. If no working managed builder exists, setup fails instead of selecting Solana's bundled builder. Other copies on the user's `PATH` are not updated.
+
+AVM's bin directory precedes the selected Solana release in the child's `PATH`, so the standalone builder is independent of the Solana CLI version. Anchor's explicit architecture and platform-tools arguments are preserved; omitted arguments use the builder's defaults. Platform-tools caching, Solana activation, and Rustup toolchain setup are unchanged.
 
 ## `<blue>avm</blue> self-update`
 

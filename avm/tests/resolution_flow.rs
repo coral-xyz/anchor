@@ -64,6 +64,25 @@ if [ -n "$install_only" ] && [ -n "$version" ]; then
 fi
 "#,
         );
+        // Managed builder takes precedence over the bundled Solana builder.
+        let builder = fs::read_to_string(solana_bin.join("cargo-build-sbf")).unwrap();
+        write_executable(
+            &avm_bin.join("cargo-build-sbf"),
+            &builder.replacen(
+                "#!/bin/sh\n",
+                "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then echo 'cargo-build-sbf 4.4.0'; \
+                 exit 0; fi\n",
+                1,
+            ),
+        );
+        fs::write(
+            avm_home.join(".build-sbf-check.json"),
+            format!(
+                r#"{{"timestamp":{},"version":"4.4.0"}}"#,
+                chrono::Utc::now().timestamp()
+            ),
+        )
+        .unwrap();
         write_executable(
             &path_bin.join("rustup"),
             r#"#!/bin/sh
