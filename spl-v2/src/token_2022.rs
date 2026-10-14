@@ -86,10 +86,9 @@ pub struct PermanentDelegateInitialize<'a> {
     pub mint: CpiHandleMut<'a>,
 }
 
+#[cfg(not(target_os = "solana"))]
 #[inline(never)]
-fn return_data_from(
-    program: &Address,
-) -> Result<anchor_lang::FixedVec<u8, 256>, ProgramError> {
+fn return_data_from(program: &Address) -> Result<std::vec::Vec<u8>, ProgramError> {
     let (return_program, data) = anchor_lang::solana_program::program::get_return_data()
         .ok_or(ProgramError::InvalidInstructionData)?;
     require_eq!(
@@ -97,12 +96,24 @@ fn return_data_from(
         program.as_ref(),
         ProgramError::IncorrectProgramId
     );
-    let mut out = crate::token_shared::TokenInstructionData::new();
-    #[cfg(target_os = "solana")]
+    Ok(data.as_slice().to_vec())
+}
+
+#[cfg(target_os = "solana")]
+#[inline(never)]
+fn return_data_from(
+    program: &Address,
+) -> Result<anchor_lang::FixedVec<u8, { anchor_lang::MAX_INSTRUCTION_DATA }>, ProgramError> {
+    let (return_program, data) = anchor_lang::solana_program::program::get_return_data()
+        .ok_or(ProgramError::InvalidInstructionData)?;
+    require_eq!(
+        return_program.to_bytes().as_slice(),
+        program.as_ref(),
+        ProgramError::IncorrectProgramId
+    );
+    let mut out = anchor_lang::FixedVec::new();
     out.try_extend_from_slice(data.as_slice())
         .map_err(|_| ProgramError::InvalidInstructionData)?;
-    #[cfg(not(target_os = "solana"))]
-    out.extend_from_slice(data.as_slice());
     Ok(out)
 }
 
@@ -153,10 +164,23 @@ pub fn initialize_immutable_owner<'a>(
     ctx.invoke(&data)
 }
 
+#[cfg(not(target_os = "solana"))]
 pub fn amount_to_ui_amount<'a>(
     ctx: CpiContext<'a, AmountToUiAmount<'a>>,
     amount: u64,
-) -> Result<anchor_lang::FixedVec<u8, 256>, ProgramError> {
+) -> Result<std::string::String, ProgramError> {
+    validate_token_2022_program(ctx.program)?;
+    let data = crate::token_shared::token_data_u64(23, amount);
+    ctx.invoke(&data)?;
+    let bytes = return_data_from(ctx.program)?;
+    std::string::String::from_utf8(bytes).map_err(|_| ProgramError::InvalidInstructionData)
+}
+
+#[cfg(target_os = "solana")]
+pub fn amount_to_ui_amount<'a>(
+    ctx: CpiContext<'a, AmountToUiAmount<'a>>,
+    amount: u64,
+) -> Result<anchor_lang::FixedVec<u8, { anchor_lang::MAX_INSTRUCTION_DATA }>, ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let data = crate::token_shared::token_data_u64(23, amount);
     ctx.invoke(&data)?;

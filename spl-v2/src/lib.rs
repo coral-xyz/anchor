@@ -13,6 +13,9 @@
 
 #![no_std]
 
+#[cfg(not(target_os = "solana"))]
+extern crate std;
+
 pub mod associated_token;
 pub mod extensions;
 #[cfg(all(feature = "metadata", not(target_os = "solana")))]
