@@ -139,7 +139,11 @@ impl<'a, T: Bumps> Context<'a, T> {
             // region and `remaining_num` is the exact number of accounts
             // to walk. Walking stops on the first mut-alias error so we
             // never advance past the remaining region.
+            #[cfg(not(target_os = "solana"))]
             v.push(unsafe { cursor.next() });
+            #[cfg(target_os = "solana")]
+            v.try_push(unsafe { cursor.next() })
+                .map_err(|_| ProgramError::InvalidArgument)?;
             if let Some(dups) = cursor.duplicates() {
                 if dups.intersects(mut_mask) {
                     return Err(crate::ErrorCode::ConstraintDuplicateMutableAccount.into());

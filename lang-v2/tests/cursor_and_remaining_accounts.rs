@@ -13,9 +13,9 @@
 //!      yields the earlier `AccountView` from the lookup array — not
 //!      an `AccountView` pointing at the dup slot.
 //!   3. `Context::remaining_accounts` walks the cursor lazily on first
-//!      call, caches the resulting `Vec<AccountView>`, and returns a
-//!      fresh clone on each subsequent call without advancing the
-//!      cursor or double-populating the cache.
+//!      call, caches the resulting account views, and returns borrowed
+//!      access on subsequent calls without advancing the cursor or copying
+//!      the cache.
 //!
 //! Run: `cargo test -p anchor-lang --features testing --test cursor_and_remaining_accounts`
 
@@ -29,6 +29,11 @@ use {
     pinocchio::account::AccountView,
     solana_address::Address,
 };
+
+#[cfg(target_os = "solana")]
+use anchor_lang::MAX_ACCOUNT_METAS;
+#[cfg(target_os = "solana")]
+use solana_program_error::ProgramError;
 
 // A placeholder header struct that implements `Bumps` so we can construct
 // a `Context<DummyHeader>` without needing the full `#[derive(Accounts)]`
@@ -270,6 +275,32 @@ fn remaining_accounts_returns_empty_when_nothing_trails() {
     assert!(ctx.remaining_accounts().expect("walk").is_empty());
     // Second call on empty — still empty, no cache bookkeeping bug.
     assert!(ctx.remaining_accounts().expect("walk").is_empty());
+}
+
+#[cfg(target_os = "solana")]
+#[test]
+fn remaining_accounts_over_inline_budget_returns_error() {
+    let records: Vec<_> = (0..(MAX_ACCOUNT_METAS + 1) as u8).map(non_dup).collect();
+    let mut sbf = SbfInputBuffer::build(&records);
+    let mut lookup = fresh_lookup();
+    let mut cursor =
+        unsafe { AccountCursor::new(sbf.as_mut_ptr(), lookup.as_mut_ptr() as *mut AccountView) };
+    let _ = unsafe { cursor.walk_n(0) };
+
+    let program_id = Address::new_from_array([0x42; 32]);
+    let mut ctx: Context<'_, DummyHeader> = Context::new(
+        &program_id,
+        DummyHeader,
+        (),
+        &mut cursor,
+        records.len() as u8,
+        MutMask::Static(EMPTY_MUT_MASK),
+    );
+
+    assert_eq!(
+        ctx.remaining_accounts().unwrap_err(),
+        ProgramError::InvalidArgument
+    );
 }
 
 #[test]
