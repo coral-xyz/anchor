@@ -179,18 +179,18 @@ pub mod token_2022 {
                     Self::MetadataPointer => 64,
                     Self::GroupPointer => 64,
                     Self::GroupMemberPointer => 64,
+                    Self::ConfidentialTransferMint => 65,
+                    Self::ConfidentialTransferAccount => 295,
+                    Self::InterestBearingConfig => 52,
+                    Self::ConfidentialTransferFeeConfig => 129,
+                    Self::ConfidentialTransferFeeAmount => 64,
+                    Self::TokenGroup => 80,
+                    Self::TokenGroupMember => 72,
+                    Self::ConfidentialMintBurn => 196,
+                    Self::ScaledUiAmount => 56,
                     Self::Pausable => 33,
                     Self::PausableAccount => 0,
-                    Self::ConfidentialTransferMint
-                    | Self::ConfidentialTransferAccount
-                    | Self::InterestBearingConfig
-                    | Self::ConfidentialTransferFeeConfig
-                    | Self::ConfidentialTransferFeeAmount
-                    | Self::TokenMetadata
-                    | Self::TokenGroup
-                    | Self::TokenGroupMember
-                    | Self::ConfidentialMintBurn
-                    | Self::ScaledUiAmount => return None,
+                    Self::TokenMetadata => return None,
                 })
             }
 
@@ -312,5 +312,75 @@ pub mod token_metadata {
         Symbol,
         Uri,
         Key(&'a str),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    extern crate std;
+
+    #[test]
+    fn fixed_extension_lengths_match_canonical() {
+        use spl_token_2022_interface::{
+            extension::ExtensionType as CanonicalExtensionType,
+            state::{Account as CanonicalAccount, Mint as CanonicalMint},
+        };
+        use super::token_2022::{
+            extension::ExtensionType as LocalExtensionType,
+            state::{Account as LocalAccount, Mint as LocalMint},
+        };
+
+        for (local, canonical) in [
+            (
+                LocalExtensionType::ConfidentialTransferMint,
+                CanonicalExtensionType::ConfidentialTransferMint,
+            ),
+            (
+                LocalExtensionType::InterestBearingConfig,
+                CanonicalExtensionType::InterestBearingConfig,
+            ),
+            (
+                LocalExtensionType::ConfidentialTransferFeeConfig,
+                CanonicalExtensionType::ConfidentialTransferFeeConfig,
+            ),
+            (
+                LocalExtensionType::TokenGroup,
+                CanonicalExtensionType::TokenGroup,
+            ),
+            (
+                LocalExtensionType::TokenGroupMember,
+                CanonicalExtensionType::TokenGroupMember,
+            ),
+            (
+                LocalExtensionType::ConfidentialMintBurn,
+                CanonicalExtensionType::ConfidentialMintBurn,
+            ),
+            (
+                LocalExtensionType::ScaledUiAmount,
+                CanonicalExtensionType::ScaledUiAmount,
+            ),
+        ] {
+            assert_eq!(
+                LocalExtensionType::try_calculate_account_len::<LocalMint>(&[local]),
+                CanonicalExtensionType::try_calculate_account_len::<CanonicalMint>(&[canonical]),
+            );
+        }
+        for (local, canonical) in [
+            (
+                LocalExtensionType::ConfidentialTransferAccount,
+                CanonicalExtensionType::ConfidentialTransferAccount,
+            ),
+            (
+                LocalExtensionType::ConfidentialTransferFeeAmount,
+                CanonicalExtensionType::ConfidentialTransferFeeAmount,
+            ),
+        ] {
+            assert_eq!(
+                LocalExtensionType::try_calculate_account_len::<LocalAccount>(&[local]),
+                CanonicalExtensionType::try_calculate_account_len::<CanonicalAccount>(&[
+                    canonical,
+                ]),
+            );
+        }
     }
 }

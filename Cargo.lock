@@ -578,6 +578,7 @@ dependencies = [
  "solana-program-error 3.0.1",
  "solana-program-pack 3.1.0",
  "solana-pubkey 4.3.0",
+ "spl-token-2022-interface 2.1.0",
  "spl-token-interface 2.0.0",
 ]
 

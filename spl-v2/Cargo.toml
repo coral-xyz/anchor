@@ -31,6 +31,7 @@ borsh = "1.6.1"
 # `spl-token-interface` types (see `tests/miri_spl_pod.rs`). Dev-only.
 solana-program-pack.workspace = true
 spl-token-interface = "2.0"
+spl-token-2022-interface = "2.1"
 
 [target.'cfg(not(target_os = "solana"))'.dependencies]
 borsh = "1.6.1"
