@@ -482,21 +482,18 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
         CpiFieldKind::Phantom => quote! {},
         CpiFieldKind::Nested => quote! {
             let __nested = anchor_lang::ToCpiAccounts::optional_account_sentinel_flags(&self.#ident)?;
-            for __flag in __nested.iter() {
-                __flags
-                    .try_push(__flag)
-                    .map_err(|_| anchor_lang::Error::InvalidArgument)?;
+            for __index in 0..anchor_lang::OptionalSentinelFlags::len(&__nested) {
+                anchor_lang::try_push_bool(
+                    &mut __flags,
+                    anchor_lang::OptionalSentinelFlags::get(&__nested, __index),
+                )?;
             }
         },
         CpiFieldKind::Readonly | CpiFieldKind::Writable => quote! {
-            __flags
-                .try_push(false)
-                .map_err(|_| anchor_lang::Error::InvalidArgument)?;
+            anchor_lang::try_push_bool(&mut __flags, false)?;
         },
         CpiFieldKind::OptionalReadonly | CpiFieldKind::OptionalWritable => quote! {
-            __flags
-                .try_push(self.#ident.is_none())
-                .map_err(|_| anchor_lang::Error::InvalidArgument)?;
+            anchor_lang::try_push_bool(&mut __flags, self.#ident.is_none())?;
         },
     });
 
@@ -5382,12 +5379,14 @@ fn process_handler(
     let set_return_data = returns_value.then(|| {
         quote! {
             let mut __return_data = anchor_lang::InstructionDataBuffer::new();
-            anchor_lang::wincode::config::serialize_into(
+            if anchor_lang::wincode::config::serialize_into(
                 &mut __return_data,
                 &__result,
                 anchor_lang::BORSH_CONFIG,
             )
-                .expect("return data serialization failed");
+            .is_err() {
+                return anchor_lang::Error::InvalidInstructionData.into();
+            }
             anchor_lang::pinocchio::cpi::set_return_data(&__return_data);
         }
     });
@@ -6888,9 +6887,7 @@ pub fn emit_cpi(input: TokenStream) -> TokenStream {
                     &self,
                 ) -> anchor_lang::Result<anchor_lang::BoolBuffer> {
                     let mut __flags = anchor_lang::BoolBuffer::new();
-                    __flags
-                        .try_push(false)
-                        .map_err(|_| anchor_lang::Error::InvalidArgument)?;
+                    anchor_lang::try_push_bool(&mut __flags, false)?;
                     Ok(__flags)
                 }
             }

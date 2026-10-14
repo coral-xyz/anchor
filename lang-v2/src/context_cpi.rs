@@ -142,9 +142,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
                 ),
             )?;
             crate::try_push_cpi_handle(&mut handles, *handle)?;
-            optional_sentinel_flags
-                .try_push(false)
-                .map_err(|_| ProgramError::InvalidArgument)?;
+            crate::try_push_bool(&mut optional_sentinel_flags, false)?;
         }
 
         crate::program::validate_instruction_accounts(

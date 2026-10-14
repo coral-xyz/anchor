@@ -72,6 +72,74 @@ pub mod __idl {
     }
 }
 
+#[cfg(not(target_os = "solana"))]
+#[derive(Clone, Default, Eq, PartialEq)]
+pub struct HostBoolBuffer {
+    values: std::vec::Vec<bool>,
+}
+
+#[cfg(not(target_os = "solana"))]
+impl HostBoolBuffer {
+    #[inline]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
+
+    #[inline]
+    pub fn get(&self, index: usize) -> bool {
+        self.values.get(index).copied().unwrap_or(false)
+    }
+
+    #[inline]
+    pub fn push(&mut self, value: bool) {
+        self.values.push(value);
+    }
+
+    #[inline]
+    pub fn try_push(&mut self, value: bool) -> core::result::Result<(), bool> {
+        self.values.push(value);
+        Ok(())
+    }
+
+    #[inline]
+    pub fn resize(&mut self, len: usize, value: bool) {
+        self.values.resize(len, value);
+    }
+
+    #[inline]
+    pub fn iter(&self) -> std::slice::Iter<'_, bool> {
+        self.values.iter()
+    }
+}
+
+#[cfg(not(target_os = "solana"))]
+impl core::ops::Deref for HostBoolBuffer {
+    type Target = [bool];
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.values.as_slice()
+    }
+}
+
+#[cfg(not(target_os = "solana"))]
+impl core::ops::DerefMut for HostBoolBuffer {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.values.as_mut_slice()
+    }
+}
+
 /// Format a message into a bounded stack buffer and send it to the Solana log
 /// syscall. This is the no-`alloc` implementation used by the on-chain
 /// `msg!` macro.
@@ -212,6 +280,9 @@ pub type AccountViewBuffer = FixedVec<pinocchio::account::AccountView, MAX_ACCOU
 pub type CpiHandleBuffer<'a> = std::vec::Vec<CpiHandle<'a>>;
 #[cfg(target_os = "solana")]
 pub type CpiHandleBuffer<'a> = FixedVec<CpiHandle<'a>, MAX_ACCOUNT_METAS>;
+#[cfg(not(target_os = "solana"))]
+pub type BoolBuffer = HostBoolBuffer;
+#[cfg(target_os = "solana")]
 pub type BoolBuffer = AccountFlags;
 #[cfg(not(target_os = "solana"))]
 pub type InstructionDataBuffer = std::vec::Vec<u8>;
@@ -266,9 +337,28 @@ pub fn try_push_cpi_handle<'a>(
         .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
 }
 
+/// Append an optional-account sentinel flag without imposing the on-chain
+/// inline capacity on host/client account builders.
+#[inline]
+pub fn try_push_bool(
+    buffer: &mut BoolBuffer,
+    value: bool,
+) -> core::result::Result<(), solana_program_error::ProgramError> {
+    #[cfg(not(target_os = "solana"))]
+    {
+        buffer.push(value);
+        Ok(())
+    }
+    #[cfg(target_os = "solana")]
+    buffer
+        .try_push(value)
+        .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
+}
+
 /// Read-only view of optional-account sentinel flags used by CPI validation.
-/// The compact [`AccountFlags`] representation is used by generated V2 code,
-/// while slices remain accepted by the lower-level public CPI helpers.
+/// The compact [`AccountFlags`] representation is used by generated V2 code
+/// on SBF, while host/client builds use an unbounded `Vec<bool>`-backed
+/// buffer and slices remain accepted by the lower-level public CPI helpers.
 pub trait OptionalSentinelFlags {
     fn len(&self) -> usize;
     fn get(&self, index: usize) -> bool;
@@ -295,6 +385,19 @@ impl<const N: usize> OptionalSentinelFlags for [bool; N] {
     #[inline]
     fn get(&self, index: usize) -> bool {
         self.as_slice().get(index).copied().unwrap_or(false)
+    }
+}
+
+#[cfg(not(target_os = "solana"))]
+impl OptionalSentinelFlags for HostBoolBuffer {
+    #[inline]
+    fn len(&self) -> usize {
+        HostBoolBuffer::len(self)
+    }
+
+    #[inline]
+    fn get(&self, index: usize) -> bool {
+        HostBoolBuffer::get(self, index)
     }
 }
 

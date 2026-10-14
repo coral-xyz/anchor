@@ -805,3 +805,13 @@ fn unchecked_handle_api_is_available() {
 
     unsafe { program::invoke_unchecked(&ix, &[]) }.unwrap();
 }
+
+#[test]
+fn host_optional_sentinel_flags_are_not_inline_capped() {
+    let mut flags = anchor_lang::BoolBuffer::new();
+    for _ in 0..=MAX_ACCOUNT_METAS {
+        anchor_lang::try_push_bool(&mut flags, false).unwrap();
+    }
+
+    assert_eq!(flags.len(), MAX_ACCOUNT_METAS + 1);
+}
