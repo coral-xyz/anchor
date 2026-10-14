@@ -178,9 +178,9 @@ impl_idl_account_type_noop!(
     pinocchio::address::Address,
 );
 
-// Pod scalar wrappers still lower like their native counterparts when they
-// appear directly in a field type, but generic bytemuck helpers like `PodVec`
-// can reference them by name. Register them as alias defs so those named
+// Pod scalar wrappers are referenced by name (`{"defined":{"name":"PodU64"}}`),
+// both as direct field types and as `PodVec` elements, so their align-1 layout
+// survives in bytemuck types. Register them as alias defs so those named
 // references resolve in the final IDL.
 macro_rules! impl_idl_account_type_pod_alias {
     ($(($t:path, $name:literal, $alias:literal)),* $(,)?) => {
