@@ -56,9 +56,11 @@ TESTS_V2_COVERAGE_TESTS := \
 	token_2022_extensions \
 	token_interface
 TESTS_V2_COVERAGE_ARGS := $(foreach test,$(TESTS_V2_COVERAGE_TESTS),--test $(test))
-# These tests exercise legacy allocator-backed account/serialization fixtures
-# and are intentionally outside the no-alloc SBF runtime coverage matrix.
-TESTS_V2_NON_COVERAGE_TESTS := compile_fail borsh_realloc
+# The legacy allocator-backed Borsh Vec fixture is intentionally not part of
+# the V2 no-alloc test matrix. It remains available for host compatibility
+# work, but cannot be built as an on-chain V2 program without reintroducing
+# allocator-backed serialization.
+TESTS_V2_NON_COVERAGE_TESTS := compile_fail
 TESTS_V2_NON_COVERAGE_ARGS := $(foreach test,$(TESTS_V2_NON_COVERAGE_TESTS),--test $(test))
 
 .PHONY: coverage-v2
