@@ -982,8 +982,7 @@ fn test_initialize() {{
             counter,
             system_program: solana_sdk_ids::system_program::id(),
         }}
-        .to_account_metas(None)
-        .to_vec(),
+        .to_account_metas(None),
     );
 
     let counter_space = <Account<{0}::state::Counter> as Space>::INIT_SPACE;
@@ -1058,8 +1057,7 @@ fn test_initialize() {{
             counter: counter.pubkey(),
             system_program: System::id(),
         }}
-        .to_account_metas(None)
-        .to_vec(),
+        .to_account_metas(None),
     );
 
     let blockhash = svm.latest_blockhash();
@@ -1113,14 +1111,13 @@ mod tests {
     }
 
     #[test]
-    fn host_rust_templates_materialize_account_metas() {
+    fn host_rust_templates_pass_owned_account_metas() {
         for template in [
             create_program_template_mollusk_test("my_program", Path::new("tests")),
             create_program_template_litesvm_test("my_program", Path::new("tests")),
         ] {
-            assert!(template[0]
-                .1
-                .contains(".to_account_metas(None)\n        .to_vec()"));
+            assert!(template[0].1.contains(".to_account_metas(None),"));
+            assert!(!template[0].1.contains(".to_account_metas(None)\n        .to_vec()"));
         }
     }
 }

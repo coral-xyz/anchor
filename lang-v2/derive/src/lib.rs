@@ -5621,7 +5621,7 @@ fn process_handler(
                 anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
                     #program_id,
                     &<Self as anchor_lang::InstructionData>::data(&self),
-                    accounts.to_account_metas(None).to_vec(),
+                    accounts.to_account_metas(None),
                 )
             }
         }
