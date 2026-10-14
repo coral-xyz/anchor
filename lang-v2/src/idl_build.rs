@@ -82,24 +82,8 @@ pub fn strip_account_entry_identity(entry: &str) -> std::string::String {
 // ---------------------------------------------------------------------------
 //
 // All default to the no-op `__register_idl_deps` so a struct field of these
-// types doesn't contribute anything to `types[]`. The collection impls
-// forward to their element type so a `Vec<Inner>` field still pulls `Inner`
-// into the registry.
-
-macro_rules! impl_idl_account_type_noop {
-    ($($t:ty),* $(,)?) => {
-        $(
-            #[doc(hidden)]
-            impl IdlAccountType for $t {}
-        )*
-    };
-}
-
-impl_idl_account_type_noop!(
-    f32,
-    f64,
-    std::string::String,
-);
+// types doesn't contribute anything to `types[]`. Host collection impls live
+// in `idl.rs` so non-IDL host builds can still compile generated bindings.
 
 // Pod scalar wrappers are referenced by name (`{"defined":{"name":"PodU64"}}`),
 // both as direct field types and as `PodVec` elements, so their align-1 layout
@@ -142,67 +126,6 @@ impl_idl_account_type_pod_alias!(
     (crate::pod::PodI64, "PodI64", "i64"),
     (crate::pod::PodI128, "PodI128", "i128"),
 );
-
-#[doc(hidden)]
-impl<T: IdlAccountType> IdlAccountType for std::vec::Vec<T> {
-    fn __register_idl_deps(
-        accounts: &mut crate::IdlEntries,
-        types: &mut crate::IdlEntries,
-    ) {
-        T::__register_idl_deps(accounts, types);
-    }
-}
-
-#[doc(hidden)]
-impl<K: IdlAccountType, V: IdlAccountType> IdlAccountType for std::collections::BTreeMap<K, V> {
-    fn __register_idl_deps(
-        accounts: &mut crate::IdlEntries,
-        types: &mut crate::IdlEntries,
-    ) {
-        K::__register_idl_deps(accounts, types);
-        V::__register_idl_deps(accounts, types);
-    }
-}
-
-#[doc(hidden)]
-impl<T: IdlAccountType> IdlAccountType for std::collections::BTreeSet<T> {
-    fn __register_idl_deps(
-        accounts: &mut crate::IdlEntries,
-        types: &mut crate::IdlEntries,
-    ) {
-        T::__register_idl_deps(accounts, types);
-    }
-}
-
-macro_rules! impl_idl_account_type_tuple {
-    ($($ty:ident),+ $(,)?) => {
-        #[doc(hidden)]
-        impl<$($ty: IdlAccountType),+> IdlAccountType for ($($ty,)+) {
-            fn __register_idl_deps(
-                accounts: &mut crate::IdlEntries,
-                types: &mut crate::IdlEntries,
-            ) {
-                $( $ty::__register_idl_deps(accounts, types); )+
-            }
-        }
-    };
-}
-
-impl_idl_account_type_tuple!(A, B);
-impl_idl_account_type_tuple!(A, B, C);
-impl_idl_account_type_tuple!(A, B, C, D);
-impl_idl_account_type_tuple!(A, B, C, D, E);
-impl_idl_account_type_tuple!(A, B, C, D, E, F);
-impl_idl_account_type_tuple!(A, B, C, D, E, F, G);
-impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H);
-impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I);
-impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J);
-impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K);
-impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K, L);
-impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
 
 // `PodVec<T, MAX>` — the zero-copy bounded-capacity analog of `Vec<T>`.
 // It contributes a generic type definition so downstream `declare_program!`

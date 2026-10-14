@@ -36,9 +36,67 @@ macro_rules! impl_leaf_idl_types {
 }
 
 impl_leaf_idl_types!(
-    (), bool, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128,
+    (), bool, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64,
     crate::Address,
 );
+
+// Host/client IDL bindings may still use owned standard-library collections.
+// Keep these impls outside the SBF target so the on-chain closure has no
+// `std`/`alloc` dependency while `declare_program!` remains source-compatible
+// for host consumers that do not enable the IDL build feature.
+#[cfg(not(target_os = "solana"))]
+impl IdlAccountType for std::string::String {}
+
+#[cfg(not(target_os = "solana"))]
+impl<T: IdlAccountType> IdlAccountType for std::vec::Vec<T> {
+    fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+        T::__register_idl_deps(accounts, types);
+    }
+}
+
+#[cfg(not(target_os = "solana"))]
+impl<K: IdlAccountType, V: IdlAccountType> IdlAccountType
+    for std::collections::BTreeMap<K, V>
+{
+    fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+        K::__register_idl_deps(accounts, types);
+        V::__register_idl_deps(accounts, types);
+    }
+}
+
+#[cfg(not(target_os = "solana"))]
+impl<T: IdlAccountType> IdlAccountType for std::collections::BTreeSet<T> {
+    fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+        T::__register_idl_deps(accounts, types);
+    }
+}
+
+macro_rules! impl_idl_account_type_tuple {
+    ($($ty:ident),+ $(,)?) => {
+        #[doc(hidden)]
+        impl<$($ty: IdlAccountType),+> IdlAccountType for ($($ty,)+) {
+            fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+                $( $ty::__register_idl_deps(accounts, types); )+
+            }
+        }
+    };
+}
+
+impl_idl_account_type_tuple!(A, B);
+impl_idl_account_type_tuple!(A, B, C);
+impl_idl_account_type_tuple!(A, B, C, D);
+impl_idl_account_type_tuple!(A, B, C, D, E);
+impl_idl_account_type_tuple!(A, B, C, D, E, F);
+impl_idl_account_type_tuple!(A, B, C, D, E, F, G);
+impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H);
+impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I);
+impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J);
+impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K);
+impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K, L);
+impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K, L, M);
+impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+impl_idl_account_type_tuple!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
 
 impl<T: IdlAccountType + ?Sized> IdlAccountType for &T {
     fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
