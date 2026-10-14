@@ -79,18 +79,61 @@ pub mod __idl {
 pub fn sol_log_fmt(args: core::fmt::Arguments<'_>) {
     struct LogWriter {
         bytes: FixedVec<u8, 256>,
+        truncated: bool,
+    }
+
+    impl LogWriter {
+        #[inline]
+        fn mark_truncated(&mut self) {
+            self.truncated = true;
+            if self.bytes.len() + 3 > self.bytes.capacity() {
+                let prefix = &self.bytes.as_slice()[..self.bytes.capacity() - 3];
+                let keep = match core::str::from_utf8(prefix) {
+                    Ok(_) => prefix.len(),
+                    Err(error) => error.valid_up_to(),
+                };
+                self.bytes.truncate(keep);
+            }
+            let _ = self.bytes.try_extend_from_slice(b"...");
+        }
     }
 
     impl core::fmt::Write for LogWriter {
         fn write_str(&mut self, value: &str) -> core::fmt::Result {
-            self.bytes
-                .try_extend_from_slice(value.as_bytes())
-                .map_err(|_| core::fmt::Error)
+            if self.truncated {
+                return Ok(());
+            }
+            if self.bytes.len() + value.len() <= self.bytes.capacity() {
+                self.bytes
+                    .try_extend_from_slice(value.as_bytes())
+                    .map_err(|_| core::fmt::Error)?;
+                return Ok(());
+            }
+
+            let available = self.bytes.capacity() - self.bytes.len();
+            if available > 3 {
+                let prefix_limit = available - 3;
+                let mut written = 0;
+                for character in value.chars() {
+                    let mut encoded = [0u8; 4];
+                    let encoded = character.encode_utf8(&mut encoded).as_bytes();
+                    if written + encoded.len() > prefix_limit {
+                        break;
+                    }
+                    self.bytes
+                        .try_extend_from_slice(encoded)
+                        .map_err(|_| core::fmt::Error)?;
+                    written += encoded.len();
+                }
+            }
+            self.mark_truncated();
+            Ok(())
         }
     }
 
     let mut writer = LogWriter {
         bytes: FixedVec::new(),
+        truncated: false,
     };
     let _ = core::fmt::write(&mut writer, args);
     // Formatting only writes valid UTF-8, so this conversion cannot fail.
@@ -186,11 +229,6 @@ pub type CpiAccountBuffer<'a> =
 #[cfg(target_os = "solana")]
 pub type CpiAccountBuffer<'a> =
     FixedVec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>, MAX_ACCOUNT_METAS>;
-
-#[cfg(not(target_os = "solana"))]
-pub type AccountBindingBuffer = std::vec::Vec<Option<usize>>;
-#[cfg(target_os = "solana")]
-pub type AccountBindingBuffer = FixedVec<Option<usize>, MAX_ACCOUNT_METAS>;
 
 /// Append one instruction account without making the generated CPI builder
 /// rely on `FixedVec::push`'s panic-on-overflow compatibility behavior.
