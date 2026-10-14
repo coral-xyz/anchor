@@ -241,7 +241,7 @@ fn remaining_account_views_expose_compat_helpers() {
         MutMask::Static(EMPTY_MUT_MASK),
     );
 
-    let mut remaining = ctx.remaining_accounts().expect("walk");
+    let remaining = ctx.remaining_accounts().expect("walk");
     assert_eq!(remaining[0].key().to_bytes(), unique_addr(1));
     assert!(!remaining[0].data_is_empty());
     assert_eq!(remaining[0].try_data_len().unwrap(), 16);
@@ -294,16 +294,18 @@ fn remaining_accounts_caches_and_does_not_re_walk_cursor() {
         MutMask::Static(EMPTY_MUT_MASK),
     );
 
-    let first = ctx.remaining_accounts().expect("first walk");
+    let first_addresses = {
+        let first = ctx.remaining_accounts().expect("first walk");
+        [first[0].address().to_bytes(), first[1].address().to_bytes()]
+    };
     let second = ctx.remaining_accounts().expect("second walk");
 
     // Structural equality via address, since AccountView is Copy and the
     // cache returns a clone each call.
-    assert_eq!(first.len(), 2);
+    assert_eq!(first_addresses.len(), 2);
     assert_eq!(second.len(), 2);
-    for (a, b) in first.iter().zip(second.iter()) {
-        assert_eq!(a.address().to_bytes(), b.address().to_bytes());
-    }
+    assert_eq!(first_addresses[0], second[0].address().to_bytes());
+    assert_eq!(first_addresses[1], second[1].address().to_bytes());
     // Cursor must have advanced by exactly `remaining_num` (2), not
     // twice that — verifies caching short-circuits the walk.
     //

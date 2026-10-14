@@ -143,7 +143,7 @@ Here are some examples of optimizations present in Anchor v2.
 - **Typed `CpiHandle` lets us use pinocchio's unchecked CPI.** The unchecked path would be UB under stale-borrow aliasing, but the Rust borrow checker rules that out at compile time — so `CpiContext::invoke()` takes it. Turns UB into a compile error and drops one runtime check per CPI.
 - **`const-rent` feature** bakes the rent formula into the binary so `create_account` skips the `Rent::get()` sysvar. Saves ~85 CU per `create_account`.
 - **Guardrails compile away** when you drop the feature. `check_program_id` / the `is_writable` check in `load_mut` just aren't emitted. Smaller binary in prod.
-- **`remaining_accounts()` is lazy-cached.** First call walks the account cursor; subsequent calls return a clone of the cached fixed-capacity buffer. Zero overhead for instructions that don't touch it.
+- **`remaining_accounts()` is a lazy-cached borrowed slice.** The first call walks the account cursor; subsequent calls reuse the cached views without copying a fixed-capacity buffer. Instructions that do not touch it pay no walk cost.
 
 ## Account types
 
