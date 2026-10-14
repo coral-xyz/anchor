@@ -75,12 +75,13 @@ keep `Vec` aliases for client ergonomics; the host-only `Box<T>` forwarding
 implementation is excluded from Solana builds.
 
 This intentionally changes a few V2 surfaces: `transfer_with_seed` borrows a
-`&str`, Token-2022 UI amount return data is a bounded byte buffer, and
-`CpiContext::with_remaining_accounts` accepts a bounded account buffer. A
-program that needs unbounded `Vec`/`String` account data must use an inline
-fixed-capacity type such as `PodVec<T, MAX>` or provide its own allocator-backed
-wrapper. IDL emission and generated client JSON remain host-only and may use
-`std`; they are kept separate from the deployed runtime.
+`&str`, the SBF Token-2022 UI amount helper returns a bounded byte buffer, and
+SBF `CpiContext::with_remaining_accounts` borrows a caller-owned slice. Host
+builds retain the owned `String`, `Vec`, and CPI-buffer forms. A program that
+needs unbounded `Vec`/`String` account data must use an inline fixed-capacity
+type such as `PodVec<T, MAX>` or provide its own allocator-backed wrapper. IDL
+emission and generated client JSON remain host-only and may use `std`; they are
+kept separate from the deployed runtime.
 
 The boundary is split deliberately:
 

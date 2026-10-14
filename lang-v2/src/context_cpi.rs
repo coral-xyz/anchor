@@ -30,7 +30,10 @@ use solana_instruction::Instruction;
 /// ```
 pub struct CpiContext<'a, T: ToCpiAccounts<'a>> {
     pub accounts: T,
+    #[cfg(not(target_os = "solana"))]
     pub remaining_accounts: crate::CpiHandleBuffer<'a>,
+    #[cfg(target_os = "solana")]
+    pub remaining_accounts: &'a [CpiHandle<'a>],
     pub program: &'a Address,
     pub signer_seeds: &'a [&'a [&'a [u8]]],
 }
@@ -41,7 +44,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         Self {
             accounts,
             program,
-            remaining_accounts: crate::CpiHandleBuffer::new(),
+            remaining_accounts: Self::empty_remaining_accounts(),
             signer_seeds: &[],
         }
     }
@@ -55,9 +58,21 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         Self {
             accounts,
             program,
-            remaining_accounts: crate::CpiHandleBuffer::new(),
+            remaining_accounts: Self::empty_remaining_accounts(),
             signer_seeds,
         }
+    }
+
+    #[cfg(not(target_os = "solana"))]
+    #[inline]
+    fn empty_remaining_accounts() -> crate::CpiHandleBuffer<'a> {
+        crate::CpiHandleBuffer::new()
+    }
+
+    #[cfg(target_os = "solana")]
+    #[inline]
+    fn empty_remaining_accounts() -> &'a [CpiHandle<'a>] {
+        &[]
     }
 
     #[must_use]
@@ -67,7 +82,16 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     }
 
     #[must_use]
+    #[cfg(not(target_os = "solana"))]
     pub fn with_remaining_accounts(mut self, ra: crate::CpiHandleBuffer<'a>) -> Self {
+        self.remaining_accounts = ra;
+        self
+    }
+
+    /// Attach borrowed remaining accounts without copying a maximum-sized
+    /// inline buffer into the CPI context. The slice must outlive the CPI.
+    #[cfg(target_os = "solana")]
+    pub fn with_remaining_accounts(mut self, ra: &'a [CpiHandle<'a>]) -> Self {
         self.remaining_accounts = ra;
         self
     }

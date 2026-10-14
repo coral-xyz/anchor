@@ -104,9 +104,14 @@ pub fn harvest_withheld_tokens_to_mint<'a>(
     for source in sources {
         push_remaining_account(&mut remaining_accounts, (*source).into())?;
     }
-    remaining_accounts.extend(ctx.remaining_accounts.iter().copied());
+    for account in ctx.remaining_accounts.iter().copied() {
+        push_remaining_account(&mut remaining_accounts, account)?;
+    }
     let data = token_data_subinstruction(26, 4);
-    ctx.with_remaining_accounts(remaining_accounts)
+    #[cfg(not(target_os = "solana"))]
+    return ctx.with_remaining_accounts(remaining_accounts).invoke(&data);
+    #[cfg(target_os = "solana")]
+    ctx.with_remaining_accounts(remaining_accounts.as_slice())
         .invoke(&data)
 }
 
@@ -124,12 +129,20 @@ pub fn withdraw_withheld_tokens_from_accounts<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let has_signers = !ctx.remaining_accounts.is_empty();
-    let mut remaining_accounts = ctx.remaining_accounts.clone();
+    let mut remaining_accounts = anchor_lang::CpiHandleBuffer::new();
+    for account in ctx.remaining_accounts.iter().copied() {
+        push_remaining_account(&mut remaining_accounts, account)?;
+    }
     for source in sources {
         push_remaining_account(&mut remaining_accounts, CpiHandle::from(*source))?;
     }
     let mut data = token_data_subinstruction(26, 3);
     data.push(sources.len() as u8);
-    ctx.with_remaining_accounts(remaining_accounts)
+    #[cfg(not(target_os = "solana"))]
+    return ctx
+        .with_remaining_accounts(remaining_accounts)
+        .invoke_with_signer_override(&data, Some((2, !has_signers)));
+    #[cfg(target_os = "solana")]
+    ctx.with_remaining_accounts(remaining_accounts.as_slice())
         .invoke_with_signer_override(&data, Some((2, !has_signers)))
 }
