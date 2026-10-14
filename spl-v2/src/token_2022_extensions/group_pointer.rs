@@ -75,6 +75,6 @@ mod tests {
             authority: CpiHandle::readonly(&authority_view),
         };
 
-        assert_eq!(accounts.to_cpi_handles().len(), 2);
+        assert_eq!(accounts.to_cpi_handles().unwrap().len(), 2);
     }
 }

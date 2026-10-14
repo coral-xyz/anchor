@@ -256,16 +256,32 @@ impl Drop for CpiBorrowGuard {
     }
 }
 
+#[cfg(not(target_os = "solana"))]
 pub(crate) fn enter_cpi<'a>(
     handles: &[CpiHandle<'a>],
-) -> crate::FixedVec<CpiBorrowGuard, { crate::MAX_ACCOUNT_METAS }> {
-    let mut guards = crate::FixedVec::new();
+) -> Result<std::vec::Vec<CpiBorrowGuard>, ProgramError> {
+    let mut guards = std::vec::Vec::new();
     for handle in handles {
         if let Some(guard) = handle.enter_cpi() {
             guards.push(guard);
         }
     }
-    guards
+    Ok(guards)
+}
+
+#[cfg(target_os = "solana")]
+pub(crate) fn enter_cpi<'a>(
+    handles: &[CpiHandle<'a>],
+) -> Result<crate::FixedVec<CpiBorrowGuard, { crate::MAX_ACCOUNT_METAS }>, ProgramError> {
+    let mut guards = crate::FixedVec::new();
+    for handle in handles {
+        if let Some(guard) = handle.enter_cpi() {
+            guards
+                .try_push(guard)
+                .map_err(|_| ProgramError::InvalidArgument)?;
+        }
+    }
+    Ok(guards)
 }
 
 /// Converts a CPI accounts struct into instruction metadata and handles.
@@ -275,10 +291,12 @@ pub(crate) fn enter_cpi<'a>(
 /// [`CpiHandle`] for the actual invocation.
 pub trait ToCpiAccounts<'a> {
     /// Produce instruction account metadata for the CPI instruction.
-    fn to_instruction_accounts(&self) -> crate::InstructionAccountBuffer<'a>;
+    fn to_instruction_accounts(
+        &self,
+    ) -> Result<crate::InstructionAccountBuffer<'a>, ProgramError>;
 
     /// Collect all CPI handles for the invocation.
-    fn to_cpi_handles(&self) -> crate::CpiHandleBuffer<'a>;
+    fn to_cpi_handles(&self) -> Result<crate::CpiHandleBuffer<'a>, ProgramError>;
 
     /// Parallel to [`to_instruction_accounts`]: `true` at each index where an
     /// optional field was `None` and a program-id sentinel meta was emitted.
@@ -286,7 +304,7 @@ pub trait ToCpiAccounts<'a> {
     /// The CPI invoker may skip a matching handle only for these indices.
     /// Required accounts whose address equals the callee program id must be
     /// `false` here so they still require a handle.
-    fn optional_account_sentinel_flags(&self) -> crate::BoolBuffer;
+    fn optional_account_sentinel_flags(&self) -> Result<crate::BoolBuffer, ProgramError>;
 }
 
 pub trait AnchorAccount: Deref<Target = Self::Data> + Sized {

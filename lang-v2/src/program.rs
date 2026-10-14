@@ -84,8 +84,8 @@ where
         account_handles,
         optional_sentinel_flags,
     )?;
-    let _borrow_guards = crate::enter_cpi(account_handles);
-    let cpi_accounts = cpi_accounts(account_handles);
+    let _borrow_guards = crate::enter_cpi(account_handles)?;
+    let cpi_accounts = cpi_accounts(account_handles)?;
     let cpi_accounts = unsafe {
         from_raw_parts(
             cpi_accounts.as_ptr() as *const CpiAccount,
@@ -111,7 +111,7 @@ where
             }
         }
         signer_seeds => {
-            let signers = signers(signer_seeds);
+            let signers = signers(signer_seeds)?;
             unsafe {
                 pinocchio::cpi::invoke_signed_unchecked(instruction, cpi_accounts, &signers);
             }
@@ -254,8 +254,8 @@ where
         accounts: &instruction_accounts,
         data: &instruction.data,
     };
-    let _borrow_guards = crate::enter_cpi(account_handles);
-    let cpi_accounts = cpi_accounts(account_handles);
+    let _borrow_guards = crate::enter_cpi(account_handles)?;
+    let cpi_accounts = cpi_accounts(account_handles)?;
     let cpi_accounts = unsafe {
         from_raw_parts(
             cpi_accounts.as_ptr() as *const CpiAccount,
@@ -281,7 +281,7 @@ where
             }
         }
         signer_seeds => {
-            let signers = signers(signer_seeds);
+            let signers = signers(signer_seeds)?;
             unsafe {
                 pinocchio::cpi::invoke_signed_unchecked(
                     &instruction_view,
@@ -300,6 +300,9 @@ pub(crate) fn validate_fixed_instruction_accounts<'a, const N: usize>(
     handles: &[CpiHandle<'a>; N],
     enforce_signers: bool,
 ) -> ProgramResult {
+    if N > crate::MAX_ACCOUNT_METAS {
+        return Err(ProgramError::InvalidArgument);
+    }
     for (account, handle) in instruction_accounts.iter().zip(handles) {
         require!(
             address_eq(account.address, handle.address())
@@ -407,8 +410,8 @@ fn resolve_instruction_account_bindings<'a, F: crate::OptionalSentinelFlags + ?S
     program_id: &Address,
     account_handles: &[CpiHandle<'a>],
     optional_sentinel_flags: &F,
-) -> Result<crate::FixedVec<Option<usize>, { crate::MAX_ACCOUNT_METAS }>, ProgramError> {
-    let mut bindings = crate::FixedVec::new();
+) -> Result<crate::AccountBindingBuffer, ProgramError> {
+    let mut bindings = crate::AccountBindingBuffer::new();
     let mut handle_index = 0;
 
     for (instruction_index, account) in instruction_accounts.iter().enumerate() {
@@ -431,14 +434,14 @@ fn resolve_instruction_account_bindings<'a, F: crate::OptionalSentinelFlags + ?S
                     ) && instruction_account_matches_handle(later, &account_handles[handle_index])
                 }));
         if can_skip {
-            bindings.push(None);
+            push_binding(&mut bindings, None)?;
             continue;
         }
 
         let can_consume = handle_index < account_handles.len()
             && instruction_account_matches_handle(account, &account_handles[handle_index]);
         if can_consume {
-            bindings.push(Some(handle_index));
+            push_binding(&mut bindings, Some(handle_index))?;
             handle_index += 1;
             continue;
         }
@@ -482,12 +485,17 @@ fn instruction_accounts(instruction: &Instruction) -> crate::InstructionAccountB
 
 fn signers<'seeds>(
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
-) -> crate::FixedVec<Signer<'seeds, 'seeds>, { crate::MAX_ACCOUNT_METAS }> {
-    let mut out = crate::FixedVec::new();
+) -> Result<crate::SignerBuffer<'seeds>, ProgramError> {
+    let mut out = crate::SignerBuffer::new();
     for seeds in signer_seeds {
-        out.push(signer_from_seeds(seeds));
+        let signer = signer_from_seeds(seeds);
+        #[cfg(not(target_os = "solana"))]
+        out.push(signer);
+        #[cfg(target_os = "solana")]
+        out.try_push(signer)
+            .map_err(|_| ProgramError::InvalidArgument)?;
     }
-    out
+    Ok(out)
 }
 
 #[inline(always)]
@@ -500,13 +508,34 @@ fn signer_from_seeds<'seeds>(seeds: &'seeds [&'seeds [u8]]) -> Signer<'seeds, 's
 
 fn cpi_accounts<'a>(
     account_handles: &[CpiHandle<'a>],
-) -> crate::FixedVec<MaybeUninit<CpiAccount<'a>>, { crate::MAX_ACCOUNT_METAS }> {
-    let mut accounts = crate::FixedVec::new();
+) -> Result<crate::CpiAccountBuffer<'a>, ProgramError> {
+    let mut accounts = crate::CpiAccountBuffer::new();
     for handle in account_handles {
         let mut slot = MaybeUninit::uninit();
         CpiAccount::init_from_account_view(handle.account_view(), &mut slot);
+        #[cfg(not(target_os = "solana"))]
         accounts.push(slot);
+        #[cfg(target_os = "solana")]
+        accounts
+            .try_push(slot)
+            .map_err(|_| ProgramError::InvalidArgument)?;
     }
 
-    accounts
+    Ok(accounts)
+}
+
+#[inline]
+fn push_binding(
+    bindings: &mut crate::AccountBindingBuffer,
+    binding: Option<usize>,
+) -> Result<(), ProgramError> {
+    #[cfg(not(target_os = "solana"))]
+    {
+        bindings.push(binding);
+        Ok(())
+    }
+    #[cfg(target_os = "solana")]
+    bindings
+        .try_push(binding)
+        .map_err(|_| ProgramError::InvalidArgument)
 }

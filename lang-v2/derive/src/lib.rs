@@ -412,36 +412,40 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
         match kind {
             CpiFieldKind::Phantom => quote! {},
             CpiFieldKind::Nested => quote! {
-                __accounts.extend(
-                    anchor_lang::ToCpiAccounts::to_instruction_accounts(&self.#ident).iter().cloned(),
-                );
+                let __nested = anchor_lang::ToCpiAccounts::to_instruction_accounts(&self.#ident)?;
+                for __account in __nested.iter().cloned() {
+                    anchor_lang::try_push_instruction_account(&mut __accounts, __account)?;
+                }
             },
             CpiFieldKind::Readonly | CpiFieldKind::Writable => quote! {
-                __accounts.push(
+                anchor_lang::try_push_instruction_account(
+                    &mut __accounts,
                     anchor_lang::pinocchio::instruction::InstructionAccount::new(
                         self.#ident.address(),
                         #writable,
                         #signer,
                     ),
-                );
+                )?;
             },
             CpiFieldKind::OptionalReadonly | CpiFieldKind::OptionalWritable => quote! {
                 match self.#ident {
                     ::core::option::Option::Some(__account) => {
-                        __accounts.push(
+                        anchor_lang::try_push_instruction_account(
+                            &mut __accounts,
                             anchor_lang::pinocchio::instruction::InstructionAccount::new(
                                 __account.address(),
                                 #writable,
                                 #signer,
                             ),
-                        );
+                        )?;
                     }
                     ::core::option::Option::None => {
-                        __accounts.push(
+                        anchor_lang::try_push_instruction_account(
+                            &mut __accounts,
                             anchor_lang::pinocchio::instruction::InstructionAccount::readonly(
                                 &#accounts_program_id,
                             ),
-                        );
+                        )?;
                     }
                 }
             },
@@ -451,24 +455,25 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
     let handle_steps = cpi_fields.iter().map(|(ident, kind, _)| match kind {
         CpiFieldKind::Phantom => quote! {},
         CpiFieldKind::Nested => quote! {
-            __handles.extend(
-                anchor_lang::ToCpiAccounts::to_cpi_handles(&self.#ident).iter().cloned(),
-            );
+            let __nested = anchor_lang::ToCpiAccounts::to_cpi_handles(&self.#ident)?;
+            for __handle in __nested.iter().cloned() {
+                anchor_lang::try_push_cpi_handle(&mut __handles, __handle)?;
+            }
         },
         CpiFieldKind::Readonly => quote! {
-            __handles.push(self.#ident.into_readonly());
+            anchor_lang::try_push_cpi_handle(&mut __handles, self.#ident.into_readonly())?;
         },
         CpiFieldKind::Writable => quote! {
-            __handles.push(self.#ident.into());
+            anchor_lang::try_push_cpi_handle(&mut __handles, self.#ident.into())?;
         },
         CpiFieldKind::OptionalReadonly => quote! {
             if let ::core::option::Option::Some(__account) = self.#ident {
-                __handles.push(__account.into_readonly());
+                anchor_lang::try_push_cpi_handle(&mut __handles, __account.into_readonly())?;
             }
         },
         CpiFieldKind::OptionalWritable => quote! {
             if let ::core::option::Option::Some(__account) = self.#ident {
-                __handles.push(__account.into());
+                anchor_lang::try_push_cpi_handle(&mut __handles, __account.into())?;
             }
         },
     });
@@ -476,16 +481,22 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
     let flag_steps = cpi_fields.iter().map(|(ident, kind, _)| match kind {
         CpiFieldKind::Phantom => quote! {},
         CpiFieldKind::Nested => quote! {
-            __flags.extend(
-                anchor_lang::ToCpiAccounts::optional_account_sentinel_flags(&self.#ident)
-                    .iter(),
-            );
+            let __nested = anchor_lang::ToCpiAccounts::optional_account_sentinel_flags(&self.#ident)?;
+            for __flag in __nested.iter() {
+                __flags
+                    .try_push(__flag)
+                    .map_err(|_| anchor_lang::Error::InvalidArgument)?;
+            }
         },
         CpiFieldKind::Readonly | CpiFieldKind::Writable => quote! {
-            __flags.push(false);
+            __flags
+                .try_push(false)
+                .map_err(|_| anchor_lang::Error::InvalidArgument)?;
         },
         CpiFieldKind::OptionalReadonly | CpiFieldKind::OptionalWritable => quote! {
-            __flags.push(self.#ident.is_none());
+            __flags
+                .try_push(self.#ident.is_none())
+                .map_err(|_| anchor_lang::Error::InvalidArgument)?;
         },
     });
 
@@ -495,24 +506,26 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
         {
             fn to_instruction_accounts(
                 &self,
-            ) -> anchor_lang::InstructionAccountBuffer<#cpi_lifetime> {
+            ) -> anchor_lang::Result<anchor_lang::InstructionAccountBuffer<#cpi_lifetime>> {
                 let mut __accounts = anchor_lang::InstructionAccountBuffer::new();
                 #(#meta_steps)*
-                __accounts
+                Ok(__accounts)
             }
 
             fn to_cpi_handles(
                 &self,
-            ) -> anchor_lang::CpiHandleBuffer<#cpi_lifetime> {
+            ) -> anchor_lang::Result<anchor_lang::CpiHandleBuffer<#cpi_lifetime>> {
                 let mut __handles = anchor_lang::CpiHandleBuffer::new();
                 #(#handle_steps)*
-                __handles
+                Ok(__handles)
             }
 
-            fn optional_account_sentinel_flags(&self) -> anchor_lang::BoolBuffer {
+            fn optional_account_sentinel_flags(
+                &self,
+            ) -> anchor_lang::Result<anchor_lang::BoolBuffer> {
                 let mut __flags = anchor_lang::BoolBuffer::new();
                 #(#flag_steps)*
-                __flags
+                Ok(__flags)
             }
         }
     }
@@ -6831,7 +6844,8 @@ pub fn emit(input: TokenStream) -> TokenStream {
     let data: proc_macro2::TokenStream = input.into();
     TokenStream::from(quote! {
         {
-            anchor_lang::sol_log_data(&[&anchor_lang::Event::data(&#data)]);
+            let __event_data = anchor_lang::Event::try_data(&#data)?;
+            anchor_lang::sol_log_data(&[&__event_data]);
         }
     })
 }
@@ -6851,39 +6865,45 @@ pub fn emit_cpi(input: TokenStream) -> TokenStream {
             impl<'a> anchor_lang::ToCpiAccounts<'a> for __AnchorEventCpiAccounts<'a> {
                 fn to_instruction_accounts(
                     &self,
-                    ) -> anchor_lang::InstructionAccountBuffer<'a> {
+                    ) -> anchor_lang::Result<anchor_lang::InstructionAccountBuffer<'a>> {
                     let mut __accounts = anchor_lang::InstructionAccountBuffer::new();
-                    __accounts.push(
+                    anchor_lang::try_push_instruction_account(
+                        &mut __accounts,
                         anchor_lang::pinocchio::instruction::InstructionAccount::readonly_signer(
                             self.event_authority.address(),
                         ),
-                    );
-                    __accounts
+                    )?;
+                    Ok(__accounts)
                 }
 
                 fn to_cpi_handles(
                     &self,
-                ) -> anchor_lang::CpiHandleBuffer<'a> {
+                ) -> anchor_lang::Result<anchor_lang::CpiHandleBuffer<'a>> {
                     let mut __handles = anchor_lang::CpiHandleBuffer::new();
-                    __handles.push(self.event_authority);
-                    __handles
+                    anchor_lang::try_push_cpi_handle(&mut __handles, self.event_authority)?;
+                    Ok(__handles)
                 }
 
                 fn optional_account_sentinel_flags(
                     &self,
-                ) -> anchor_lang::BoolBuffer {
+                ) -> anchor_lang::Result<anchor_lang::BoolBuffer> {
                     let mut __flags = anchor_lang::BoolBuffer::new();
-                    __flags.push(false);
                     __flags
+                        .try_push(false)
+                        .map_err(|_| anchor_lang::Error::InvalidArgument)?;
+                    Ok(__flags)
                 }
             }
 
             let __event_authority =
                 anchor_lang::AnchorAccount::cpi_handle(&ctx.accounts.event_authority);
-            let __event_data = anchor_lang::Event::data(&#event_struct);
+            let __event_data = anchor_lang::Event::try_data(&#event_struct)?;
             let mut __ix_data = anchor_lang::InstructionDataBuffer::new();
-            __ix_data.extend_from_slice(anchor_lang::event::EVENT_IX_TAG_LE);
-            __ix_data.extend_from_slice(&__event_data);
+            anchor_lang::try_extend_instruction_data(
+                &mut __ix_data,
+                anchor_lang::event::EVENT_IX_TAG_LE,
+            )?;
+            anchor_lang::try_extend_instruction_data(&mut __ix_data, &__event_data)?;
 
             let __event_authority_bump = [ctx.bumps.event_authority];
             let __event_authority_seeds: &[&[u8]] =

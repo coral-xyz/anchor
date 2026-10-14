@@ -146,9 +146,14 @@ pub const MAX_INSTRUCTION_DATA: usize = 1232;
 /// Maximum number of elements in an allocator-free collection emitted by
 /// generated on-chain IDL bindings.
 pub const MAX_IDL_SEQUENCE: usize = 256;
-/// Bounded account-meta storage shared by host and on-chain code. Client
-/// builders can call [`FixedVec::to_vec`] at the instruction-construction
-/// boundary when an owned SDK instruction is required.
+/// Account-meta storage used by generated account builders.
+///
+/// Host/client builds retain an ordinary `Vec`, while the on-chain target uses
+/// a bounded inline buffer. This keeps the owned client API unbounded without
+/// allowing the SBF dependency graph to pull in `alloc`.
+#[cfg(not(target_os = "solana"))]
+pub type AccountMetaBuffer = std::vec::Vec<AccountMeta>;
+#[cfg(target_os = "solana")]
 pub type AccountMetaBuffer = FixedVec<AccountMeta, MAX_ACCOUNT_METAS>;
 #[cfg(not(target_os = "solana"))]
 pub type InstructionAccountBuffer<'a> =
@@ -169,6 +174,59 @@ pub type BoolBuffer = AccountFlags;
 pub type InstructionDataBuffer = std::vec::Vec<u8>;
 #[cfg(target_os = "solana")]
 pub type InstructionDataBuffer = FixedVec<u8, MAX_INSTRUCTION_DATA>;
+
+#[cfg(not(target_os = "solana"))]
+pub type SignerBuffer<'a> = std::vec::Vec<pinocchio::cpi::Signer<'a, 'a>>;
+#[cfg(target_os = "solana")]
+pub type SignerBuffer<'a> = FixedVec<pinocchio::cpi::Signer<'a, 'a>, MAX_ACCOUNT_METAS>;
+
+#[cfg(not(target_os = "solana"))]
+pub type CpiAccountBuffer<'a> =
+    std::vec::Vec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>>;
+#[cfg(target_os = "solana")]
+pub type CpiAccountBuffer<'a> =
+    FixedVec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>, MAX_ACCOUNT_METAS>;
+
+#[cfg(not(target_os = "solana"))]
+pub type AccountBindingBuffer = std::vec::Vec<Option<usize>>;
+#[cfg(target_os = "solana")]
+pub type AccountBindingBuffer = FixedVec<Option<usize>, MAX_ACCOUNT_METAS>;
+
+/// Append one instruction account without making the generated CPI builder
+/// rely on `FixedVec::push`'s panic-on-overflow compatibility behavior.
+#[inline]
+pub fn try_push_instruction_account<'a>(
+    buffer: &mut InstructionAccountBuffer<'a>,
+    account: pinocchio::instruction::InstructionAccount<'a>,
+) -> core::result::Result<(), solana_program_error::ProgramError> {
+    #[cfg(not(target_os = "solana"))]
+    {
+        buffer.push(account);
+        Ok(())
+    }
+    #[cfg(target_os = "solana")]
+    buffer
+        .try_push(account)
+        .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
+}
+
+/// Append one CPI handle without panicking when a generated account shape is
+/// larger than the SBF inline account budget.
+#[inline]
+pub fn try_push_cpi_handle<'a>(
+    buffer: &mut CpiHandleBuffer<'a>,
+    handle: CpiHandle<'a>,
+) -> core::result::Result<(), solana_program_error::ProgramError> {
+    #[cfg(not(target_os = "solana"))]
+    {
+        buffer.push(handle);
+        Ok(())
+    }
+    #[cfg(target_os = "solana")]
+    buffer
+        .try_push(handle)
+        .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
+}
 
 /// Read-only view of optional-account sentinel flags used by CPI validation.
 /// The compact [`AccountFlags`] representation is used by generated V2 code,

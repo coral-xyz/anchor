@@ -50,14 +50,20 @@ impl AccountFlags {
 
     #[inline]
     pub fn push(&mut self, value: bool) {
-        assert!(
-            self.len < crate::MAX_ACCOUNT_METAS,
-            "account flag capacity exceeded"
-        );
+        self.try_push(value)
+            .expect("account flag capacity exceeded");
+    }
+
+    #[inline]
+    pub fn try_push(&mut self, value: bool) -> Result<(), bool> {
+        if self.len >= crate::MAX_ACCOUNT_METAS {
+            return Err(value);
+        }
         if value {
             self.bits |= 1 << self.len;
         }
         self.len += 1;
+        Ok(())
     }
 
     #[inline]
@@ -503,5 +509,16 @@ mod tests {
             crate::BORSH_CONFIG,
         );
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn bounded_push_reports_capacity_without_panicking() {
+        let mut values = FixedVec::<u8, 1>::new();
+        assert!(values.try_push(1).is_ok());
+        assert_eq!(values.try_push(2), Err(2));
+
+        let mut flags = AccountFlags::new();
+        flags.resize(crate::MAX_ACCOUNT_METAS, false);
+        assert_eq!(flags.try_push(true), Err(true));
     }
 }

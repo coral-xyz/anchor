@@ -91,7 +91,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         data: &[u8],
         signer_override: Option<(usize, bool)>,
     ) -> ProgramResult {
-        let mut instruction_accounts = self.accounts.to_instruction_accounts();
+        let mut instruction_accounts = self.accounts.to_instruction_accounts()?;
         if let Some((index, is_signer)) = signer_override {
             let account = instruction_accounts
                 .as_mut_slice()
@@ -99,19 +99,24 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
                 .ok_or(ProgramError::InvalidArgument)?;
             account.is_signer = is_signer;
         }
-        let mut handles = self.accounts.to_cpi_handles();
-        let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags();
+        let mut handles = self.accounts.to_cpi_handles()?;
+        let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags()?;
 
         // Append remaining accounts using the handle's writable/signer flags
         // so PDA remaining accounts marked with `as_signer()` emit signer metas.
         for handle in &self.remaining_accounts {
-            instruction_accounts.push(InstructionAccount::new(
+            crate::try_push_instruction_account(
+                &mut instruction_accounts,
+                InstructionAccount::new(
                 handle.address(),
                 handle.is_writable(),
                 handle.is_signer(),
-            ));
-            handles.push(*handle);
-            optional_sentinel_flags.push(false);
+                ),
+            )?;
+            crate::try_push_cpi_handle(&mut handles, *handle)?;
+            optional_sentinel_flags
+                .try_push(false)
+                .map_err(|_| ProgramError::InvalidArgument)?;
         }
 
         crate::program::validate_instruction_accounts(
@@ -128,20 +133,22 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
             accounts: &instruction_accounts,
         };
 
-        let _borrow_guards = crate::enter_cpi(&handles);
+        let _borrow_guards = crate::enter_cpi(&handles)?;
 
         // Build CpiAccounts and invoke. Account count matches handles (optional
         // None sentinels have metas but no handles); pinocchio skips program-id
         // placeholder metas that lack a paired CpiAccount.
         let n = handles.len();
-        let mut cpi_accounts: crate::FixedVec<
-            MaybeUninit<pinocchio::cpi::CpiAccount<'a>>,
-            { crate::MAX_ACCOUNT_METAS },
-        > = crate::FixedVec::new();
+        let mut cpi_accounts = crate::CpiAccountBuffer::new();
         for handle in &handles {
             let mut slot = MaybeUninit::uninit();
             pinocchio::cpi::CpiAccount::init_from_account_view(handle.account_view(), &mut slot);
+            #[cfg(not(target_os = "solana"))]
             cpi_accounts.push(slot);
+            #[cfg(target_os = "solana")]
+            cpi_accounts
+                .try_push(slot)
+                .map_err(|_| ProgramError::InvalidArgument)?;
         }
 
         // SAFETY:
@@ -172,12 +179,15 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
                 }
             }
             signer_seeds => {
-                let mut signers: crate::FixedVec<
-                    pinocchio::cpi::Signer<'a, 'a>,
-                    { crate::MAX_ACCOUNT_METAS },
-                > = crate::FixedVec::new();
+                let mut signers = crate::SignerBuffer::new();
                 for seeds in signer_seeds {
-                    signers.push(signer_from_seeds(seeds));
+                    let signer = signer_from_seeds(seeds);
+                    #[cfg(not(target_os = "solana"))]
+                    signers.push(signer);
+                    #[cfg(target_os = "solana")]
+                    signers
+                        .try_push(signer)
+                        .map_err(|_| ProgramError::InvalidArgument)?;
                 }
                 unsafe {
                     pinocchio::cpi::invoke_signed_unchecked(
@@ -208,10 +218,12 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
             ProgramError::IncorrectProgramId
         );
 
-        let mut handles = self.accounts.to_cpi_handles();
-        handles.extend(self.remaining_accounts.iter().copied());
+        let mut handles = self.accounts.to_cpi_handles()?;
+        for handle in self.remaining_accounts.iter().copied() {
+            crate::try_push_cpi_handle(&mut handles, handle)?;
+        }
 
-        let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags();
+        let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags()?;
         require!(
             optional_sentinel_flags.len() <= ix.accounts.len(),
             ProgramError::InvalidArgument
@@ -266,7 +278,7 @@ pub fn unchecked_invoke_signed_fixed<'a, const N: usize>(
         accounts: instruction_accounts,
     };
 
-    let _borrow_guards = crate::enter_cpi(handles);
+    let _borrow_guards = crate::enter_cpi(handles)?;
 
     let mut cpi_accounts = [const { MaybeUninit::<pinocchio::cpi::CpiAccount>::uninit() }; N];
     for (handle, slot) in handles.iter().zip(cpi_accounts.iter_mut()) {
@@ -290,12 +302,15 @@ pub fn unchecked_invoke_signed_fixed<'a, const N: usize>(
             }
         }
         _ => {
-            let mut signers: crate::FixedVec<
-                pinocchio::cpi::Signer<'a, 'a>,
-                { crate::MAX_ACCOUNT_METAS },
-            > = crate::FixedVec::new();
+            let mut signers = crate::SignerBuffer::new();
             for seeds in signer_seeds {
-                signers.push(signer_from_seeds(seeds));
+                let signer = signer_from_seeds(seeds);
+                #[cfg(not(target_os = "solana"))]
+                signers.push(signer);
+                #[cfg(target_os = "solana")]
+                signers
+                    .try_push(signer)
+                    .map_err(|_| ProgramError::InvalidArgument)?;
             }
             unsafe {
                 pinocchio::cpi::invoke_signed_unchecked(&instruction, cpi_accounts, &signers);
