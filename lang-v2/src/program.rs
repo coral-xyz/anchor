@@ -70,19 +70,12 @@ pub fn invoke_view_with_optional_sentinels<'a, 'b, 'c, 'd, 'seeds, F>(
 where
     F: crate::OptionalSentinelFlags + ?Sized,
 {
-    validate_instruction_accounts(
+    let cpi_account_count = validate_instruction_accounts(
         instruction.accounts,
         instruction.program_id,
         account_handles,
         optional_sentinel_flags,
         signer_seeds.is_empty(),
-    )?;
-
-    let cpi_account_count = required_cpi_account_count(
-        instruction.accounts,
-        instruction.program_id,
-        account_handles,
-        optional_sentinel_flags,
     )?;
     let _borrow_guards = crate::enter_cpi(account_handles)?;
     let cpi_accounts = cpi_accounts(account_handles)?;
@@ -243,11 +236,12 @@ where
     F: crate::OptionalSentinelFlags + ?Sized,
 {
     let instruction_accounts = instruction_accounts(instruction);
-    let cpi_account_count = required_cpi_account_count(
+    let cpi_account_count = walk_instruction_account_bindings(
         &instruction_accounts,
         &instruction.program_id,
         account_handles,
         optional_sentinel_flags,
+        |_, _| Ok(()),
     )?;
     let instruction_view = InstructionView {
         program_id: &instruction.program_id,
@@ -335,40 +329,33 @@ pub(crate) fn validate_instruction_accounts<'a, F>(
     account_handles: &[CpiHandle<'a>],
     optional_sentinel_flags: &F,
     enforce_signers: bool,
-) -> ProgramResult
+) -> Result<usize, ProgramError>
 where
     F: crate::OptionalSentinelFlags + ?Sized,
 {
-    let bindings = resolve_instruction_account_bindings(
+    walk_instruction_account_bindings(
         instruction_accounts,
         program_id,
         account_handles,
         optional_sentinel_flags,
-    )?;
-
-    for (account, binding) in instruction_accounts.iter().zip(bindings.iter()) {
-        let Some(handle_index) = binding else {
-            continue;
-        };
-        let handle = &account_handles[*handle_index];
-
-        if account.is_writable {
-            if handle.requires_borrow_check() {
-                handle.account_view().check_borrow_mut()?;
+        |account, handle| {
+            if account.is_writable {
+                if handle.requires_borrow_check() {
+                    handle.account_view().check_borrow_mut()?;
+                }
+            } else if handle.requires_borrow_check() {
+                handle.account_view().check_borrow()?;
             }
-        } else if handle.requires_borrow_check() {
-            handle.account_view().check_borrow()?;
-        }
 
-        if enforce_signers && account.is_signer {
-            require!(
-                handle.account_view().is_signer(),
-                ProgramError::MissingRequiredSignature
-            );
-        }
-    }
-
-    Ok(())
+            if enforce_signers && account.is_signer {
+                require!(
+                    handle.account_view().is_signer(),
+                    ProgramError::MissingRequiredSignature
+                );
+            }
+            Ok(())
+        },
+    )
 }
 
 fn is_optional_instruction_account_sentinel_candidate(
@@ -388,31 +375,19 @@ fn is_skippable_optional_sentinel<F: crate::OptionalSentinelFlags + ?Sized>(
         && is_optional_instruction_account_sentinel_candidate(program_id, account)
 }
 
-fn required_cpi_account_count<'a, F: crate::OptionalSentinelFlags + ?Sized>(
+fn walk_instruction_account_bindings<'a, F, V>(
     instruction_accounts: &[InstructionAccount<'a>],
     program_id: &Address,
     account_handles: &[CpiHandle<'a>],
     optional_sentinel_flags: &F,
-) -> Result<usize, ProgramError> {
-    Ok(resolve_instruction_account_bindings(
-        instruction_accounts,
-        program_id,
-        account_handles,
-        optional_sentinel_flags,
-    )?
-    .iter()
-    .flatten()
-    .count())
-}
-
-fn resolve_instruction_account_bindings<'a, F: crate::OptionalSentinelFlags + ?Sized>(
-    instruction_accounts: &[InstructionAccount<'a>],
-    program_id: &Address,
-    account_handles: &[CpiHandle<'a>],
-    optional_sentinel_flags: &F,
-) -> Result<crate::AccountBindingBuffer, ProgramError> {
-    let mut bindings = crate::AccountBindingBuffer::new();
+    mut on_match: V,
+) -> Result<usize, ProgramError>
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+    V: FnMut(&InstructionAccount<'a>, &CpiHandle<'a>) -> ProgramResult,
+{
     let mut handle_index = 0;
+    let mut cpi_account_count = 0;
 
     for (instruction_index, account) in instruction_accounts.iter().enumerate() {
         let can_skip = is_skippable_optional_sentinel(
@@ -434,33 +409,26 @@ fn resolve_instruction_account_bindings<'a, F: crate::OptionalSentinelFlags + ?S
                     ) && instruction_account_matches_handle(later, &account_handles[handle_index])
                 }));
         if can_skip {
-            push_binding(&mut bindings, None)?;
             continue;
         }
 
-        let can_consume = handle_index < account_handles.len()
-            && instruction_account_matches_handle(account, &account_handles[handle_index]);
-        if can_consume {
-            push_binding(&mut bindings, Some(handle_index))?;
-            handle_index += 1;
-            continue;
+        let Some(handle) = account_handles.get(handle_index) else {
+            return Err(ProgramError::NotEnoughAccountKeys);
+        };
+        if !instruction_account_matches_handle(account, handle) {
+            return Err(ProgramError::InvalidArgument);
         }
 
-        return Err(if handle_index < account_handles.len() {
-            // A handle is available, but it does not match this instruction
-            // account's address or mutability. This is an invalid CPI shape,
-            // not a missing account.
-            ProgramError::InvalidArgument
-        } else {
-            ProgramError::NotEnoughAccountKeys
-        });
+        on_match(account, handle)?;
+        handle_index += 1;
+        cpi_account_count += 1;
     }
 
     if handle_index != account_handles.len() {
         return Err(ProgramError::InvalidArgument);
     }
 
-    Ok(bindings)
+    Ok(cpi_account_count)
 }
 
 fn instruction_account_matches_handle(
@@ -522,20 +490,4 @@ fn cpi_accounts<'a>(
     }
 
     Ok(accounts)
-}
-
-#[inline]
-fn push_binding(
-    bindings: &mut crate::AccountBindingBuffer,
-    binding: Option<usize>,
-) -> Result<(), ProgramError> {
-    #[cfg(not(target_os = "solana"))]
-    {
-        bindings.push(binding);
-        Ok(())
-    }
-    #[cfg(target_os = "solana")]
-    bindings
-        .try_push(binding)
-        .map_err(|_| ProgramError::InvalidArgument)
 }
