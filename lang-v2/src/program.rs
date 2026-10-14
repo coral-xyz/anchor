@@ -474,7 +474,7 @@ fn signer_from_seeds<'seeds>(seeds: &'seeds [&'seeds [u8]]) -> Signer<'seeds, 's
     Signer::from(cpi_seeds)
 }
 
-fn cpi_accounts<'a>(
+pub(crate) fn cpi_accounts<'a>(
     account_handles: &[CpiHandle<'a>],
 ) -> Result<crate::CpiAccountBuffer<'a>, ProgramError> {
     let mut accounts = crate::CpiAccountBuffer::new();
