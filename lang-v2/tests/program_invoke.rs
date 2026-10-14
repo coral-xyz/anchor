@@ -14,7 +14,7 @@ use {
         testing::{AccountBuffer, MIN_ACCOUNT_BUF},
         unchecked_invoke_signed_fixed, Address, AnchorAccount, AnchorDeserialize, AnchorSerialize,
         CpiContext, CpiHandle, CpiHandleMut, Discriminator, Owner, ToCpiAccounts, ToCpiHandle,
-        ToCpiHandleMut,
+        ToCpiHandleMut, MAX_ACCOUNT_METAS,
     },
     bytemuck::{Pod, Zeroable},
     pinocchio::instruction::InstructionAccount,
@@ -360,6 +360,19 @@ fn fixed_invoke_rejects_address_mismatch() {
     let metas = [InstructionAccount::new(&other, false, false)];
 
     let err = unchecked_invoke_signed_fixed(&ID, &[], &metas, &[handle], &[]).unwrap_err();
+
+    assert_eq!(err, ProgramError::InvalidArgument);
+}
+
+#[test]
+fn fixed_invoke_rejects_more_than_inline_account_budget() {
+    let buffer = account_view([1; 32], false);
+    let view = unsafe { buffer.view() };
+    let handle = CpiHandle::readonly(&view);
+    let metas = core::array::from_fn(|_| InstructionAccount::new(handle.address(), false, false));
+    let handles = [handle; MAX_ACCOUNT_METAS + 1];
+
+    let err = unchecked_invoke_signed_fixed(&ID, &[], &metas, &handles, &[]).unwrap_err();
 
     assert_eq!(err, ProgramError::InvalidArgument);
 }
