@@ -64,6 +64,12 @@ jobs:
       - name: Check V2 SBF dependency graph is alloc-free
         run: ./.github/scripts/check-v2-no-alloc.sh
 
+      - name: Install nightly Rust for the V2 core-only BPF check
+        run: rustup toolchain install nightly --profile minimal --component rust-src
+
+      - name: Check V2 compiles without std or alloc
+        run: ./.github/scripts/check-v2-no-alloc-bpfel.sh
+
       # Tools for `make coverage-v2`:
       #   - lcov for merging sbf.lcov + host.lcov and generating the report.
       #   - cargo-llvm-cov for host-side instrumentation coverage.
