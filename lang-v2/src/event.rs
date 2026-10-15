@@ -24,11 +24,18 @@ pub const EVENT_IX_TAG_LE: &[u8] = &EVENT_IX_TAG.to_le_bytes();
 ///   only fixed-size, non-fat-pointer fields.
 pub trait Event: Discriminator {
     /// Serialize the event: discriminator bytes followed by event data.
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     fn data(&self) -> InstructionDataBuffer;
 
     /// Fallible event serialization for allocator-free runtime paths.
-    /// Generated V2 events override this method; the default preserves the
-    /// legacy infallible implementation contract for custom events.
+    /// On-chain implementations must provide this method directly. Host
+    /// implementations retain the infallible `data()` compatibility method.
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+    fn try_data(
+        &self,
+    ) -> Result<InstructionDataBuffer, solana_program_error::ProgramError>;
+
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     fn try_data(&self) -> Result<InstructionDataBuffer, solana_program_error::ProgramError> {
         Ok(self.data())
     }
@@ -36,17 +43,17 @@ pub trait Event: Discriminator {
 
 /// Log event data via the `sol_log_data` syscall.
 ///
-/// On-chain (`target_os = "solana"`), this calls the `sol_log_data` syscall
+/// On-chain (`any(target_os = "solana", target_arch = "bpf")`), this calls the `sol_log_data` syscall
 /// which emits a `Program data: <base64>` log entry that clients can subscribe to.
 ///
 /// Off-chain (tests / non-Solana), this is a no-op.
 pub fn sol_log_data(data: &[&[u8]]) {
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     // SAFETY: data is a valid slice-of-slices; the syscall reads but does not write.
     unsafe {
         pinocchio::syscalls::sol_log_data(data as *const _ as *const u8, data.len() as u64)
     };
 
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     core::hint::black_box(data);
 }

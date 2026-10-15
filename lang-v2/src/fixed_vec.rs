@@ -272,7 +272,7 @@ impl<T, const N: usize> FixedVec<T, N> {
     /// Converts the buffer to an owned host-side vector. This is intentionally
     /// unavailable for on-chain builds; instruction construction is a client
     /// concern and Solana's host instruction type still owns a `Vec`.
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub fn to_vec(&self) -> std::vec::Vec<T>
     where
         T: Clone,

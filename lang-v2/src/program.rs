@@ -8,7 +8,7 @@ use {
     solana_program_error::{ProgramError, ProgramResult},
 };
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 use solana_instruction::Instruction;
 
 pub use pinocchio::cpi::{set_return_data, MAX_RETURN_DATA};
@@ -37,7 +37,7 @@ pub fn get_return_data() -> Option<(crate::Address, pinocchio::cpi::ReturnData)>
 /// [`invoke_with_optional_sentinels`] / [`invoke_signed_with_optional_sentinels`]
 /// (or [`crate::CpiContext`]) so required readonly program-id accounts still
 /// require matching handles.
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn invoke<'a>(instruction: &Instruction, account_handles: &[CpiHandle<'a>]) -> ProgramResult {
     invoke_signed(instruction, account_handles, &[])
 }
@@ -117,7 +117,7 @@ where
 /// Like [`invoke`], but marks instruction-account indices that are intentional
 /// optional `None` program-id sentinels (parallel to
 /// [`crate::ToCpiAccounts::optional_account_sentinel_flags`]).
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn invoke_with_optional_sentinels<'a, F>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -136,7 +136,7 @@ where
 
 /// Invoke a cross-program instruction with PDA signer seeds using Anchor v2
 /// CPI handles.
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn invoke_signed<'a, 'seeds>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -147,7 +147,7 @@ pub fn invoke_signed<'a, 'seeds>(
 }
 
 /// Like [`invoke_signed`], with an explicit optional-sentinel mask.
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn invoke_signed_with_optional_sentinels<'a, 'seeds, F>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -186,7 +186,7 @@ where
 /// The caller must ensure no live Rust references or stale `AccountView` data
 /// borrows can be invalidated by the callee. Prefer [`invoke`] unless this is
 /// being used through a higher-level API that already enforces those lifetimes.
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub unsafe fn invoke_unchecked<'a>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -203,7 +203,7 @@ pub unsafe fn invoke_unchecked<'a>(
 /// borrows can be invalidated by the callee. Prefer [`invoke_signed`] unless
 /// this is being used through a higher-level API that already enforces those
 /// lifetimes.
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub unsafe fn invoke_signed_unchecked<'a, 'seeds>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -225,7 +225,7 @@ pub unsafe fn invoke_signed_unchecked<'a, 'seeds>(
 /// # Safety
 ///
 /// Same as [`invoke_signed_unchecked`].
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub unsafe fn invoke_signed_unchecked_with_optional_sentinels<'a, 'seeds, F>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -438,7 +438,7 @@ fn instruction_account_matches_handle(
     address_eq(account.address, handle.address()) && (!account.is_writable || handle.is_writable())
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 fn instruction_accounts(instruction: &Instruction) -> crate::InstructionAccountBuffer<'_> {
     let mut accounts = crate::InstructionAccountBuffer::new();
     for meta in &instruction.accounts {
@@ -457,9 +457,9 @@ fn signers<'seeds>(
     let mut out = crate::SignerBuffer::new();
     for seeds in signer_seeds {
         let signer = signer_from_seeds(seeds);
-        #[cfg(not(target_os = "solana"))]
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         out.push(signer);
-        #[cfg(target_os = "solana")]
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         out.try_push(signer)
             .map_err(|_| ProgramError::InvalidArgument)?;
     }
@@ -481,9 +481,9 @@ pub(crate) fn cpi_accounts<'a>(
     for handle in account_handles {
         let mut slot = MaybeUninit::uninit();
         CpiAccount::init_from_account_view(handle.account_view(), &mut slot);
-        #[cfg(not(target_os = "solana"))]
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         accounts.push(slot);
-        #[cfg(target_os = "solana")]
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         accounts
             .try_push(slot)
             .map_err(|_| ProgramError::InvalidArgument)?;

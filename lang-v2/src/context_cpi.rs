@@ -8,9 +8,9 @@ use {
     solana_program_error::{ProgramError, ProgramResult},
 };
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 use crate::{address_eq, require};
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 use solana_instruction::Instruction;
 
 /// Context for cross-program invocations.
@@ -30,9 +30,9 @@ use solana_instruction::Instruction;
 /// ```
 pub struct CpiContext<'a, T: ToCpiAccounts<'a>> {
     pub accounts: T,
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub remaining_accounts: crate::CpiHandleBuffer<'a>,
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     pub remaining_accounts: &'a [CpiHandle<'a>],
     pub program: &'a Address,
     pub signer_seeds: &'a [&'a [&'a [u8]]],
@@ -63,13 +63,13 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         }
     }
 
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     #[inline]
     fn empty_remaining_accounts() -> crate::CpiHandleBuffer<'a> {
         crate::CpiHandleBuffer::new()
     }
 
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     #[inline]
     fn empty_remaining_accounts() -> &'a [CpiHandle<'a>] {
         &[]
@@ -82,7 +82,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     }
 
     #[must_use]
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub fn with_remaining_accounts(mut self, ra: crate::CpiHandleBuffer<'a>) -> Self {
         self.remaining_accounts = ra;
         self
@@ -90,7 +90,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
 
     /// Attach borrowed remaining accounts without copying a maximum-sized
     /// inline buffer into the CPI context. The slice must outlive the CPI.
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     pub fn with_remaining_accounts(mut self, ra: &'a [CpiHandle<'a>]) -> Self {
         self.remaining_accounts = ra;
         self
@@ -128,9 +128,9 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
 
         // Append remaining accounts using the handle's writable/signer flags
         // so PDA remaining accounts marked with `as_signer()` emit signer metas.
-        #[cfg(not(target_os = "solana"))]
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         let remaining_accounts = &self.remaining_accounts;
-        #[cfg(target_os = "solana")]
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         let remaining_accounts = self.remaining_accounts;
         for handle in remaining_accounts {
             crate::try_push_instruction_account(
@@ -169,9 +169,9 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         for handle in &handles {
             let mut slot = MaybeUninit::uninit();
             pinocchio::cpi::CpiAccount::init_from_account_view(handle.account_view(), &mut slot);
-            #[cfg(not(target_os = "solana"))]
+            #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
             cpi_accounts.push(slot);
-            #[cfg(target_os = "solana")]
+            #[cfg(any(target_os = "solana", target_arch = "bpf"))]
             cpi_accounts
                 .try_push(slot)
                 .map_err(|_| ProgramError::InvalidArgument)?;
@@ -208,9 +208,9 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
                 let mut signers = crate::SignerBuffer::new();
                 for seeds in signer_seeds {
                     let signer = signer_from_seeds(seeds);
-                    #[cfg(not(target_os = "solana"))]
+                    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
                     signers.push(signer);
-                    #[cfg(target_os = "solana")]
+                    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
                     signers
                         .try_push(signer)
                         .map_err(|_| ProgramError::InvalidArgument)?;
@@ -237,7 +237,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     /// Optional `None` sentinel slots must appear in the same positions as in
     /// [`ToCpiAccounts::to_instruction_accounts`]; only those indices may omit
     /// handles for readonly program-id metas.
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub fn invoke_ix(&self, ix: Instruction) -> ProgramResult {
         require!(
             address_eq(self.program, &ix.program_id),
@@ -338,9 +338,9 @@ pub fn unchecked_invoke_signed_fixed<'a, const N: usize>(
             let mut signers = crate::SignerBuffer::new();
             for seeds in signer_seeds {
                 let signer = signer_from_seeds(seeds);
-                #[cfg(not(target_os = "solana"))]
+                #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
                 signers.push(signer);
-                #[cfg(target_os = "solana")]
+                #[cfg(any(target_os = "solana", target_arch = "bpf"))]
                 signers
                     .try_push(signer)
                     .map_err(|_| ProgramError::InvalidArgument)?;

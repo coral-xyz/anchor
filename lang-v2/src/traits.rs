@@ -256,7 +256,7 @@ impl Drop for CpiBorrowGuard {
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub(crate) fn enter_cpi<'a>(
     handles: &[CpiHandle<'a>],
 ) -> Result<std::vec::Vec<CpiBorrowGuard>, ProgramError> {
@@ -269,7 +269,7 @@ pub(crate) fn enter_cpi<'a>(
     Ok(guards)
 }
 
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub(crate) fn enter_cpi<'a>(
     handles: &[CpiHandle<'a>],
 ) -> Result<crate::FixedVec<CpiBorrowGuard, { crate::MAX_ACCOUNT_METAS }>, ProgramError> {

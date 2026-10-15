@@ -1,9 +1,9 @@
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 use crate::FixedVec;
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type IdlEntries = std::vec::Vec<&'static str>;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type IdlEntries = FixedVec<&'static str, { crate::MAX_ACCOUNT_METAS }>;
 
 /// Compile-time IDL metadata hooks. The registration surface is bounded so
@@ -44,17 +44,17 @@ impl_leaf_idl_types!(
 // Keep these impls outside the SBF target so the on-chain closure has no
 // `std`/`alloc` dependency while `declare_program!` remains source-compatible
 // for host consumers that do not enable the IDL build feature.
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl IdlAccountType for std::string::String {}
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl<T: IdlAccountType> IdlAccountType for std::vec::Vec<T> {
     fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
         T::__register_idl_deps(accounts, types);
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl<K: IdlAccountType, V: IdlAccountType> IdlAccountType
     for std::collections::BTreeMap<K, V>
 {
@@ -64,7 +64,7 @@ impl<K: IdlAccountType, V: IdlAccountType> IdlAccountType
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl<T: IdlAccountType> IdlAccountType for std::collections::BTreeSet<T> {
     fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
         T::__register_idl_deps(accounts, types);

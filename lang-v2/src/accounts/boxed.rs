@@ -3,7 +3,7 @@
 //! `Box<T>` is deliberately unavailable to Solana builds. Existing host-side
 //! integration tests and IDL tools can still inspect older declarations.
 
-#![cfg(not(target_os = "solana"))]
+#![cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 
 use {
     crate::{AccountConstraint, AccountInitialize, AnchorAccount, Discriminator, ForeignOwnerInit, Space},
