@@ -28,9 +28,9 @@ pub fn group_pointer_initialize<'a>(
     group_address: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data: TokenInstructionData = token_data_subinstruction(40, 0);
-    push_optional_zero_address(&mut data, authority);
-    push_optional_zero_address(&mut data, group_address);
+    let mut data: TokenInstructionData = token_data_subinstruction(40, 0)?;
+    push_optional_zero_address(&mut data, authority)?;
+    push_optional_zero_address(&mut data, group_address)?;
     ctx.invoke(&data)
 }
 
@@ -39,8 +39,8 @@ pub fn group_pointer_update<'a>(
     group_address: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data: TokenInstructionData = token_data_subinstruction(40, 1);
-    push_optional_zero_address(&mut data, group_address);
+    let mut data: TokenInstructionData = token_data_subinstruction(40, 1)?;
+    push_optional_zero_address(&mut data, group_address)?;
     ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }
 

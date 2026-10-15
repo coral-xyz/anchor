@@ -56,7 +56,7 @@ pub fn token_metadata_initialize<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let mut data = TokenInstructionData::new();
-    data.extend_from_slice(&INITIALIZE_DISCRIMINATOR);
+    extend_token_data(&mut data, &INITIALIZE_DISCRIMINATOR)?;
     push_string(&mut data, name)?;
     push_string(&mut data, symbol)?;
     push_string(&mut data, uri)?;
@@ -69,8 +69,8 @@ pub fn token_metadata_update_authority<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let mut data = TokenInstructionData::new();
-    data.extend_from_slice(&UPDATE_AUTHORITY_DISCRIMINATOR);
-    push_optional_zero_address(&mut data, new_authority);
+    extend_token_data(&mut data, &UPDATE_AUTHORITY_DISCRIMINATOR)?;
+    push_optional_zero_address(&mut data, new_authority)?;
     ctx.invoke(&data)
 }
 
@@ -81,13 +81,20 @@ pub fn token_metadata_update_field<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let mut data = TokenInstructionData::new();
-    data.extend_from_slice(&UPDATE_FIELD_DISCRIMINATOR);
+    extend_token_data(&mut data, &UPDATE_FIELD_DISCRIMINATOR)?;
     match field {
-        Field::Name => data.push(0),
-        Field::Symbol => data.push(1),
-        Field::Uri => data.push(2),
+        Field::Name => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
+        Field::Symbol => data
+            .try_push(1)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
+        Field::Uri => data
+            .try_push(2)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
         Field::Key(key) => {
-            data.push(3);
+            data.try_push(3)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
             push_string(&mut data, &key)?;
         }
     }
@@ -102,8 +109,9 @@ pub fn token_metadata_remove_key<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let mut data = TokenInstructionData::new();
-    data.extend_from_slice(&REMOVE_KEY_DISCRIMINATOR);
-    data.push(idempotent as u8);
+    extend_token_data(&mut data, &REMOVE_KEY_DISCRIMINATOR)?;
+    data.try_push(idempotent as u8)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
     push_string(&mut data, key)?;
     ctx.invoke(&data)
 }

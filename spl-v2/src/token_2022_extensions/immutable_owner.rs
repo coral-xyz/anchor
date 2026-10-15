@@ -14,6 +14,6 @@ pub fn immutable_owner_initialize<'a>(
     ctx: CpiContext<'a, ImmutableOwnerInitialize<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data(22);
+    let data = token_data(22)?;
     ctx.invoke(&data)
 }

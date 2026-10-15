@@ -29,9 +29,9 @@ pub fn transfer_hook_initialize<'a>(
     transfer_hook_program_id: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data: TokenInstructionData = token_data_subinstruction(36, 0);
-    push_optional_zero_address(&mut data, authority);
-    push_optional_zero_address(&mut data, transfer_hook_program_id);
+    let mut data: TokenInstructionData = token_data_subinstruction(36, 0)?;
+    push_optional_zero_address(&mut data, authority)?;
+    push_optional_zero_address(&mut data, transfer_hook_program_id)?;
     ctx.invoke(&data)
 }
 
@@ -40,7 +40,7 @@ pub fn transfer_hook_update<'a>(
     transfer_hook_program_id: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data = token_data_subinstruction(36, 1);
-    push_optional_zero_address(&mut data, transfer_hook_program_id);
+    let mut data = token_data_subinstruction(36, 1)?;
+    push_optional_zero_address(&mut data, transfer_hook_program_id)?;
     ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }

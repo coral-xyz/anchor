@@ -14,6 +14,6 @@ pub fn non_transferable_mint_initialize<'a>(
     ctx: CpiContext<'a, NonTransferableMintInitialize<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data(32);
+    let data = token_data(32)?;
     ctx.invoke(&data)
 }

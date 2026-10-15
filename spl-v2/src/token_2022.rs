@@ -86,7 +86,7 @@ pub struct PermanentDelegateInitialize<'a> {
     pub mint: CpiHandleMut<'a>,
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[inline(never)]
 fn return_data_from(program: &Address) -> Result<std::vec::Vec<u8>, ProgramError> {
     let (return_program, data) = anchor_lang::solana_program::program::get_return_data()
@@ -99,7 +99,7 @@ fn return_data_from(program: &Address) -> Result<std::vec::Vec<u8>, ProgramError
     Ok(data.as_slice().to_vec())
 }
 
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 #[inline(never)]
 fn return_data_from(
     program: &Address,
@@ -138,7 +138,7 @@ pub fn get_account_data_size<'a>(
     extension_types: &[ExtensionType],
 ) -> Result<u64, ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data = token_data(21);
+    let mut data = token_data(21)?;
     for extension_type in extension_types {
         extend_token_data(&mut data, &<[u8; 2]>::from(*extension_type))?;
     }
@@ -152,7 +152,7 @@ pub fn initialize_mint_close_authority<'a>(
     close_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data_option_address(25, close_authority);
+    let data = token_data_option_address(25, close_authority)?;
     ctx.invoke(&data)
 }
 
@@ -160,29 +160,29 @@ pub fn initialize_immutable_owner<'a>(
     ctx: CpiContext<'a, InitializeImmutableOwner<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data(22);
+    let data = token_data(22)?;
     ctx.invoke(&data)
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn amount_to_ui_amount<'a>(
     ctx: CpiContext<'a, AmountToUiAmount<'a>>,
     amount: u64,
 ) -> Result<std::string::String, ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = crate::token_shared::token_data_u64(23, amount);
+    let data = crate::token_shared::token_data_u64(23, amount)?;
     ctx.invoke(&data)?;
     let bytes = return_data_from(ctx.program)?;
     std::string::String::from_utf8(bytes).map_err(|_| ProgramError::InvalidInstructionData)
 }
 
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub fn amount_to_ui_amount<'a>(
     ctx: CpiContext<'a, AmountToUiAmount<'a>>,
     amount: u64,
 ) -> Result<anchor_lang::FixedVec<u8, { anchor_lang::MAX_INSTRUCTION_DATA }>, ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = crate::token_shared::token_data_u64(23, amount);
+    let data = crate::token_shared::token_data_u64(23, amount)?;
     ctx.invoke(&data)?;
     drop(data);
     Ok(return_data_from(ctx.program)?)
@@ -193,7 +193,7 @@ pub fn ui_amount_to_amount<'a>(
     ui_amount: &str,
 ) -> Result<u64, ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data = token_data(24);
+    let mut data = token_data(24)?;
     extend_token_data(&mut data, ui_amount.as_bytes())?;
     ctx.invoke(&data)?;
     drop(data);
@@ -205,7 +205,7 @@ pub fn reallocate<'a>(
     extension_types: &[ExtensionType],
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data = token_data(29);
+    let mut data = token_data(29)?;
     for extension_type in extension_types {
         extend_token_data(&mut data, &<[u8; 2]>::from(*extension_type))?;
     }
@@ -216,7 +216,7 @@ pub fn withdraw_excess_lamports<'a>(
     ctx: CpiContext<'a, WithdrawExcessLamports<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data(38);
+    let data = token_data(38)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
@@ -224,7 +224,7 @@ pub fn create_native_mint<'a>(
     ctx: CpiContext<'a, CreateNativeMint<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data(31);
+    let data = token_data(31)?;
     ctx.invoke(&data)
 }
 
@@ -232,7 +232,7 @@ pub fn initialize_non_transferable_mint<'a>(
     ctx: CpiContext<'a, InitializeNonTransferableMint<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data(32);
+    let data = token_data(32)?;
     ctx.invoke(&data)
 }
 
@@ -241,6 +241,6 @@ pub fn initialize_permanent_delegate<'a>(
     permanent_delegate: &Address,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data_address(35, permanent_delegate);
+    let data = token_data_address(35, permanent_delegate)?;
     ctx.invoke(&data)
 }

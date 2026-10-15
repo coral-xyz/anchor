@@ -29,9 +29,9 @@ pub fn interest_bearing_mint_initialize<'a>(
     rate: i16,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data: TokenInstructionData = token_data_subinstruction(33, 0);
-    push_optional_zero_address(&mut data, rate_authority);
-    data.extend_from_slice(&rate.to_le_bytes());
+    let mut data: TokenInstructionData = token_data_subinstruction(33, 0)?;
+    push_optional_zero_address(&mut data, rate_authority)?;
+    crate::token_shared::extend_token_data(&mut data, &rate.to_le_bytes())?;
     ctx.invoke(&data)
 }
 
@@ -40,7 +40,7 @@ pub fn interest_bearing_mint_update_rate<'a>(
     rate: i16,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data = token_data_subinstruction(33, 1);
-    data.extend_from_slice(&rate.to_le_bytes());
+    let mut data = token_data_subinstruction(33, 1)?;
+    crate::token_shared::extend_token_data(&mut data, &rate.to_le_bytes())?;
     ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }

@@ -23,19 +23,19 @@ pub fn pausable_initialize<'a>(
     authority: &Address,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data = token_data_subinstruction(44, 0);
-    data.extend_from_slice(authority.as_ref());
+    let mut data = token_data_subinstruction(44, 0)?;
+    crate::token_shared::extend_token_data(&mut data, authority.as_ref())?;
     ctx.invoke(&data)
 }
 
 pub fn pausable_pause<'a>(ctx: CpiContext<'a, PausableToggle<'a>>) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data_subinstruction(44, 1);
+    let data = token_data_subinstruction(44, 1)?;
     ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }
 
 pub fn pausable_resume<'a>(ctx: CpiContext<'a, PausableToggle<'a>>) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data_subinstruction(44, 2);
+    let data = token_data_subinstruction(44, 2)?;
     ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }

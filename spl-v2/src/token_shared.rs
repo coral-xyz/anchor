@@ -23,13 +23,13 @@ pub(crate) fn push_remaining_account<'a>(
     accounts: &mut anchor_lang::CpiHandleBuffer<'a>,
     account: anchor_lang::CpiHandle<'a>,
 ) -> Result<(), ProgramError> {
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     {
         accounts
             .try_push(account)
             .map_err(|_| ProgramError::InvalidInstructionData)
     }
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         accounts.push(account);
         Ok(())
@@ -37,17 +37,21 @@ pub(crate) fn push_remaining_account<'a>(
 }
 
 #[inline]
-pub(crate) fn token_data(opcode: u8) -> TokenInstructionData {
+pub(crate) fn token_data(opcode: u8) -> Result<TokenInstructionData, ProgramError> {
     let mut data = TokenInstructionData::new();
-    data.push(opcode);
-    data
+    data.try_push(opcode)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    Ok(data)
 }
 
 #[inline]
-pub(crate) fn token_data_u64(opcode: u8, amount: u64) -> TokenInstructionData {
-    let mut data = token_data(opcode);
-    data.extend_from_slice(&amount.to_le_bytes());
-    data
+pub(crate) fn token_data_u64(
+    opcode: u8,
+    amount: u64,
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data(opcode)?;
+    extend_token_data(&mut data, &amount.to_le_bytes())?;
+    Ok(data)
 }
 
 #[inline]
@@ -55,65 +59,80 @@ pub(crate) fn token_data_u64_u8(
     opcode: u8,
     amount: u64,
     value: u8,
-) -> TokenInstructionData {
-    let mut data = token_data_u64(opcode, amount);
-    data.push(value);
-    data
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data_u64(opcode, amount)?;
+    data.try_push(value)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    Ok(data)
 }
 
 #[inline]
 pub(crate) fn token_data_address(
     opcode: u8,
     address: &Address,
-) -> TokenInstructionData {
-    let mut data = token_data(opcode);
-    data.extend_from_slice(address.as_ref());
-    data
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data(opcode)?;
+    extend_token_data(&mut data, address.as_ref())?;
+    Ok(data)
 }
 
 #[inline]
 pub(crate) fn token_data_option_address(
     opcode: u8,
     address: Option<&Address>,
-) -> TokenInstructionData {
-    let mut data = token_data(opcode);
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data(opcode)?;
     match address {
         Some(address) => {
-            data.push(1);
-            data.extend_from_slice(address.as_ref());
+            data.try_push(1)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            extend_token_data(&mut data, address.as_ref())?;
         }
-        None => data.push(0),
+        None => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
     }
-    data
+    Ok(data)
 }
 
 #[inline]
-pub(crate) fn token_data_subinstruction(opcode: u8, subinstruction: u8) -> TokenInstructionData {
-    let mut data = token_data(opcode);
-    data.push(subinstruction);
-    data
+pub(crate) fn token_data_subinstruction(
+    opcode: u8,
+    subinstruction: u8,
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data(opcode)?;
+    data.try_push(subinstruction)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    Ok(data)
 }
 
 #[inline]
 pub(crate) fn push_optional_zero_address(
     data: &mut TokenInstructionData,
     address: Option<&Address>,
-) {
+) -> Result<(), ProgramError> {
     match address {
-        Some(address) => data.extend_from_slice(address.as_ref()),
-        None => data.extend_from_slice(&[0; 32]),
+        Some(address) => extend_token_data(data, address.as_ref()),
+        None => extend_token_data(data, &[0; 32]),
     }
 }
 
 #[inline]
-pub(crate) fn push_coption_address(data: &mut TokenInstructionData, address: Option<&Address>) {
+pub(crate) fn push_coption_address(
+    data: &mut TokenInstructionData,
+    address: Option<&Address>,
+) -> Result<(), ProgramError> {
     match address {
         Some(address) => {
-            data.push(1);
-            data.extend_from_slice(address.as_ref());
+            data.try_push(1)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            extend_token_data(data, address.as_ref())?;
         }
-        None => data.push(0),
+        None => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
     }
+    Ok(())
 }
 
 #[inline]
@@ -121,12 +140,12 @@ pub(crate) fn extend_token_data(
     data: &mut TokenInstructionData,
     bytes: &[u8],
 ) -> Result<(), ProgramError> {
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     {
         data.try_extend_from_slice(bytes)
             .map_err(|_| ProgramError::InvalidInstructionData)
     }
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         data.extend_from_slice(bytes);
         Ok(())
@@ -161,17 +180,21 @@ fn authority_type_byte(authority_type: &spl_token_2022::instruction::AuthorityTy
 fn token_data_set_authority(
     authority_type: &spl_token_2022::instruction::AuthorityType,
     new_authority: Option<&Address>,
-) -> TokenInstructionData {
-    let mut data = token_data(6);
-    data.push(authority_type_byte(authority_type));
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data(6)?;
+    data.try_push(authority_type_byte(authority_type))
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
     match new_authority {
         Some(address) => {
-            data.push(1);
-            data.extend_from_slice(address.as_ref());
+            data.try_push(1)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            extend_token_data(&mut data, address.as_ref())?;
         }
-        None => data.push(0),
+        None => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
     }
-    data
+    Ok(data)
 }
 
 /// SPL Token encodes a multisig authority by marking the authority account
@@ -354,14 +377,14 @@ pub struct SyncNative<'a> {
 pub fn initialize_account<'a>(
     ctx: CpiContext<'a, InitializeAccount<'a>>,
 ) -> Result<(), ProgramError> {
-    let data = token_data(1);
+    let data = token_data(1)?;
     ctx.invoke(&data)
 }
 
 pub fn initialize_account3<'a>(
     ctx: CpiContext<'a, InitializeAccount3<'a>>,
 ) -> Result<(), ProgramError> {
-    let data = token_data_address(18, ctx.accounts.authority.address());
+    let data = token_data_address(18, ctx.accounts.authority.address())?;
     ctx.invoke(&data)
 }
 
@@ -371,15 +394,19 @@ pub fn initialize_mint<'a>(
     authority: &Address,
     freeze_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
-    let mut data = token_data(0);
-    data.push(decimals);
-    data.extend_from_slice(authority.as_ref());
+    let mut data = token_data(0)?;
+    data.try_push(decimals)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    extend_token_data(&mut data, authority.as_ref())?;
     match freeze_authority {
         Some(address) => {
-            data.push(1);
-            data.extend_from_slice(address.as_ref());
+            data.try_push(1)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            extend_token_data(&mut data, address.as_ref())?;
         }
-        None => data.push(0),
+        None => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
     }
     ctx.invoke(&data)
 }
@@ -390,21 +417,25 @@ pub fn initialize_mint2<'a>(
     authority: &Address,
     freeze_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
-    let mut data = token_data(20);
-    data.push(decimals);
-    data.extend_from_slice(authority.as_ref());
+    let mut data = token_data(20)?;
+    data.try_push(decimals)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    extend_token_data(&mut data, authority.as_ref())?;
     match freeze_authority {
         Some(address) => {
-            data.push(1);
-            data.extend_from_slice(address.as_ref());
+            data.try_push(1)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            extend_token_data(&mut data, address.as_ref())?;
         }
-        None => data.push(0),
+        None => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
     }
     ctx.invoke(&data)
 }
 
 pub fn transfer<'a>(ctx: CpiContext<'a, Transfer<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let data = token_data_u64(3, amount);
+    let data = token_data_u64(3, amount)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
@@ -413,12 +444,12 @@ pub fn transfer_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let data = token_data_u64_u8(12, amount, decimals);
+    let data = token_data_u64_u8(12, amount, decimals)?;
     ctx.invoke_with_signer_override(&data, Some((3, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn mint_to<'a>(ctx: CpiContext<'a, MintTo<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let data = token_data_u64(7, amount);
+    let data = token_data_u64(7, amount)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
@@ -427,12 +458,12 @@ pub fn mint_to_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let data = token_data_u64_u8(14, amount, decimals);
+    let data = token_data_u64_u8(14, amount, decimals)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn burn<'a>(ctx: CpiContext<'a, Burn<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let data = token_data_u64(8, amount);
+    let data = token_data_u64(8, amount)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
@@ -441,12 +472,12 @@ pub fn burn_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let data = token_data_u64_u8(15, amount, decimals);
+    let data = token_data_u64_u8(15, amount, decimals)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn approve<'a>(ctx: CpiContext<'a, Approve<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let data = token_data_u64(4, amount);
+    let data = token_data_u64(4, amount)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
@@ -455,12 +486,12 @@ pub fn approve_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let data = token_data_u64_u8(13, amount, decimals);
+    let data = token_data_u64_u8(13, amount, decimals)?;
     ctx.invoke_with_signer_override(&data, Some((3, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn revoke<'a>(ctx: CpiContext<'a, Revoke<'a>>) -> Result<(), ProgramError> {
-    let data = token_data(5);
+    let data = token_data(5)?;
     ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.len() == 0)))
 }
 
@@ -469,27 +500,27 @@ pub fn set_authority<'a>(
     authority_type: spl_token_2022::instruction::AuthorityType,
     new_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
-    let data = token_data_set_authority(&authority_type, new_authority);
+    let data = token_data_set_authority(&authority_type, new_authority)?;
     ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn close_account<'a>(ctx: CpiContext<'a, CloseAccount<'a>>) -> Result<(), ProgramError> {
-    let data = token_data(9);
+    let data = token_data(9)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn freeze_account<'a>(ctx: CpiContext<'a, FreezeAccount<'a>>) -> Result<(), ProgramError> {
-    let data = token_data(10);
+    let data = token_data(10)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn thaw_account<'a>(ctx: CpiContext<'a, ThawAccount<'a>>) -> Result<(), ProgramError> {
-    let data = token_data(11);
+    let data = token_data(11)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn sync_native<'a>(ctx: CpiContext<'a, SyncNative<'a>>) -> Result<(), ProgramError> {
-    let data = token_data(17);
+    let data = token_data(17)?;
     ctx.invoke(&data)
 }
 

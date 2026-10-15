@@ -29,9 +29,9 @@ pub fn metadata_pointer_initialize<'a>(
     metadata_address: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data: TokenInstructionData = token_data_subinstruction(39, 0);
-    push_optional_zero_address(&mut data, authority);
-    push_optional_zero_address(&mut data, metadata_address);
+    let mut data: TokenInstructionData = token_data_subinstruction(39, 0)?;
+    push_optional_zero_address(&mut data, authority)?;
+    push_optional_zero_address(&mut data, metadata_address)?;
     ctx.invoke(&data)
 }
 
@@ -40,7 +40,7 @@ pub fn metadata_pointer_update<'a>(
     metadata_address: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data = token_data_subinstruction(39, 1);
-    push_optional_zero_address(&mut data, metadata_address);
+    let mut data = token_data_subinstruction(39, 1)?;
+    push_optional_zero_address(&mut data, metadata_address)?;
     ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }

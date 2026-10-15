@@ -332,6 +332,18 @@ mod tests {
 
         for (local, canonical) in [
             (
+                LocalExtensionType::TransferFeeConfig,
+                CanonicalExtensionType::TransferFeeConfig,
+            ),
+            (
+                LocalExtensionType::MintCloseAuthority,
+                CanonicalExtensionType::MintCloseAuthority,
+            ),
+            (
+                LocalExtensionType::DefaultAccountState,
+                CanonicalExtensionType::DefaultAccountState,
+            ),
+            (
                 LocalExtensionType::ConfidentialTransferMint,
                 CanonicalExtensionType::ConfidentialTransferMint,
             ),
@@ -359,6 +371,10 @@ mod tests {
                 LocalExtensionType::ScaledUiAmount,
                 CanonicalExtensionType::ScaledUiAmount,
             ),
+            (
+                LocalExtensionType::Pausable,
+                CanonicalExtensionType::Pausable,
+            ),
         ] {
             assert_eq!(
                 LocalExtensionType::try_calculate_account_len::<LocalMint>(&[local]),
@@ -371,8 +387,36 @@ mod tests {
                 CanonicalExtensionType::ConfidentialTransferAccount,
             ),
             (
+                LocalExtensionType::TransferFeeAmount,
+                CanonicalExtensionType::TransferFeeAmount,
+            ),
+            (
+                LocalExtensionType::ImmutableOwner,
+                CanonicalExtensionType::ImmutableOwner,
+            ),
+            (
+                LocalExtensionType::MemoTransfer,
+                CanonicalExtensionType::MemoTransfer,
+            ),
+            (
+                LocalExtensionType::NonTransferableAccount,
+                CanonicalExtensionType::NonTransferableAccount,
+            ),
+            (
+                LocalExtensionType::CpiGuard,
+                CanonicalExtensionType::CpiGuard,
+            ),
+            (
+                LocalExtensionType::TransferHookAccount,
+                CanonicalExtensionType::TransferHookAccount,
+            ),
+            (
                 LocalExtensionType::ConfidentialTransferFeeAmount,
                 CanonicalExtensionType::ConfidentialTransferFeeAmount,
+            ),
+            (
+                LocalExtensionType::PausableAccount,
+                CanonicalExtensionType::PausableAccount,
             ),
         ] {
             assert_eq!(

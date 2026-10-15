@@ -38,7 +38,7 @@ pub fn token_group_initialize<'a>(
     validate_token_2022_program(ctx.program)?;
     let mut data = TokenInstructionData::new();
     extend_token_data(&mut data, &INITIALIZE_GROUP_DISCRIMINATOR)?;
-    push_optional_zero_address(&mut data, update_authority);
+    push_optional_zero_address(&mut data, update_authority)?;
     extend_token_data(&mut data, &max_size.to_le_bytes())?;
     ctx.invoke(&data)
 }

@@ -61,11 +61,11 @@ pub fn transfer_fee_initialize<'a>(
     maximum_fee: u64,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data: TokenInstructionData = token_data_subinstruction(26, 0);
-    push_coption_address(&mut data, transfer_fee_config_authority);
-    push_coption_address(&mut data, withdraw_withheld_authority);
-    data.extend_from_slice(&transfer_fee_basis_points.to_le_bytes());
-    data.extend_from_slice(&maximum_fee.to_le_bytes());
+    let mut data: TokenInstructionData = token_data_subinstruction(26, 0)?;
+    push_coption_address(&mut data, transfer_fee_config_authority)?;
+    push_coption_address(&mut data, withdraw_withheld_authority)?;
+    crate::token_shared::extend_token_data(&mut data, &transfer_fee_basis_points.to_le_bytes())?;
+    crate::token_shared::extend_token_data(&mut data, &maximum_fee.to_le_bytes())?;
     ctx.invoke(&data)
 }
 
@@ -75,9 +75,9 @@ pub fn transfer_fee_set<'a>(
     maximum_fee: u64,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data = token_data_subinstruction(26, 5);
-    data.extend_from_slice(&transfer_fee_basis_points.to_le_bytes());
-    data.extend_from_slice(&maximum_fee.to_le_bytes());
+    let mut data = token_data_subinstruction(26, 5)?;
+    crate::token_shared::extend_token_data(&mut data, &transfer_fee_basis_points.to_le_bytes())?;
+    crate::token_shared::extend_token_data(&mut data, &maximum_fee.to_le_bytes())?;
     ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }
 
@@ -88,10 +88,11 @@ pub fn transfer_checked_with_fee<'a>(
     fee: u64,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let mut data = token_data_subinstruction(26, 1);
-    data.extend_from_slice(&amount.to_le_bytes());
-    data.push(decimals);
-    data.extend_from_slice(&fee.to_le_bytes());
+    let mut data = token_data_subinstruction(26, 1)?;
+    crate::token_shared::extend_token_data(&mut data, &amount.to_le_bytes())?;
+    data.try_push(decimals)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    crate::token_shared::extend_token_data(&mut data, &fee.to_le_bytes())?;
     ctx.invoke_with_signer_override(&data, Some((3, ctx.remaining_accounts.is_empty())))
 }
 
@@ -107,10 +108,10 @@ pub fn harvest_withheld_tokens_to_mint<'a>(
     for account in ctx.remaining_accounts.iter().copied() {
         push_remaining_account(&mut remaining_accounts, account)?;
     }
-    let data = token_data_subinstruction(26, 4);
-    #[cfg(not(target_os = "solana"))]
+    let data = token_data_subinstruction(26, 4)?;
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     return ctx.with_remaining_accounts(remaining_accounts).invoke(&data);
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     ctx.with_remaining_accounts(remaining_accounts.as_slice())
         .invoke(&data)
 }
@@ -119,7 +120,7 @@ pub fn withdraw_withheld_tokens_from_mint<'a>(
     ctx: CpiContext<'a, WithdrawWithheldTokensFromMint<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data_subinstruction(26, 2);
+    let data = token_data_subinstruction(26, 2)?;
     ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.is_empty())))
 }
 
@@ -136,13 +137,16 @@ pub fn withdraw_withheld_tokens_from_accounts<'a>(
     for source in sources {
         push_remaining_account(&mut remaining_accounts, CpiHandle::from(*source))?;
     }
-    let mut data = token_data_subinstruction(26, 3);
-    data.push(sources.len() as u8);
-    #[cfg(not(target_os = "solana"))]
+    let mut data = token_data_subinstruction(26, 3)?;
+    let source_count = u8::try_from(sources.len())
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    data.try_push(source_count)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     return ctx
         .with_remaining_accounts(remaining_accounts)
         .invoke_with_signer_override(&data, Some((2, !has_signers)));
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     ctx.with_remaining_accounts(remaining_accounts.as_slice())
         .invoke_with_signer_override(&data, Some((2, !has_signers)))
 }

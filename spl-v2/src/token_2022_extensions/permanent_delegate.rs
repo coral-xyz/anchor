@@ -16,6 +16,6 @@ pub fn permanent_delegate_initialize<'a>(
     permanent_delegate: &Address,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let data = token_data_address(35, permanent_delegate);
+    let data = token_data_address(35, permanent_delegate)?;
     ctx.invoke(&data)
 }

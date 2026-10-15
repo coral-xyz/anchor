@@ -13,12 +13,12 @@
 
 #![no_std]
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 extern crate std;
 
 pub mod associated_token;
 pub mod extensions;
-#[cfg(all(feature = "metadata", not(target_os = "solana")))]
+#[cfg(all(feature = "metadata", not(any(target_os = "solana", target_arch = "bpf"))))]
 pub mod metadata;
 pub mod mint;
 pub mod token;

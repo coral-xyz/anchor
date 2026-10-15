@@ -30,8 +30,9 @@ pub fn default_account_state_initialize<'a>(
         spl_token_2022::state::AccountState::Initialized => 1,
         spl_token_2022::state::AccountState::Frozen => 2,
     };
-    let mut data: TokenInstructionData = token_data_subinstruction(28, 0);
-    data.push(state);
+    let mut data: TokenInstructionData = token_data_subinstruction(28, 0)?;
+    data.try_push(state)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
     ctx.invoke(&data)
 }
 
@@ -45,7 +46,8 @@ pub fn default_account_state_update<'a>(
         spl_token_2022::state::AccountState::Initialized => 1,
         spl_token_2022::state::AccountState::Frozen => 2,
     };
-    let mut data: TokenInstructionData = token_data_subinstruction(28, 1);
-    data.push(state);
+    let mut data: TokenInstructionData = token_data_subinstruction(28, 1)?;
+    data.try_push(state)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
     ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }
