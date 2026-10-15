@@ -119,7 +119,7 @@ pub enum SolanaCommand {
     /// AVM resolves the Anchor version and maps it to Anchor's recommended
     /// Solana CLI version.
     Resolve,
-    /// Install and activate a Solana CLI version. With no argument, installs
+    /// Install and activate an AVM-managed Solana CLI version. With no argument, installs
     /// the project-resolved version.
     Install {
         /// Solana CLI version, e.g. `4.1.2`.

@@ -322,13 +322,13 @@ pub fn installer_for_version(version: &Version) -> SolanaInstaller {
     }
 }
 
-/// Install and activate a Solana CLI version using `solana-install` or
+/// Install and activate an AVM-managed Solana CLI version using `solana-install` or
 /// `agave-install`, matching Anchor CLI's installer split at `1.18.19`.
 pub fn install_solana_cli(version: &Version, force: bool) -> Result<()> {
     install_solana_cli_with_options(version, force, true, true)
 }
 
-/// Ensure a Solana CLI version is active, without printing on no-op.
+/// Ensure a Solana CLI version is active inside AVM_HOME, without printing on no-op.
 ///
 /// The AVM `anchor` proxy uses this for transparent setup before spawning the
 /// resolved `anchor-cli` binary.
@@ -342,8 +342,13 @@ fn install_solana_cli_with_options(
     report_already_active: bool,
     report_success: bool,
 ) -> Result<()> {
+    fs::create_dir_all(solana_install_data_dir()?)?;
     let installer = installer_for_version(version);
-    if !force && read_command_version("solana")?.as_ref() == Some(version) {
+    if !force
+        && read_command_version(&active_release_bin_path()?.join("solana").to_string_lossy())?
+            .as_ref()
+            == Some(version)
+    {
         if report_already_active {
             println!("solana {version} is already active");
         }
@@ -370,7 +375,13 @@ fn install_solana_cli_with_options(
     };
     let quiet = installed.iter().any(|installed| installed == version);
     let mut cmd = Command::new(installer.command());
-    cmd.arg("init").arg(version.to_string());
+    cmd.arg("--config")
+        .arg(solana_install_data_dir()?.join("config.yml"))
+        .arg("init")
+        .arg("--data-dir")
+        .arg(solana_install_data_dir()?)
+        .arg("--no-modify-path")
+        .arg(version.to_string());
     if quiet {
         cmd.stdout(Stdio::null()).stderr(Stdio::null());
     } else {
@@ -429,6 +440,13 @@ fn ensure_installer_command(
     let status = Command::new("sh")
         .arg("-c")
         .arg(script)
+        .arg("--")
+        .arg("--config")
+        .arg(solana_install_data_dir()?.join("config.yml"))
+        .arg("--data-dir")
+        .arg(solana_install_data_dir()?)
+        .arg("--no-modify-path")
+        .arg(version.to_string())
         .status()
         .with_context(|| format!("Running installer from {url}"))?;
     if !status.success() {
@@ -441,7 +459,8 @@ fn ensure_installer_command(
         }
         bail!("Failed to install `{command}` from {url}");
     }
-    let active_solana = read_command_version("solana")?;
+    let active_solana =
+        read_command_version(&active_release_bin_path()?.join("solana").to_string_lossy())?;
     match installer_setup_after_bootstrap(
         installer_command_available(installer)?,
         active_solana.as_ref(),
@@ -501,6 +520,8 @@ fn install_legacy_solana_from_github_release(
 
     let data_dir = solana_install_data_dir()?;
     let output = Command::new(&installer)
+        .arg("--config")
+        .arg(data_dir.join("config.yml"))
         .arg("--data-dir")
         .arg(&data_dir)
         .arg("--no-modify-path")
@@ -539,15 +560,10 @@ fn legacy_solana_release_url(version: &Version, target: &str) -> String {
 }
 
 fn solana_install_data_dir() -> Result<std::path::PathBuf> {
-    Ok(dirs::home_dir()
-        .ok_or_else(|| anyhow!("Could not find home directory"))?
-        .join(".local")
-        .join("share")
-        .join("solana")
-        .join("install"))
+    Ok(crate::AVM_HOME.join("solana"))
 }
 
-/// Directory containing the active Solana release's executables.
+/// Directory containing the AVM-managed active Solana release's executables.
 pub fn active_release_bin_path() -> Result<std::path::PathBuf> {
     Ok(solana_install_data_dir()?
         .join("active_release")
@@ -559,7 +575,12 @@ fn installer_command_available(installer: SolanaInstaller) -> Result<bool> {
         return Ok(true);
     }
 
-    match Command::new(installer.command()).arg("list").output() {
+    match Command::new(installer.command())
+        .arg("--config")
+        .arg(solana_install_data_dir()?.join("config.yml"))
+        .arg("list")
+        .output()
+    {
         Ok(output) => Ok(output.status.success()),
         Err(err) if err.kind() == ErrorKind::NotFound => Ok(false),
         Err(err) => Err(err).with_context(|| format!("Running `{}`", installer.command())),
@@ -568,6 +589,8 @@ fn installer_command_available(installer: SolanaInstaller) -> Result<bool> {
 
 fn read_installed_solana_versions(installer: SolanaInstaller) -> Result<Vec<Version>> {
     let output = Command::new(installer.command())
+        .arg("--config")
+        .arg(solana_install_data_dir()?.join("config.yml"))
         .arg("list")
         .output()
         .with_context(|| format!("Running `{} list`", installer.command()))?;

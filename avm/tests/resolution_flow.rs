@@ -34,9 +34,7 @@ impl Fixture {
         let anchor_stub = path_bin.join("anchor");
         fs::copy(env!("CARGO_BIN_EXE_avm"), &anchor_stub).expect("copy avm as anchor");
         make_executable(&anchor_stub);
-        let solana_bin = temp
-            .path()
-            .join("home/.local/share/solana/install/active_release/bin");
+        let solana_bin = temp.path().join("avm-home/solana/active_release/bin");
         fs::create_dir_all(&solana_bin).expect("solana bin");
         write_executable(
             &solana_bin.join("cargo-build-sbf"),
@@ -184,7 +182,7 @@ fi
         let build_sbf = self
             ._temp
             .path()
-            .join("home/.local/share/solana/install/active_release/bin/cargo-build-sbf");
+            .join("avm-home/solana/active_release/bin/cargo-build-sbf");
         write_executable(
             &build_sbf,
             r#"#!/bin/sh
@@ -451,7 +449,7 @@ fi
 
     fn install_fake_solana(&self, version: &str) {
         write_executable(
-            &self.path_bin.join("solana"),
+            &self.avm_home.join("solana/active_release/bin/solana"),
             &format!(
                 r#"#!/bin/sh
 echo "$*" >> "$AVM_TEST_SOLANA_LOG"

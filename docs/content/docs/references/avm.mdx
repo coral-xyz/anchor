@@ -161,12 +161,13 @@ Without a working managed builder, setup fails instead of silently selecting
 the Solana release's bundled builder. Other copies on the user's `PATH` are
 not updated.
 
-AVM puts its own bin directory ahead of the selected Solana release on the
+AVM puts its own bin directory ahead of the AVM-managed Solana release on the
 child's `PATH`. The standalone builder is therefore selected independently
 of the project's Solana CLI version. Build architecture and platform-tools
 arguments passed by Anchor are preserved; when omitted, the builder's defaults
-apply. Platform-tools still use their existing cache, and Solana activation
-and Rustup toolchain setup are unchanged.
+apply. Solana installs use `$AVM_HOME/solana` for both installer configuration and data,
+with `--no-modify-path`, leaving the user’s global Solana installation and shell
+profile unchanged. Platform-tools caching and Rustup toolchain setup are unchanged.
 
 ## Self-update
 

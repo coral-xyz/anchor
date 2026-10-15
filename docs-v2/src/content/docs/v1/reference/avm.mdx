@@ -107,7 +107,7 @@ Before launching Anchor, AVM checks for the latest stable, non-yanked `cargo-bui
 
 Checks are cached for 24 hours. Failed update checks or installations warn and reuse an existing managed builder when available. If no working managed builder exists, setup fails instead of selecting Solana's bundled builder. Other copies on the user's `PATH` are not updated.
 
-AVM's bin directory precedes the selected Solana release in the child's `PATH`, so the standalone builder is independent of the Solana CLI version. Anchor's explicit architecture and platform-tools arguments are preserved; omitted arguments use the builder's defaults. Platform-tools caching, Solana activation, and Rustup toolchain setup are unchanged.
+AVM's bin directory precedes the AVM-managed Solana release in the child's `PATH`, so the standalone builder is independent of the Solana CLI version. Anchor's explicit architecture and platform-tools arguments are preserved; omitted arguments use the builder's defaults. Solana installs use `$AVM_HOME/solana` for both installer configuration and data, with `--no-modify-path`, leaving the user’s global Solana installation and shell profile unchanged. Platform-tools caching and Rustup toolchain setup are unchanged.
 
 ## `<blue>avm</blue> self-update`
 
