@@ -16,6 +16,7 @@ export type V1TransactionConfig = {
   /** Defaults to 200,000 when omitted during v1 compilation. */
   computeUnitLimit?: number;
   heapSize?: number;
+  /** Defaults to 64 MiB when omitted during v1 compilation. */
   loadedAccountsDataSizeLimit?: number;
   priorityFeeLamports?: bigint;
 };
@@ -79,6 +80,8 @@ export function toTransaction(
   }).compileToV1Message({
     ...options.transactionConfig,
     computeUnitLimit: options.transactionConfig.computeUnitLimit ?? 200_000,
+    loadedAccountsDataSizeLimit:
+      options.transactionConfig.loadedAccountsDataSizeLimit ?? 64 * 1024 * 1024,
   } as never);
 
   return new V1VersionedTransaction(message) as unknown as V1Transaction;

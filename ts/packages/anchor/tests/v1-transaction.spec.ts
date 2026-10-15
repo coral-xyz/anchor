@@ -17,15 +17,37 @@ const V1_TRANSACTION_WIRE_BASE64 =
   "gQEAAB8AAACfhtCBiEx9ZZov6qDFWtAVo79PGysLgizRXWwVsPAKCAEChQ8tbgKkevgk0Jq1ezUthFXDQyqFB+gCFczb6vgtJWYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIgTAAAAAAAA4JMEAAAAAQAAgAAAAQIMAAABAgAAAEDiAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";
 
 describe("transaction-v1 compilation", () => {
-  it.each<[string, V1TransactionConfig, number]>([
-    ["omitted", {}, 200_000],
-    ["undefined", { computeUnitLimit: undefined }, 200_000],
-    ["explicit", { computeUnitLimit: 300_000 }, 300_000],
-    ["zero", { computeUnitLimit: 0 }, 0],
-  ])("serializes the %s compute unit limit", (_, overrides, expectedLimit) => {
+  it.each<[string, V1TransactionConfig, number, number]>([
+    ["omitted limits", {}, 200_000, 67_108_864],
+    [
+      "undefined compute limit",
+      { computeUnitLimit: undefined },
+      200_000,
+      67_108_864,
+    ],
+    [
+      "explicit compute limit",
+      { computeUnitLimit: 300_000 },
+      300_000,
+      67_108_864,
+    ],
+    ["zero compute limit", { computeUnitLimit: 0 }, 0, 67_108_864],
+    [
+      "undefined data limit",
+      { loadedAccountsDataSizeLimit: undefined },
+      200_000,
+      67_108_864,
+    ],
+    [
+      "explicit data limit",
+      { loadedAccountsDataSizeLimit: 65_536 },
+      200_000,
+      65_536,
+    ],
+    ["zero data limit", { loadedAccountsDataSizeLimit: 0 }, 200_000, 0],
+  ])("serializes %s", (_, overrides, expectedLimit, expectedDataLimit) => {
     const transactionConfig = Object.freeze({
       priorityFeeLamports: BigInt(5_000),
-      loadedAccountsDataSizeLimit: 65_536,
       heapSize: 32_768,
       ...overrides,
     });
@@ -46,10 +68,13 @@ describe("transaction-v1 compilation", () => {
     expect((decoded.message as MessageV1).transactionConfig).toEqual({
       priorityFee: 5_000,
       computeUnitLimit: expectedLimit,
-      loadedAccountsDataSizeLimit: 65_536,
+      loadedAccountsDataSizeLimit: expectedDataLimit,
       heapSize: 32_768,
     });
     expect(transactionConfig.computeUnitLimit).toBe(overrides.computeUnitLimit);
+    expect(transactionConfig.loadedAccountsDataSizeLimit).toBe(
+      overrides.loadedAccountsDataSizeLimit
+    );
   });
 });
 
