@@ -30,9 +30,9 @@ use {
     solana_address::Address,
 };
 
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 use anchor_lang::MAX_ACCOUNT_METAS;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 use solana_program_error::ProgramError;
 
 // A placeholder header struct that implements `Bumps` so we can construct
@@ -277,7 +277,7 @@ fn remaining_accounts_returns_empty_when_nothing_trails() {
     assert!(ctx.remaining_accounts().expect("walk").is_empty());
 }
 
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 #[test]
 fn remaining_accounts_over_inline_budget_returns_error() {
     let records: Vec<_> = (0..(MAX_ACCOUNT_METAS + 1) as u8).map(non_dup).collect();

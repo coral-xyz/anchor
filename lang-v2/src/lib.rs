@@ -2,11 +2,11 @@
 //!
 //! `#![no_std]` compatible.
 
-#![cfg_attr(target_os = "solana", no_std)]
+#![cfg_attr(any(target_os = "solana", target_arch = "bpf"), no_std)]
 extern crate self as anchor_lang;
 
 pub mod accounts;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 mod account_meta;
 pub mod context;
 mod context_cpi;
@@ -18,7 +18,10 @@ mod fixed_vec;
 pub mod hash;
 mod idl;
 #[doc(hidden)]
-#[cfg(feature = "idl-build")]
+#[cfg(all(
+    feature = "idl-build",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
 pub mod idl_build;
 pub mod loader;
 pub mod pod;
@@ -26,7 +29,10 @@ pub mod prelude;
 mod program;
 pub mod programs;
 pub mod system_program;
-#[cfg(feature = "testing")]
+#[cfg(all(
+    feature = "testing",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
 pub mod testing;
 mod traits;
 
@@ -42,7 +48,7 @@ pub use solana_address::{address, declare_id};
 /// Implementation detail of [`solana_msg`] - re-exported for macro access only.
 #[doc(hidden)]
 pub use solana_msg;
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[doc(hidden)]
 pub mod __idl {
     pub use std::{
@@ -60,7 +66,7 @@ pub mod __idl {
 /// client APIs remain unchanged. On-chain generated bindings use bounded
 /// transient buffers instead; callers must stay within this explicit limit or
 /// split the instruction.
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 #[doc(hidden)]
 pub mod __idl {
     pub mod string {
@@ -72,13 +78,13 @@ pub mod __idl {
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[derive(Clone, Default, Eq, PartialEq)]
 pub struct HostBoolBuffer {
     values: std::vec::Vec<bool>,
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl HostBoolBuffer {
     #[inline]
     pub fn new() -> Self {
@@ -122,7 +128,7 @@ impl HostBoolBuffer {
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl core::ops::Deref for HostBoolBuffer {
     type Target = [bool];
 
@@ -132,7 +138,7 @@ impl core::ops::Deref for HostBoolBuffer {
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl core::ops::DerefMut for HostBoolBuffer {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
@@ -143,7 +149,7 @@ impl core::ops::DerefMut for HostBoolBuffer {
 /// Format a message into a bounded stack buffer and send it to the Solana log
 /// syscall. This is the no-`alloc` implementation used by the on-chain
 /// `msg!` macro.
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub fn sol_log_fmt(args: core::fmt::Arguments<'_>) {
     struct LogWriter {
         bytes: FixedVec<u8, 256>,
@@ -212,7 +218,7 @@ pub fn sol_log_fmt(args: core::fmt::Arguments<'_>) {
 /// Logs a message without introducing an allocator into the SBF dependency
 /// graph. Host builds retain `solana_msg`'s normal formatting behavior;
 /// on-chain builds format into a bounded stack buffer.
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 #[macro_export]
 macro_rules! msg {
     ($($arg:tt)*) => {{
@@ -220,7 +226,7 @@ macro_rules! msg {
     }};
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[macro_export]
 macro_rules! msg {
     ($($arg:tt)*) => {{
@@ -262,42 +268,42 @@ pub const MAX_IDL_SEQUENCE: usize = 256;
 /// Host/client builds retain an ordinary `Vec`, while the on-chain target uses
 /// a bounded inline buffer. This keeps the owned client API unbounded without
 /// allowing the SBF dependency graph to pull in `alloc`.
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type AccountMetaBuffer = std::vec::Vec<AccountMeta>;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type AccountMetaBuffer = FixedVec<AccountMeta, MAX_ACCOUNT_METAS>;
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type InstructionAccountBuffer<'a> =
     std::vec::Vec<pinocchio::instruction::InstructionAccount<'a>>;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type InstructionAccountBuffer<'a> =
     FixedVec<pinocchio::instruction::InstructionAccount<'a>, MAX_ACCOUNT_METAS>;
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type AccountViewBuffer = std::vec::Vec<pinocchio::account::AccountView>;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type AccountViewBuffer = FixedVec<pinocchio::account::AccountView, MAX_ACCOUNT_METAS>;
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type CpiHandleBuffer<'a> = std::vec::Vec<CpiHandle<'a>>;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type CpiHandleBuffer<'a> = FixedVec<CpiHandle<'a>, MAX_ACCOUNT_METAS>;
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type BoolBuffer = HostBoolBuffer;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type BoolBuffer = AccountFlags;
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type InstructionDataBuffer = std::vec::Vec<u8>;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type InstructionDataBuffer = FixedVec<u8, MAX_INSTRUCTION_DATA>;
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type SignerBuffer<'a> = std::vec::Vec<pinocchio::cpi::Signer<'a, 'a>>;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type SignerBuffer<'a> = FixedVec<pinocchio::cpi::Signer<'a, 'a>, MAX_ACCOUNT_METAS>;
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type CpiAccountBuffer<'a> =
     std::vec::Vec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>>;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type CpiAccountBuffer<'a> =
     FixedVec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>, MAX_ACCOUNT_METAS>;
 
@@ -308,12 +314,12 @@ pub fn try_push_instruction_account<'a>(
     buffer: &mut InstructionAccountBuffer<'a>,
     account: pinocchio::instruction::InstructionAccount<'a>,
 ) -> core::result::Result<(), solana_program_error::ProgramError> {
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         buffer.push(account);
         Ok(())
     }
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     buffer
         .try_push(account)
         .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
@@ -326,12 +332,12 @@ pub fn try_push_cpi_handle<'a>(
     buffer: &mut CpiHandleBuffer<'a>,
     handle: CpiHandle<'a>,
 ) -> core::result::Result<(), solana_program_error::ProgramError> {
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         buffer.push(handle);
         Ok(())
     }
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     buffer
         .try_push(handle)
         .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
@@ -344,12 +350,12 @@ pub fn try_push_bool(
     buffer: &mut BoolBuffer,
     value: bool,
 ) -> core::result::Result<(), solana_program_error::ProgramError> {
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         buffer.push(value);
         Ok(())
     }
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     buffer
         .try_push(value)
         .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
@@ -388,7 +394,7 @@ impl<const N: usize> OptionalSentinelFlags for [bool; N] {
     }
 }
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl OptionalSentinelFlags for HostBoolBuffer {
     #[inline]
     fn len(&self) -> usize {
@@ -426,13 +432,13 @@ pub fn try_extend_instruction_data(
     buffer: &mut InstructionDataBuffer,
     bytes: &[u8],
 ) -> core::result::Result<(), solana_program_error::ProgramError> {
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     {
         buffer.extend_from_slice(bytes);
         Ok(())
     }
 
-    #[cfg(target_os = "solana")]
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
     buffer
         .try_extend_from_slice(bytes)
         .map_err(|_| solana_program_error::ProgramError::InvalidInstructionData)
@@ -550,9 +556,9 @@ pub use cpi::create_account_with_signers;
 /// `solana_program::pubkey::Pubkey` to [`Address`], but external Solana crates
 /// may still expose nominally distinct `Pubkey` newtypes with the same 32-byte
 /// representation.
-#[cfg(not(target_os = "solana"))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub use solana_instruction::account_meta::AccountMeta;
-#[cfg(target_os = "solana")]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub use account_meta::AccountMeta;
 pub use {
     accounts::{AccountInitialize, SlabInit},
@@ -570,7 +576,7 @@ pub use {
         find_program_address, verify_program_address,
     },
     cursor::{mut_mask_or_shifted, mut_mask_set_bit, AccountBitvec, AccountCursor},
-    dispatch::{run_handler, TryAccounts},
+    dispatch::{run_handler, AccountViewStorage, TryAccounts},
     event::{sol_log_data, Event},
     hash::sha256,
     loader::AccountLoader,
@@ -593,15 +599,15 @@ pub mod solana_program {
     }
 
     pub mod instruction {
-        #[cfg(not(target_os = "solana"))]
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         pub use solana_instruction::*;
-        #[cfg(target_os = "solana")]
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
         pub use crate::account_meta::AccountMeta;
     }
 
     #[cfg(feature = "compat")]
     pub use crate::pubkey;
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub use solana_system_interface::instruction as system_instruction;
 
     #[cfg(feature = "compat")]
@@ -609,7 +615,7 @@ pub mod solana_program {
         pub type Pubkey = crate::Address;
     }
 
-    #[cfg(not(target_os = "solana"))]
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub mod rent {
         pub use solana_sysvar::rent::*;
     }
@@ -630,13 +636,19 @@ pub trait ToAccountMetas {
 
 /// Serializes instruction data: discriminator prefix + LE-encoded args.
 pub trait InstructionData: Discriminator {
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     fn data(&self) -> InstructionDataBuffer;
 
     /// Fallible instruction serialization for allocator-free runtime paths.
     ///
-    /// Existing implementations that only provide `data()` remain source
-    /// compatible. Generated V2 instruction types override this method so a
-    /// full buffer reports `InvalidInstructionData` instead of panicking.
+    /// On-chain implementations must provide this method directly. Host
+    /// implementations retain the infallible `data()` compatibility method.
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+    fn try_data(
+        &self,
+    ) -> core::result::Result<InstructionDataBuffer, solana_program_error::ProgramError>;
+
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     fn try_data(&self) -> core::result::Result<InstructionDataBuffer, solana_program_error::ProgramError> {
         Ok(self.data())
     }
