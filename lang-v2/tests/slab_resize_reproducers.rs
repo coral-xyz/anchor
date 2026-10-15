@@ -291,6 +291,31 @@ fn load_mut_rejects_len_greater_than_capacity_via_validate_tail() {
     assert_eq!(result.err(), Some(ProgramError::InvalidAccountData));
 }
 
+#[test]
+fn failed_load_mut_leaves_data_unchanged() {
+    // Correct type with `len > capacity`, and another type whose bytes at
+    // `LEN_OFFSET` read as an oversized `len`.
+    let over_capacity = setup_ledger(/*capacity*/ 1, /*len*/ 2);
+    let other_type = setup_ledger(/*capacity*/ 1, /*len*/ 2);
+    let mut data = other_type.read_data().to_vec();
+    data[..8].copy_from_slice(&[0x11; 8]);
+    other_type.write_data(&data);
+
+    for buf in [over_capacity, other_type] {
+        let before = buf.read_data().to_vec();
+        let view = unsafe { buf.view() };
+        assert_eq!(
+            CounterLedger::load_mut(view).err(),
+            Some(ProgramError::InvalidAccountData)
+        );
+        assert_eq!(
+            buf.read_data(),
+            &before[..],
+            "a rejected load_mut must not write"
+        );
+    }
+}
+
 // Regression: after the guard lands, `capacity()` returns 0 (no panic,
 // no usize underflow) when a retained Slab sees `data_len` shrink below
 // `ITEMS_OFFSET`.

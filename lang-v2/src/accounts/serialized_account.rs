@@ -363,14 +363,16 @@ where
             .lamports()
             .checked_add(self_view.lamports())
             .ok_or(ProgramError::ArithmeticOverflow)?;
+
+        // Swap our guard for a checked borrow before writing anything. Once
+        // `release_borrow()` has run (e.g. for a CPI between mutation and
+        // close), an aliased view may hold a borrow of the data.
+        self.borrow = SerializedAccountBorrow::Released;
+        let mut data_view = self.view;
+        let mut data = data_view.try_borrow_mut()?;
+
         destination.set_lamports(dest_lamports);
         self_view.set_lamports(0);
-
-        // Drop any active borrow guard before the raw scrub below so the
-        // subsequent `borrow_unchecked_mut` is unaliased. If the user
-        // already called `release_borrow()` (e.g. a CPI between mutation
-        // and close), this is a no-op.
-        self.borrow = SerializedAccountBorrow::Released;
 
         // Defense-in-depth: write a closed-account sentinel (`u8::MAX`)
         // over the discriminator before pinocchio's close() zeros the
@@ -384,17 +386,13 @@ where
         // sanctioned call sequence (pre-CPI commit + derive-emitted
         // close), so the scrub must not be gated on holding a live
         // guard.
-        //
-        // SAFETY: `&mut self` plus the guard release above means no
-        // other live borrow on this account; the view's data is valid
-        // until pinocchio's `close()` reassigns ownership below.
-        let data = unsafe { self_view.borrow_unchecked_mut() };
         let disc_len = Self::disc_len();
         if disc_len > 0 && data.len() >= disc_len {
             // `sol_memset` matches the rest of this module's scrubbing
             // style and works for any discriminator width.
             unsafe { sol_memset(&mut data[..disc_len], u8::MAX, disc_len) };
         }
+        drop(data);
 
         self_view.close()?;
         Ok(())

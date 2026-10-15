@@ -23,10 +23,6 @@ impl<T: AnchorAccount> AnchorAccount for Box<T> {
         T::load_mut(view).map(Box::new)
     }
 
-    fn load_mut_after_init(view: AccountView) -> Result<Self, ProgramError> {
-        T::load_mut_after_init(view).map(Box::new)
-    }
-
     fn account(&self) -> &AccountView {
         (**self).account()
     }

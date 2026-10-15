@@ -1870,7 +1870,7 @@ fn emit_seeds_check(
 
 /// Emit the shared init body used by both `#[account(init)]` and
 /// `#[account(init_if_needed)]`: seeds check, param assignments,
-/// `create_and_initialize`, and `load_mut_after_init`.
+/// and `create_and_initialize`.
 fn emit_payer_signer_seeds_binding(
     payer: &Ident,
     field_names: &[String],

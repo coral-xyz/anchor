@@ -205,7 +205,7 @@ impl AnchorAccount for DynamicAccount<Post> {
     type Data = PostFixed;
     fn load(view, pid)   -> Result<Self>     { /* parse disc + tail */ }
     fn exit(&mut self)   -> ProgramResult    { /* realloc to fit, persist */ }
-    // load_mut, load_mut_after_init, account
+    // load_mut, account
 }
 ```
 

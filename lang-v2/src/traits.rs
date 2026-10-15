@@ -342,17 +342,6 @@ pub trait AnchorAccount: Deref<Target = Self::Data> + Sized {
         Self::load(view)
     }
 
-    /// Like [`load_mut`], but called right after
-    /// `AccountInitialize::create_and_initialize`. Owner, discriminator,
-    /// and min-length checks are tautologies on this path, so data-carrying
-    /// wrappers override to skip them. Default forwards to [`load_mut`].
-    ///
-    /// [`load_mut`]: Self::load_mut
-    #[inline(always)]
-    fn load_mut_after_init(view: AccountView) -> core::result::Result<Self, ProgramError> {
-        Self::load_mut(view)
-    }
-
     fn account(&self) -> &AccountView;
 
     fn exit(&mut self) -> ProgramResult {

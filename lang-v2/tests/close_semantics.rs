@@ -245,6 +245,32 @@ fn close_scrubs_discriminator_even_after_release_borrow() {
 }
 
 #[test]
+fn close_after_release_borrow_rejects_live_alias_borrow() {
+    let mut buf = AccountBuffer::<256>::new();
+    setup_vault_buf(&mut buf);
+
+    let dest_buf = AccountBuffer::<256>::new();
+    dest_buf.init([0xDD; 32], PROGRAM_ID, 0, false, true, false);
+
+    let view = unsafe { buf.view() };
+    let dest_view = unsafe { dest_buf.view() };
+    let dest_lamports = dest_view.lamports();
+    let mut vault = BorshAccount::<Vault>::load_mut(view).unwrap();
+    vault.release_borrow().unwrap();
+
+    let alias = view;
+    let alias_data = alias.try_borrow().unwrap();
+    assert_eq!(
+        vault.close(dest_view).err(),
+        Some(solana_program_error::ProgramError::AccountBorrowFailed),
+        "close must not write under a borrow held through an aliased view",
+    );
+    assert_eq!(&alias_data[..8], &vault_disc()[..]);
+    assert_eq!(view.lamports(), 1_000_000_000);
+    assert_eq!(dest_view.lamports(), dest_lamports);
+}
+
+#[test]
 fn second_borsh_close_after_manual_close_is_noop() {
     let mut buf = AccountBuffer::<256>::new();
     setup_vault_buf(&mut buf);

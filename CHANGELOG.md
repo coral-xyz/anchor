@@ -22,7 +22,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Breaking
 
 - lang-v2: Default `#[event]` structs now derive `AnchorDeserialize` as well as `AnchorSerialize`. Remove any explicit `AnchorDeserialize` derive from these structs to avoid conflicting implementations; `#[event(bytemuck)]` is unchanged ([#5078](https://github.com/otter-sec/anchor/pull/5078)).
-- lang-v2: Remove the dispatch-level duplicate mutable account check and the `#[account(unsafe(dup))]` constraint. One account may fill several slots: `Account<T>`, `BorshAccount<T>` and `Slab<H, T>` reject a conflicting borrow of an aliased account at load time with `AccountBorrowFailed` instead of `ConstraintDuplicateMutableAccount`, while `Signer`, `SystemAccount`, `UncheckedAccount` and `Program<T>` may alias freely. Remove any `unsafe(dup)` attributes. `AnchorAccount::load_mut` and `load_mut_after_init` are safe functions, and `Context::remaining_accounts()` returns the `Vec<AccountView>` directly ([#5091](https://github.com/otter-sec/anchor/pull/5091)).
+- lang-v2: Replace the duplicate mutable account check with borrow checks, so conflicting aliases fail with `AccountBorrowFailed`. Remove `#[account(unsafe(dup))]` and drop `?` on `ctx.remaining_accounts()`; a read-only `Account<T>` or `Slab<H, T>` used in a writable CPI needs `#[account(mut)]` ([#5091](https://github.com/otter-sec/anchor/pull/5091)).
 
 ## [2.0.0-rc.2] - 2026-10-06
 
