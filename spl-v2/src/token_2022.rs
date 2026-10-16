@@ -11,9 +11,8 @@ use {
 };
 
 pub use anchor_lang::programs::Token2022;
-pub use spl_token_2022_interface::{
-    self as spl_token_2022, extension::ExtensionType, native_mint, ID,
-};
+pub use spl_token_2022_interface::{extension::ExtensionType, native_mint, ID};
+pub(crate) use spl_token_2022_interface as spl_token_2022;
 
 pub use crate::token_shared::{
     approve, approve_checked, burn, burn_checked, close_account, freeze_account,

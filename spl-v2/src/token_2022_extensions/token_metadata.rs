@@ -1,5 +1,5 @@
 use {
-    super::common::validate_token_2022_program,
+    super::{common::validate_token_2022_program, spl_token_metadata_interface},
     alloc::borrow::ToOwned,
     anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     pinocchio::address::Address,
@@ -7,7 +7,7 @@ use {
     spl_pod::optional_keys::OptionalNonZeroPubkey,
 };
 
-pub use spl_token_metadata_interface::state::Field;
+pub use super::spl_token_metadata_interface::state::Field;
 
 #[derive(ToCpiAccounts)]
 pub struct TokenMetadataInitialize<'a> {

@@ -7,7 +7,7 @@
 
 extern crate alloc;
 
-pub use mpl_token_metadata;
+pub(crate) use mpl_token_metadata;
 
 use {
     anchor_lang::{

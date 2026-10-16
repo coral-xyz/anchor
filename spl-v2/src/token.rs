@@ -6,8 +6,9 @@
 pub use {
     crate::mint::Mint,
     anchor_lang::programs::Token,
-    spl_token_interface::{self as spl_token, ID},
+    spl_token_interface::ID,
 };
+pub(crate) use spl_token_interface as spl_token;
 use {
     anchor_lang::{
         accounts::{Account, Program, SlabInit, SlabSchema},
