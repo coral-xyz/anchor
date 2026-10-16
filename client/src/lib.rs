@@ -814,8 +814,8 @@ mod tests {
         const DISCRIMINATOR: &'static [u8] = &[0; 8];
     }
     impl Event for MockEvent {
-        fn data(&self) -> Vec<u8> {
-            Vec::new()
+        fn data(&self) -> anchor_lang::InstructionDataBuffer {
+            anchor_lang::InstructionDataBuffer::new()
         }
     }
 
