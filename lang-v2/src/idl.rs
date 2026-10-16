@@ -1,9 +1,18 @@
-#[cfg(target_os = "solana")]
+#[cfg(not(all(
+    feature = "idl-build",
+    not(any(target_os = "solana", target_arch = "bpf"))
+)))]
 use crate::FixedVec;
 
-#[cfg(not(target_os = "solana"))]
+#[cfg(all(
+    feature = "idl-build",
+    not(any(target_os = "solana", target_arch = "bpf"))
+))]
 pub type IdlEntries = std::vec::Vec<&'static str>;
-#[cfg(target_os = "solana")]
+#[cfg(not(all(
+    feature = "idl-build",
+    not(any(target_os = "solana", target_arch = "bpf"))
+)))]
 pub type IdlEntries = FixedVec<&'static str, { crate::MAX_ACCOUNT_METAS }>;
 
 /// Compile-time IDL metadata hooks. The registration surface is bounded so
