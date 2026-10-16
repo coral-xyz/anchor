@@ -599,7 +599,7 @@ impl<C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'_, C, 
 
     #[must_use]
     pub fn args(mut self, args: impl InstructionData) -> Self {
-        self.instruction_data = Some(args.data().to_vec());
+        self.instruction_data = Some(args.data().as_slice().to_vec());
         self
     }
 
