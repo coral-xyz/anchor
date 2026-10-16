@@ -2,19 +2,23 @@
 //!
 //! `#![no_std]` compatible.
 
-#![no_std]
-extern crate alloc;
+#![cfg_attr(any(target_os = "solana", target_arch = "bpf"), no_std)]
 extern crate self as anchor_lang;
 
 pub mod accounts;
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+mod account_meta;
 pub mod context;
 mod context_cpi;
 pub mod cpi;
 pub mod cursor;
 mod dispatch;
 pub mod event;
+mod fixed_vec;
 pub mod hash;
+mod idl;
 #[doc(hidden)]
+#[cfg(feature = "idl-build")]
 pub mod idl_build;
 pub mod loader;
 pub mod pod;
@@ -38,35 +42,82 @@ pub use solana_address::{address, declare_id};
 /// Implementation detail of [`solana_msg`] - re-exported for macro access only.
 #[doc(hidden)]
 pub use solana_msg;
-// Re-export for `debug!` macro — routes through this crate's namespace so
-// user programs don't need `solana-program-log` or `extern crate alloc;`.
-#[cfg(feature = "compat")]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[doc(hidden)]
-pub use solana_program_log::log as __log_str;
+pub mod __idl {
+    pub use std::{
+        boxed,
+        boxed::Box,
+        collections, format, string,
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+}
 
-// Ungated re-export so generated macro code (`#[event]`, `debug!`, etc.)
-// can reach `Vec` without std or `extern crate alloc;` in user crates.
+/// No-alloc compatibility namespace used by generated `declare_program!`
+/// bindings. Host builds keep the standard library's owned collections so
+/// client APIs remain unchanged. On-chain generated bindings use bounded
+/// transient buffers instead; callers must stay within this explicit limit or
+/// split the instruction.
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 #[doc(hidden)]
-pub extern crate alloc as __alloc;
+pub mod __idl {
+    pub mod string {
+        pub type String = crate::FixedVec<u8, { crate::MAX_IDL_SEQUENCE }>;
+    }
 
-/// Logs a message via `solana_msg`.
-///
-/// Thin wrapper around `solana_msg::msg!` that always evaluates to
-/// `()`, so it's usable in expression position (match arms, closures, tuples,
-/// etc.).
+    pub mod vec {
+        pub type Vec<T> = crate::FixedVec<T, { crate::MAX_IDL_SEQUENCE }>;
+    }
+}
+
+/// Format a message into a bounded stack buffer and send it to the Solana log
+/// syscall. This is the no-`alloc` implementation used by the on-chain
+/// `msg!` macro.
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub fn sol_log_fmt(args: core::fmt::Arguments<'_>) {
+    struct LogWriter {
+        bytes: FixedVec<u8, 256>,
+    }
+
+    impl core::fmt::Write for LogWriter {
+        fn write_str(&mut self, value: &str) -> core::fmt::Result {
+            self.bytes
+                .try_extend_from_slice(value.as_bytes())
+                .map_err(|_| core::fmt::Error)
+        }
+    }
+
+    let mut writer = LogWriter {
+        bytes: FixedVec::new(),
+    };
+    let _ = core::fmt::write(&mut writer, args);
+    // Formatting only writes valid UTF-8, so this conversion cannot fail.
+    let message = unsafe { core::str::from_utf8_unchecked(writer.bytes.as_slice()) };
+    solana_msg::sol_log(message);
+}
+
+/// Logs a message without introducing an allocator into the SBF dependency
+/// graph. Host builds retain `solana_msg`'s normal formatting behavior;
+/// on-chain builds format into a bounded stack buffer.
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 #[macro_export]
 macro_rules! msg {
     ($($arg:tt)*) => {{
-        // bring into scope from re-export as the macro accesses it
-        use $crate::solana_msg;
-        solana_msg::msg!($($arg)*);
+        $crate::sol_log_fmt(core::format_args!($($arg)*));
     }};
 }
 
-/// v1-compat logger with full `format!` support (`{:?}`, `{:x}`, etc.).
-///
-/// Heap-allocates via `alloc::format!`. Prefer [`msg!`] for production
-/// (cheaper CUs). Gated behind `compat`.
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[macro_export]
+macro_rules! msg {
+    ($($arg:tt)*) => {{
+        $crate::solana_msg::msg!($($arg)*);
+    }};
+}
+
+/// v1-compat logger. Gated behind `compat`.
 ///
 /// # Example
 ///
@@ -76,15 +127,136 @@ macro_rules! msg {
 #[cfg(feature = "compat")]
 #[macro_export]
 macro_rules! debug {
-    ($msg:expr) => {{
-        $crate::__log_str($msg)
-    }};
-    ($($arg:tt)*) => {{
-        $crate::__log_str(&$crate::__alloc::format!($($arg)*))
-    }};
+    ($($arg:tt)*) => {{ $crate::msg!($($arg)*) }};
 }
 // Re-export wincode for instruction data serialization
 pub use wincode;
+
+pub use fixed_vec::{AccountFlags, AccountFlagsIter, FixedVec};
+pub use idl::{IdlAccountType, IdlEntries};
+/// Maximum number of account metas held by an on-chain V2 inline buffer.
+///
+/// Pinocchio permits up to 255 transaction accounts, but using that value for
+/// every allocator-free CPI buffer would place large `CpiAccount` arrays on
+/// the SBF stack. Keep the inline runtime bound deliberately small so common
+/// CPI paths remain within Solana's stack limit; callers needing more account
+/// metas must split the operation into smaller instructions.
+pub const MAX_ACCOUNT_METAS: usize = 16;
+pub const MAX_INSTRUCTION_DATA: usize = 1232;
+/// Maximum number of elements in an allocator-free collection emitted by
+/// generated on-chain IDL bindings.
+pub const MAX_IDL_SEQUENCE: usize = 256;
+/// Account-meta storage used by generated account builders.
+///
+/// This type is deliberately identical on host and on-chain builds. Keeping
+/// the allocator-free type in the public trait signature prevents a target
+/// alias from silently exposing `Vec` through rustdoc or generated APIs.
+pub type AccountMetaBuffer = FixedVec<AccountMeta, MAX_ACCOUNT_METAS>;
+pub type InstructionAccountBuffer<'a> =
+    FixedVec<pinocchio::instruction::InstructionAccount<'a>, MAX_ACCOUNT_METAS>;
+pub type AccountViewBuffer = FixedVec<pinocchio::account::AccountView, MAX_ACCOUNT_METAS>;
+pub type CpiHandleBuffer<'a> = FixedVec<CpiHandle<'a>, MAX_ACCOUNT_METAS>;
+pub type BoolBuffer = AccountFlags;
+pub type InstructionDataBuffer = FixedVec<u8, MAX_INSTRUCTION_DATA>;
+
+pub type SignerBuffer<'a> = FixedVec<pinocchio::cpi::Signer<'a, 'a>, MAX_ACCOUNT_METAS>;
+
+pub type CpiAccountBuffer<'a> =
+    FixedVec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>, MAX_ACCOUNT_METAS>;
+
+pub type AccountBindingBuffer = FixedVec<Option<usize>, MAX_ACCOUNT_METAS>;
+
+/// Append one instruction account without making the generated CPI builder
+/// rely on `FixedVec::push`'s panic-on-overflow compatibility behavior.
+#[inline]
+pub fn try_push_instruction_account<'a>(
+    buffer: &mut InstructionAccountBuffer<'a>,
+    account: pinocchio::instruction::InstructionAccount<'a>,
+) -> core::result::Result<(), solana_program_error::ProgramError> {
+    buffer
+        .try_push(account)
+        .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
+}
+
+/// Append one CPI handle without panicking when a generated account shape is
+/// larger than the SBF inline account budget.
+#[inline]
+pub fn try_push_cpi_handle<'a>(
+    buffer: &mut CpiHandleBuffer<'a>,
+    handle: CpiHandle<'a>,
+) -> core::result::Result<(), solana_program_error::ProgramError> {
+    buffer
+        .try_push(handle)
+        .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
+}
+
+/// Read-only view of optional-account sentinel flags used by CPI validation.
+/// The compact [`AccountFlags`] representation is used by generated V2 code,
+/// while slices remain accepted by the lower-level public CPI helpers.
+pub trait OptionalSentinelFlags {
+    fn len(&self) -> usize;
+    fn get(&self, index: usize) -> bool;
+}
+
+impl OptionalSentinelFlags for [bool] {
+    #[inline]
+    fn len(&self) -> usize {
+        <[bool]>::len(self)
+    }
+
+    #[inline]
+    fn get(&self, index: usize) -> bool {
+        <[bool]>::get(self, index).copied().unwrap_or(false)
+    }
+}
+
+impl<const N: usize> OptionalSentinelFlags for [bool; N] {
+    #[inline]
+    fn len(&self) -> usize {
+        N
+    }
+
+    #[inline]
+    fn get(&self, index: usize) -> bool {
+        self.as_slice().get(index).copied().unwrap_or(false)
+    }
+}
+
+impl OptionalSentinelFlags for AccountFlags {
+    #[inline]
+    fn len(&self) -> usize {
+        AccountFlags::len(self)
+    }
+
+    #[inline]
+    fn get(&self, index: usize) -> bool {
+        AccountFlags::get(self, index)
+    }
+}
+
+/// Append bytes to an instruction/event buffer without allocating or
+/// panicking on the on-chain target.
+///
+/// The bounded `FixedVec` implementation reports capacity exhaustion as
+/// `InvalidInstructionData`, which lets generated serializers expose a
+/// genuinely fallible path without target-dependent public return types.
+#[inline]
+pub fn try_extend_instruction_data(
+    buffer: &mut InstructionDataBuffer,
+    bytes: &[u8],
+) -> core::result::Result<(), solana_program_error::ProgramError> {
+    buffer
+        .try_extend_from_slice(bytes)
+        .map_err(|_| solana_program_error::ProgramError::InvalidInstructionData)
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __anchor_program_allocator {
+    () => {
+        $crate::pinocchio::no_allocator!();
+    };
+}
 
 /// Borsh-compatible wincode config: u8 enum tags + fixed u32 LE length
 /// prefixes. Used for borsh-compatible v2 serialization paths (instruction
@@ -179,7 +351,6 @@ pub use cpi::create_account_with_signers;
 /// its associated items — they are implementation details of the IDL
 /// build pipeline and will change without notice. See [`idl_build`] for
 /// the trait definition.
-pub use idl_build::IdlAccountType;
 /// Metadata for a single account in a transaction instruction.
 ///
 /// Re-exported from `solana-instruction` so tests and CPI builders can pass
@@ -191,12 +362,16 @@ pub use idl_build::IdlAccountType;
 /// `solana_program::pubkey::Pubkey` to [`Address`], but external Solana crates
 /// may still expose nominally distinct `Pubkey` newtypes with the same 32-byte
 /// representation.
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub use solana_instruction::account_meta::AccountMeta;
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub use account_meta::AccountMeta;
 pub use {
     accounts::{AccountInitialize, SlabInit},
     anchor_derive_accounts::{
-        access_control, account, constant, declare_program, emit, error_code, event, pod_wrapper,
-        program, Accounts, AnchorDeserialize, AnchorSerialize, InitSpace, ToCpiAccounts, __erase,
+        __erase, access_control, account, constant, declare_program, emit, error_code, event,
+        pod_wrapper, program, Accounts, AnchorDeserialize, AnchorSerialize, InitSpace,
+        ToCpiAccounts,
     },
     bytemuck,
     context::{Bumps, Context},
@@ -230,11 +405,15 @@ pub mod solana_program {
     }
 
     pub mod instruction {
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         pub use solana_instruction::*;
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+        pub use crate::account_meta::AccountMeta;
     }
 
     #[cfg(feature = "compat")]
     pub use crate::pubkey;
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub use solana_system_interface::instruction as system_instruction;
 
     #[cfg(feature = "compat")]
@@ -242,6 +421,7 @@ pub mod solana_program {
         pub type Pubkey = crate::Address;
     }
 
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub mod rent {
         pub use solana_sysvar::rent::*;
     }
@@ -257,12 +437,21 @@ pub mod solana_program {
 
 /// Converts a struct of account addresses into a list of [`AccountMeta`]s.
 pub trait ToAccountMetas {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> alloc::vec::Vec<AccountMeta>;
+    fn to_account_metas(&self, is_signer: Option<bool>) -> AccountMetaBuffer;
 }
 
 /// Serializes instruction data: discriminator prefix + LE-encoded args.
 pub trait InstructionData: Discriminator {
-    fn data(&self) -> alloc::vec::Vec<u8>;
+    fn data(&self) -> InstructionDataBuffer;
+
+    /// Fallible instruction serialization for allocator-free runtime paths.
+    ///
+    /// Existing implementations that only provide `data()` remain source
+    /// compatible. Generated V2 instruction types override this method so a
+    /// full buffer reports `InvalidInstructionData` instead of panicking.
+    fn try_data(&self) -> core::result::Result<InstructionDataBuffer, solana_program_error::ProgramError> {
+        Ok(self.data())
+    }
 }
 
 /// Compile-time account-size calculation. Derived via `#[derive(InitSpace)]`.
