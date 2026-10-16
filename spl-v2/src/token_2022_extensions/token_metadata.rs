@@ -1,6 +1,6 @@
 use {
     super::common::validate_token_2022_program,
-    alloc::string::String,
+    alloc::borrow::ToOwned,
     anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
@@ -41,9 +41,9 @@ pub struct TokenMetadataRemoveKey<'a> {
 
 pub fn token_metadata_initialize<'a>(
     ctx: CpiContext<'a, TokenMetadataInitialize<'a>>,
-    name: String,
-    symbol: String,
-    uri: String,
+    name: &str,
+    symbol: &str,
+    uri: &str,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
@@ -53,9 +53,9 @@ pub fn token_metadata_initialize<'a>(
         ctx.accounts.update_authority.address(),
         ctx.accounts.mint.address(),
         ctx.accounts.mint_authority.address(),
-        name,
-        symbol,
-        uri,
+        name.to_owned(),
+        symbol.to_owned(),
+        uri.to_owned(),
     );
     ctx.invoke_ix(ix)
 }
@@ -80,7 +80,7 @@ pub fn token_metadata_update_authority<'a>(
 pub fn token_metadata_update_field<'a>(
     ctx: CpiContext<'a, TokenMetadataUpdateField<'a>>,
     field: Field,
-    value: String,
+    value: &str,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
@@ -89,14 +89,14 @@ pub fn token_metadata_update_field<'a>(
         ctx.accounts.metadata.address(),
         ctx.accounts.update_authority.address(),
         field,
-        value,
+        value.to_owned(),
     );
     ctx.invoke_ix(ix)
 }
 
 pub fn token_metadata_remove_key<'a>(
     ctx: CpiContext<'a, TokenMetadataRemoveKey<'a>>,
-    key: String,
+    key: &str,
     idempotent: bool,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
@@ -105,7 +105,7 @@ pub fn token_metadata_remove_key<'a>(
         &program,
         ctx.accounts.metadata.address(),
         ctx.accounts.update_authority.address(),
-        key,
+        key.to_owned(),
         idempotent,
     );
     ctx.invoke_ix(ix)

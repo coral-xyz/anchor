@@ -1,11 +1,11 @@
 //! Token-2022 CPI helpers and interface re-exports.
 
-extern crate alloc;
-
 use {
     crate::token_shared::multisig_signer_addresses,
-    alloc::{string::String, vec::Vec},
-    anchor_lang::{require_eq, CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
+    anchor_lang::{
+        require_eq, try_extend_instruction_data, CpiContext, CpiHandle, CpiHandleMut,
+        InstructionDataBuffer, ToCpiAccounts,
+    },
     pinocchio::address::Address,
     solana_program_error::ProgramError,
 };
@@ -139,15 +139,19 @@ pub fn initialize_immutable_owner<'a>(
 pub fn amount_to_ui_amount<'a>(
     ctx: CpiContext<'a, AmountToUiAmount<'a>>,
     amount: u64,
-) -> Result<String, ProgramError> {
+) -> Result<InstructionDataBuffer, ProgramError> {
     let ix = spl_token_2022::instruction::amount_to_ui_amount(
         ctx.program,
         ctx.accounts.account.address(),
         amount,
     )?;
     ctx.invoke_ix(ix)?;
-    String::from_utf8(return_data_from(ctx.program)?)
-        .map_err(|_| ProgramError::InvalidInstructionData)
+    let return_data = return_data_from(ctx.program)?;
+    let mut output = InstructionDataBuffer::new();
+    try_extend_instruction_data(&mut output, return_data.as_slice())?;
+    core::str::from_utf8(output.as_slice())
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    Ok(output)
 }
 
 pub fn ui_amount_to_amount<'a>(
