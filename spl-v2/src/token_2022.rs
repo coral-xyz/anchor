@@ -111,7 +111,7 @@ pub struct PermanentDelegateInitialize<'a> {
     pub mint: CpiHandleMut<'a>,
 }
 
-fn return_data_from(program: &Address) -> Result<Vec<u8>, ProgramError> {
+fn return_data_from(program: &Address) -> Result<pinocchio::cpi::ReturnData, ProgramError> {
     let (return_program, data) = anchor_lang::solana_program::program::get_return_data()
         .ok_or(ProgramError::InvalidInstructionData)?;
     require_eq!(
