@@ -175,7 +175,7 @@ pub fn reallocate<'a>(
     ctx: CpiContext<'a, Reallocate<'a>>,
     extension_types: &[ExtensionType],
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::reallocate(
         ctx.program,
         ctx.accounts.account.address(),
@@ -190,7 +190,7 @@ pub fn reallocate<'a>(
 pub fn withdraw_excess_lamports<'a>(
     ctx: CpiContext<'a, WithdrawExcessLamports<'a>>,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::withdraw_excess_lamports(
         ctx.program,
         ctx.accounts.source.address(),

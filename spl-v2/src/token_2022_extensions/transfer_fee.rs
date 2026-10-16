@@ -78,7 +78,7 @@ pub fn transfer_fee_set<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::extension::transfer_fee::instruction::set_transfer_fee(
         &program,
         ctx.accounts.mint.address(),
@@ -98,7 +98,7 @@ pub fn transfer_checked_with_fee<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::extension::transfer_fee::instruction::transfer_checked_with_fee(
         &program,
         ctx.accounts.source.address(),
@@ -146,7 +146,7 @@ pub fn withdraw_withheld_tokens_from_mint<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix =
         spl_token_2022::extension::transfer_fee::instruction::withdraw_withheld_tokens_from_mint(
             &program,
@@ -164,7 +164,7 @@ pub fn withdraw_withheld_tokens_from_accounts<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let mut source_pubkeys = FixedVec::<Pubkey, MAX_ACCOUNT_METAS>::new();
     for source in sources {
         source_pubkeys

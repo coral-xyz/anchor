@@ -4,13 +4,10 @@
 //! multisigs. For a multisig, pass the member signer handles in canonical
 //! order through [`CpiContext::with_remaining_accounts`].
 
-extern crate alloc;
-
 #[cfg(feature = "guardrails")]
 use anchor_lang::{require, Id};
 use {
-    alloc::vec::Vec,
-    anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
+    anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, FixedVec, ToCpiAccounts, MAX_ACCOUNT_METAS},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
     spl_token_2022_interface as spl_token_2022,
@@ -19,8 +16,16 @@ use {
 /// SPL Token encodes a multisig authority by marking the authority account
 /// non-signer and appending each member signer to the instruction. Token CPI
 /// callers provide those member handles through `remaining_accounts`.
-pub(crate) fn multisig_signer_addresses<'a>(accounts: &[CpiHandle<'a>]) -> Vec<&'a Address> {
-    accounts.iter().map(CpiHandle::address).collect()
+pub(crate) fn multisig_signer_addresses<'a>(
+    accounts: &[CpiHandle<'a>],
+) -> Result<FixedVec<&'a Address, MAX_ACCOUNT_METAS>, ProgramError> {
+    let mut addresses = FixedVec::new();
+    for account in accounts {
+        addresses
+            .try_push(account.address())
+            .map_err(|_| ProgramError::InvalidArgument)?;
+    }
+    Ok(addresses)
 }
 
 #[cfg(feature = "guardrails")]
@@ -243,7 +248,7 @@ pub fn initialize_mint2<'a>(
 }
 
 pub fn transfer<'a>(ctx: CpiContext<'a, Transfer<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     #[allow(deprecated)]
     let ix = spl_token_2022::instruction::transfer(
         ctx.program,
@@ -261,7 +266,7 @@ pub fn transfer_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::transfer_checked(
         ctx.program,
         ctx.accounts.from.address(),
@@ -276,7 +281,7 @@ pub fn transfer_checked<'a>(
 }
 
 pub fn mint_to<'a>(ctx: CpiContext<'a, MintTo<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::mint_to(
         ctx.program,
         ctx.accounts.mint.address(),
@@ -293,7 +298,7 @@ pub fn mint_to_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::mint_to_checked(
         ctx.program,
         ctx.accounts.mint.address(),
@@ -307,7 +312,7 @@ pub fn mint_to_checked<'a>(
 }
 
 pub fn burn<'a>(ctx: CpiContext<'a, Burn<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::burn(
         ctx.program,
         ctx.accounts.from.address(),
@@ -324,7 +329,7 @@ pub fn burn_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::burn_checked(
         ctx.program,
         ctx.accounts.from.address(),
@@ -338,7 +343,7 @@ pub fn burn_checked<'a>(
 }
 
 pub fn approve<'a>(ctx: CpiContext<'a, Approve<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::approve(
         ctx.program,
         ctx.accounts.to.address(),
@@ -355,7 +360,7 @@ pub fn approve_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::approve_checked(
         ctx.program,
         ctx.accounts.to.address(),
@@ -370,7 +375,7 @@ pub fn approve_checked<'a>(
 }
 
 pub fn revoke<'a>(ctx: CpiContext<'a, Revoke<'a>>) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::revoke(
         ctx.program,
         ctx.accounts.source.address(),
@@ -385,7 +390,7 @@ pub fn set_authority<'a>(
     authority_type: spl_token_2022::instruction::AuthorityType,
     new_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::set_authority(
         ctx.program,
         ctx.accounts.account_or_mint.address(),
@@ -398,7 +403,7 @@ pub fn set_authority<'a>(
 }
 
 pub fn close_account<'a>(ctx: CpiContext<'a, CloseAccount<'a>>) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::close_account(
         ctx.program,
         ctx.accounts.account.address(),
@@ -410,7 +415,7 @@ pub fn close_account<'a>(ctx: CpiContext<'a, CloseAccount<'a>>) -> Result<(), Pr
 }
 
 pub fn freeze_account<'a>(ctx: CpiContext<'a, FreezeAccount<'a>>) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::freeze_account(
         ctx.program,
         ctx.accounts.account.address(),
@@ -422,7 +427,7 @@ pub fn freeze_account<'a>(ctx: CpiContext<'a, FreezeAccount<'a>>) -> Result<(), 
 }
 
 pub fn thaw_account<'a>(ctx: CpiContext<'a, ThawAccount<'a>>) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
     let ix = spl_token_2022::instruction::thaw_account(
         ctx.program,
         ctx.accounts.account.address(),
@@ -465,7 +470,7 @@ mod tests {
             CpiHandle::readonly(&member_one_view),
             CpiHandle::readonly(&member_two_view),
         ];
-        let signer_addresses = multisig_signer_addresses(&handles);
+        let signer_addresses = multisig_signer_addresses(&handles).unwrap();
 
         #[allow(deprecated)]
         let ix = spl_token_2022::instruction::transfer(
