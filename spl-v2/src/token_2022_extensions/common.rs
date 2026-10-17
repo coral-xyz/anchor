@@ -1,5 +1,5 @@
 use {
-    anchor_lang::{FixedVec, MAX_ACCOUNT_METAS},
+    anchor_lang::{FixedVec, MAX_RUNTIME_ACCOUNT_METAS},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
     solana_pubkey::Pubkey,
@@ -23,7 +23,7 @@ pub(crate) fn validate_token_2022_program(_program: &Address) -> Result<(), Prog
 
 pub(crate) fn pubkey_refs<'a>(
     pubkeys: &'a [Pubkey],
-) -> Result<FixedVec<&'a Pubkey, MAX_ACCOUNT_METAS>, ProgramError> {
+) -> Result<FixedVec<&'a Pubkey, MAX_RUNTIME_ACCOUNT_METAS>, ProgramError> {
     let mut refs = FixedVec::new();
     for pubkey in pubkeys {
         refs.try_push(pubkey)

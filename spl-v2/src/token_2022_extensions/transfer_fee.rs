@@ -1,7 +1,10 @@
 use {
     super::common::{pubkey_refs, validate_token_2022_program},
     crate::{token_2022::spl_token_2022, token_shared::multisig_signer_addresses},
-    anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, FixedVec, ToCpiAccounts, MAX_ACCOUNT_METAS},
+    anchor_lang::{
+        CpiContext, CpiHandle, CpiHandleMut, FixedVec, ToCpiAccounts,
+        MAX_RUNTIME_ACCOUNT_METAS,
+    },
     pinocchio::address::Address,
     solana_program_error::ProgramError,
     solana_pubkey::Pubkey,
@@ -119,7 +122,7 @@ pub fn harvest_withheld_tokens_to_mint<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
-    let mut source_pubkeys = FixedVec::<Pubkey, MAX_ACCOUNT_METAS>::new();
+    let mut source_pubkeys = FixedVec::<Pubkey, MAX_RUNTIME_ACCOUNT_METAS>::new();
     for source in sources {
         source_pubkeys
             .try_push(*source.address())
@@ -165,7 +168,7 @@ pub fn withdraw_withheld_tokens_from_accounts<'a>(
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
     let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
-    let mut source_pubkeys = FixedVec::<Pubkey, MAX_ACCOUNT_METAS>::new();
+    let mut source_pubkeys = FixedVec::<Pubkey, MAX_RUNTIME_ACCOUNT_METAS>::new();
     for source in sources {
         source_pubkeys
             .try_push(*source.address())

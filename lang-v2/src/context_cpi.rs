@@ -107,10 +107,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         // SAFETY: pinocchio::cpi::Seed is repr(C) { *const u8, u64, PhantomData }
         // which has the same layout as &[u8] on SBF. This is verified by the
         // static assertion in cpi.rs.
-        let mut signers: crate::FixedVec<
-            pinocchio::cpi::Signer<'a, 'a>,
-            { crate::MAX_ACCOUNT_METAS },
-        > = crate::FixedVec::new();
+        let mut signers: crate::SignerBuffer<'a> = crate::SignerBuffer::new();
         for seeds in self.signer_seeds {
             let cpi_seeds: &[pinocchio::cpi::Seed] = unsafe {
                 core::slice::from_raw_parts(
@@ -125,10 +122,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         // None sentinels have metas but no handles); pinocchio skips program-id
         // placeholder metas that lack a paired CpiAccount.
         let n = handles.len();
-        let mut cpi_accounts: crate::FixedVec<
-            MaybeUninit<pinocchio::cpi::CpiAccount<'a>>,
-            { crate::MAX_ACCOUNT_METAS },
-        > = crate::FixedVec::new();
+        let mut cpi_accounts: crate::CpiAccountBuffer<'a> = crate::CpiAccountBuffer::new();
         for handle in &handles {
             let mut slot = MaybeUninit::uninit();
             pinocchio::cpi::CpiAccount::init_from_account_view(handle.account_view(), &mut slot);
@@ -253,10 +247,7 @@ pub fn unchecked_invoke_signed_fixed<'a, const N: usize>(
             }
         }
         _ => {
-            let mut signers: crate::FixedVec<
-                pinocchio::cpi::Signer<'a, 'a>,
-                { crate::MAX_ACCOUNT_METAS },
-            > = crate::FixedVec::new();
+            let mut signers: crate::SignerBuffer<'a> = crate::SignerBuffer::new();
             for seeds in signer_seeds {
                 signers.push(signer_from_seeds(seeds));
             }

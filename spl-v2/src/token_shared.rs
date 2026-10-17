@@ -7,7 +7,9 @@
 #[cfg(feature = "guardrails")]
 use anchor_lang::{require, Id};
 use {
-    anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, FixedVec, ToCpiAccounts, MAX_ACCOUNT_METAS},
+    anchor_lang::{
+        CpiContext, CpiHandle, CpiHandleMut, FixedVec, ToCpiAccounts, MAX_RUNTIME_ACCOUNT_METAS,
+    },
     pinocchio::address::Address,
     solana_program_error::ProgramError,
     spl_token_2022_interface as spl_token_2022,
@@ -43,7 +45,7 @@ impl AuthorityType {
 /// callers provide those member handles through `remaining_accounts`.
 pub(crate) fn multisig_signer_addresses<'a>(
     accounts: &[CpiHandle<'a>],
-) -> Result<FixedVec<&'a Address, MAX_ACCOUNT_METAS>, ProgramError> {
+) -> Result<FixedVec<&'a Address, MAX_RUNTIME_ACCOUNT_METAS>, ProgramError> {
     let mut addresses = FixedVec::new();
     for account in accounts {
         addresses

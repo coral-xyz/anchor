@@ -1,8 +1,4 @@
-#[cfg(not(all(
-    feature = "idl-build",
-    not(any(target_os = "solana", target_arch = "bpf"))
-)))]
-use crate::FixedVec;
+use crate::fixed_vec::FixedVec;
 
 #[cfg(all(
     feature = "idl-build",
@@ -44,6 +40,22 @@ impl_leaf_idl_types!(
     (), bool, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128,
     crate::Address,
 );
+
+impl<T: IdlAccountType, const N: usize> IdlAccountType for FixedVec<T, N> {
+    fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+        T::__register_idl_deps(accounts, types);
+    }
+}
+
+#[cfg(all(feature = "alloc", not(feature = "idl-build")))]
+impl<T: IdlAccountType> IdlAccountType for alloc::vec::Vec<T> {
+    fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
+        T::__register_idl_deps(accounts, types);
+    }
+}
+
+#[cfg(all(feature = "alloc", not(feature = "idl-build")))]
+impl IdlAccountType for alloc::string::String {}
 
 impl<T: IdlAccountType + ?Sized> IdlAccountType for &T {
     fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {

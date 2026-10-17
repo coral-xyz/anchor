@@ -24,6 +24,10 @@ declare_id!("SpL1111111111111111111111111111111111111111");
 
 const TOKEN_CPI_EXT_AUTHORITY_SEED: &[u8] = b"token-cpi-ext-authority";
 
+// Token-2022 account size for the ImmutableOwner extension: the 165-byte
+// base account plus one four-byte TLV header and its one-byte payload.
+const TOKEN_2022_IMMUTABLE_OWNER_ACCOUNT_SIZE: u64 = 170;
+
 #[program]
 pub mod spl_test {
     use super::*;
@@ -1225,7 +1229,7 @@ pub mod spl_test {
         )?;
         require_eq!(
             size,
-            170,
+            TOKEN_2022_IMMUTABLE_OWNER_ACCOUNT_SIZE,
             ProgramError::InvalidInstructionData
         );
         Ok(())

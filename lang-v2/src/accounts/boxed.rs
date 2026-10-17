@@ -1,15 +1,19 @@
-//! Host-only compatibility for the removed heap-backed account wrapper.
+//! Compatibility for the heap-backed account wrapper.
 //!
-//! `Box<T>` is deliberately unavailable to Solana builds. Existing host-side
-//! integration tests and IDL tools can still inspect older declarations.
+//! This module is available only with the explicit `alloc` feature. A
+//! no-alloc build does not expose the `Box<T>` account surface, while legacy
+//! alloc-enabled programs retain their existing behavior.
 
-#![cfg(not(target_os = "solana"))]
+#![cfg(all(
+    feature = "alloc",
+    any(target_os = "solana", not(target_arch = "bpf")),
+))]
 
 use {
     crate::{AccountConstraint, AccountInitialize, AnchorAccount, Discriminator, ForeignOwnerInit, Space},
+    alloc::boxed::Box,
     pinocchio::{account::AccountView, address::Address},
     solana_program_error::ProgramError,
-    std::boxed::Box,
 };
 
 impl<T: AnchorAccount> AnchorAccount for Box<T> {

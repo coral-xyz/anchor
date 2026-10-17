@@ -77,7 +77,7 @@ fn send_raw(
     data: impl AsRef<[u8]>,
     metas: Vec<AccountMeta>,
     payer: &Keypair,
-) -> anchor_v2_testing::litesvm::types::TransactionResult {
+) -> litesvm::types::TransactionResult {
     let ix = Instruction::new_with_bytes(program_id(), data.as_ref(), metas);
     let blockhash = svm.latest_blockhash();
     let message = Message::new_with_blockhash(&[ix], Some(&payer.pubkey()), &blockhash);

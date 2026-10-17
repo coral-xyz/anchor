@@ -4777,7 +4777,7 @@ fn declare_idl_type_to_tokens_with_generics(
         return Ok(quote! { #ident });
     }
     if let Some(inner) = value.get("vec") {
-        let inner = declare_idl_type_to_tokens_with_generics(inner, span, const_generic_names)?;
+        let inner = declare_idl_type_to_tokens(inner, span)?;
         return Ok(quote! { anchor_lang::__idl::vec::Vec<#inner> });
     }
     if let Some(inner) = value.get("option") {

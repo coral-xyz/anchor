@@ -204,7 +204,8 @@ pub struct PermanentDelegateInitialize<'a> {
     pub mint: CpiHandleMut<'a>,
 }
 
-fn return_data_from(program: &Address) -> Result<pinocchio::cpi::ReturnData, ProgramError> {
+#[inline(never)]
+fn return_data_from(program: &Address) -> Result<alloc::vec::Vec<u8>, ProgramError> {
     let (return_program, data) = anchor_lang::solana_program::program::get_return_data()
         .ok_or(ProgramError::InvalidInstructionData)?;
     require_eq!(
@@ -212,7 +213,7 @@ fn return_data_from(program: &Address) -> Result<pinocchio::cpi::ReturnData, Pro
         program.as_ref(),
         ProgramError::IncorrectProgramId
     );
-    Ok(data)
+    Ok(data.as_slice().to_vec())
 }
 
 pub fn get_account_data_size<'a>(

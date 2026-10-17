@@ -6,6 +6,12 @@
 extern crate alloc;
 extern crate self as anchor_lang;
 
+/// Hidden compatibility re-export used by generated and legacy V2 test
+/// programs which opt into the allocator-backed runtime.
+#[doc(hidden)]
+#[cfg(feature = "alloc")]
+pub extern crate alloc as __alloc;
+
 pub mod accounts;
 mod account_meta;
 pub mod context;
@@ -56,6 +62,44 @@ pub mod __idl {
         vec::Vec,
     };
 }
+
+/// Compatibility namespace used by generated declared-program bindings.
+///
+/// Host builds retain the standard-library collection types for client and
+/// IDL tooling. On-chain generated instruction types use bounded buffers so
+/// the bindings do not introduce an allocator dependency into the SBF graph.
+#[doc(hidden)]
+#[cfg(all(
+    any(target_os = "solana", target_arch = "bpf"),
+    feature = "alloc"
+))]
+pub mod __idl {
+    pub mod string {
+        pub use alloc::string::String;
+    }
+
+    pub mod vec {
+        pub use alloc::vec::Vec;
+    }
+}
+
+/// Bounded collection aliases used by generated bindings in a genuinely
+/// allocator-free target build. Alloc-enabled programs retain the existing
+/// owned collection types for compatibility with their runtime serializers.
+#[doc(hidden)]
+#[cfg(all(
+    any(target_os = "solana", target_arch = "bpf"),
+    not(feature = "alloc")
+))]
+pub mod __idl {
+    pub mod string {
+        pub type String = crate::FixedVec<u8, { crate::MAX_IDL_SEQUENCE }>;
+    }
+
+    pub mod vec {
+        pub type Vec<T> = crate::FixedVec<T, { crate::MAX_IDL_SEQUENCE }>;
+    }
+}
 #[macro_export]
 macro_rules! msg {
     ($($arg:tt)*) => {{
@@ -87,29 +131,70 @@ pub use idl::{IdlAccountType, IdlEntries};
 /// the SBF stack. Keep the inline runtime bound deliberately small so common
 /// CPI paths remain within Solana's stack limit; callers needing more account
 /// metas must split the operation into smaller instructions.
-pub const MAX_ACCOUNT_METAS: usize = 16;
+/// Public account-meta capacity used by generated builders and CPI helpers.
+///
+/// Keep this at the normal transaction account limit in the API PR. Smaller
+/// stack representations belong to the follow-up stack-optimization work;
+/// lowering this value here would turn valid larger account lists into
+/// `InvalidArgument` failures.
+pub const MAX_ACCOUNT_METAS: usize = 64;
+/// Inline capacity used by transient on-chain buffers in this API-focused
+/// PR. The follow-up stack work can replace these arrays with borrowed views
+/// without changing the public account-meta limit above.
+#[doc(hidden)]
+pub const MAX_RUNTIME_ACCOUNT_METAS: usize = 16;
 pub const MAX_INSTRUCTION_DATA: usize = 1232;
 /// Maximum number of elements in an allocator-free collection emitted by
 /// generated on-chain IDL bindings.
 pub const MAX_IDL_SEQUENCE: usize = 256;
-/// Account-meta storage used by generated account builders.
-///
-/// This type is deliberately identical on host and on-chain builds. Keeping
-/// the allocator-free type in the public trait signature prevents a target
-/// alias from silently exposing `Vec` through rustdoc or generated APIs.
+/// Account-meta storage used by generated account builders. Host/client builds
+/// use the public transaction-sized capacity; on-chain builds use the smaller
+/// transient capacity until the follow-up stack work replaces these arrays
+/// with borrowed views. Keeping both forms allocator-free prevents a target
+/// alias from exposing `Vec` through rustdoc or generated APIs.
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub type AccountMetaBuffer = FixedVec<AccountMeta, MAX_RUNTIME_ACCOUNT_METAS>;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type AccountMetaBuffer = FixedVec<AccountMeta, MAX_ACCOUNT_METAS>;
+
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub type InstructionAccountBuffer<'a> =
+    FixedVec<pinocchio::instruction::InstructionAccount<'a>, MAX_RUNTIME_ACCOUNT_METAS>;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type InstructionAccountBuffer<'a> =
     FixedVec<pinocchio::instruction::InstructionAccount<'a>, MAX_ACCOUNT_METAS>;
+
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub type AccountViewBuffer = FixedVec<pinocchio::account::AccountView, MAX_RUNTIME_ACCOUNT_METAS>;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type AccountViewBuffer = FixedVec<pinocchio::account::AccountView, MAX_ACCOUNT_METAS>;
+
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub type CpiHandleBuffer<'a> = FixedVec<CpiHandle<'a>, MAX_RUNTIME_ACCOUNT_METAS>;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type CpiHandleBuffer<'a> = FixedVec<CpiHandle<'a>, MAX_ACCOUNT_METAS>;
+
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub type BoolBuffer = FixedVec<bool, MAX_RUNTIME_ACCOUNT_METAS>;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type BoolBuffer = FixedVec<bool, MAX_ACCOUNT_METAS>;
 pub type InstructionDataBuffer = FixedVec<u8, MAX_INSTRUCTION_DATA>;
 
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub type SignerBuffer<'a> = FixedVec<pinocchio::cpi::Signer<'a, 'a>, MAX_RUNTIME_ACCOUNT_METAS>;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type SignerBuffer<'a> = FixedVec<pinocchio::cpi::Signer<'a, 'a>, MAX_ACCOUNT_METAS>;
 
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub type CpiAccountBuffer<'a> =
+    FixedVec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>, MAX_RUNTIME_ACCOUNT_METAS>;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type CpiAccountBuffer<'a> =
     FixedVec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>, MAX_ACCOUNT_METAS>;
 
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+pub type AccountBindingBuffer = FixedVec<Option<usize>, MAX_RUNTIME_ACCOUNT_METAS>;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type AccountBindingBuffer = FixedVec<Option<usize>, MAX_ACCOUNT_METAS>;
 
 /// Append one instruction account without making the generated CPI builder
@@ -200,7 +285,7 @@ pub fn try_extend_instruction_data(
 #[macro_export]
 macro_rules! __anchor_program_allocator {
     () => {
-        $crate::pinocchio::no_allocator!();
+        $crate::pinocchio::default_allocator!();
     };
 }
 
@@ -431,6 +516,10 @@ impl_space_for_primitives! {
 
 impl<T: Space, const N: usize> Space for [T; N] {
     const INIT_SPACE: usize = T::INIT_SPACE * N;
+}
+
+impl<T: Space, const N: usize> Space for FixedVec<T, N> {
+    const INIT_SPACE: usize = 4 + T::INIT_SPACE * N;
 }
 
 #[doc(hidden)]
