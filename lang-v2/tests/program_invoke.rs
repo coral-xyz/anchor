@@ -483,9 +483,9 @@ fn invoke_remaining_pda_as_signer_with_seeds() {
     };
 
     let mut remaining_accounts = CpiHandleBuffer::new();
-    remaining_accounts
+    assert!(remaining_accounts
         .try_push(CpiHandle::readonly(&remaining_view).as_signer())
-        .unwrap();
+        .is_ok());
 
     CpiContext::new_with_signer(&program, accounts, &[&[b"pda", &[7]]])
         .with_remaining_accounts(remaining_accounts)
