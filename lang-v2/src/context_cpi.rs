@@ -1,11 +1,10 @@
 use {
-    crate::{address_eq, require, CpiHandle, ToCpiAccounts},
+    crate::{address_eq, require, CpiHandle, CpiInstruction, ToCpiAccounts},
     core::mem::MaybeUninit,
     pinocchio::{
         address::Address,
         instruction::{InstructionAccount, InstructionView},
     },
-    solana_instruction::Instruction,
     solana_program_error::{ProgramError, ProgramResult},
 };
 
@@ -165,9 +164,9 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     /// Optional `None` sentinel slots must appear in the same positions as in
     /// [`ToCpiAccounts::to_instruction_accounts`]; only those indices may omit
     /// handles for readonly program-id metas.
-    pub fn invoke_ix(&self, ix: Instruction) -> ProgramResult {
+    pub fn invoke_ix<I: CpiInstruction>(&self, ix: I) -> ProgramResult {
         require!(
-            address_eq(self.program, &ix.program_id),
+            address_eq(self.program, ix.program_id()),
             ProgramError::IncorrectProgramId
         );
 
@@ -175,13 +174,14 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         handles.extend(self.remaining_accounts.iter().copied());
 
         let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags();
+        let instruction_account_count = crate::program::instruction_account_count(&ix);
         require!(
-            optional_sentinel_flags.len() <= ix.accounts.len(),
+            optional_sentinel_flags.len() <= instruction_account_count,
             ProgramError::InvalidArgument
         );
         // Trailing metas (e.g. remaining accounts already baked into `ix`) are
         // never treated as optional sentinels from this accounts struct.
-        optional_sentinel_flags.resize(ix.accounts.len(), false);
+        optional_sentinel_flags.resize(instruction_account_count, false);
 
         crate::program::invoke_signed_with_optional_sentinels(
             &ix,

@@ -3,15 +3,11 @@
 //! `#![no_std]` compatible.
 
 #![cfg_attr(any(target_os = "solana", target_arch = "bpf"), no_std)]
-pub extern crate alloc;
+extern crate alloc;
 extern crate self as anchor_lang;
 
-// IDL-only generated helpers still use the allocator. The runtime follow-up
-// will move the target-specific implementation out of this API branch.
-#[doc(hidden)]
-pub extern crate alloc as __alloc;
-
 pub mod accounts;
+mod account_meta;
 pub mod context;
 mod context_cpi;
 pub mod cpi;
@@ -21,6 +17,7 @@ pub mod event;
 mod fixed_vec;
 pub mod hash;
 mod idl;
+mod instruction;
 #[doc(hidden)]
 #[cfg(feature = "idl-build")]
 pub mod idl_build;
@@ -36,6 +33,7 @@ mod traits;
 
 // Re-export derive macros and bytemuck for generated code
 pub use cpi::realloc_account;
+pub use account_meta::AccountMeta;
 /// Chunked 4×u64 equality compare for `Address`. Preferred over `==`
 /// on `&Address`. See <https://github.com/anza-xyz/solana-sdk/issues/345>.
 pub use pinocchio::address::address_eq;
@@ -47,6 +45,7 @@ pub use solana_address::{address, declare_id};
 #[doc(hidden)]
 pub use solana_msg;
 #[doc(hidden)]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub mod __idl {
     pub use std::{
         boxed,
@@ -300,16 +299,10 @@ pub use cpi::create_account_with_signers;
 /// the trait definition.
 /// Metadata for a single account in a transaction instruction.
 ///
-/// Re-exported from `solana-instruction` so tests and CPI builders can pass
-/// the output of `to_account_metas()` straight into `solana_instruction::
-/// Instruction::new_with_bytes` without a manual field rename.
-///
-/// `AccountMeta` itself comes from `solana-instruction`, whose account key
-/// field is named `solana_pubkey::Pubkey`. Anchor v2's compat module aliases
-/// `solana_program::pubkey::Pubkey` to [`Address`], but external Solana crates
-/// may still expose nominally distinct `Pubkey` newtypes with the same 32-byte
-/// representation.
-pub use solana_instruction::account_meta::AccountMeta;
+/// This is a fixed-size, allocator-neutral value used by the public V2 account
+/// builder traits. Host-side instruction construction converts it to the SDK's
+/// owned `solana_instruction::AccountMeta` representation at the facade
+/// boundary.
 pub use {
     accounts::{AccountInitialize, SlabInit},
     anchor_derive_accounts::{
@@ -329,6 +322,7 @@ pub use {
     dispatch::{run_handler, TryAccounts},
     event::{sol_log_data, Event},
     hash::sha256,
+    instruction::CpiInstruction,
     loader::AccountLoader,
     pinocchio::{self, account::AccountView, address::Address},
     traits::*,
@@ -349,11 +343,16 @@ pub mod solana_program {
     }
 
     pub mod instruction {
-        pub use solana_instruction::*;
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+        pub use solana_instruction::{AccountMeta, Instruction};
+
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+        pub use crate::AccountMeta;
     }
 
     #[cfg(feature = "compat")]
     pub use crate::pubkey;
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub use solana_system_interface::instruction as system_instruction;
 
     #[cfg(feature = "compat")]
