@@ -13,6 +13,31 @@ use {
     spl_token_2022_interface as spl_token_2022,
 };
 
+/// Authority selected by a `SetAuthority` CPI.
+///
+/// This is shared by the Token and Token-2022 facades so neither public API
+/// exposes the canonical SPL instruction enum.
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AuthorityType {
+    MintTokens,
+    FreezeAccount,
+    AccountOwner,
+    CloseAccount,
+}
+
+impl AuthorityType {
+    #[inline]
+    fn into_spl(self) -> spl_token_2022::instruction::AuthorityType {
+        match self {
+            Self::MintTokens => spl_token_2022::instruction::AuthorityType::MintTokens,
+            Self::FreezeAccount => spl_token_2022::instruction::AuthorityType::FreezeAccount,
+            Self::AccountOwner => spl_token_2022::instruction::AuthorityType::AccountOwner,
+            Self::CloseAccount => spl_token_2022::instruction::AuthorityType::CloseAccount,
+        }
+    }
+}
+
 /// SPL Token encodes a multisig authority by marking the authority account
 /// non-signer and appending each member signer to the instruction. Token CPI
 /// callers provide those member handles through `remaining_accounts`.
@@ -387,7 +412,7 @@ pub fn revoke<'a>(ctx: CpiContext<'a, Revoke<'a>>) -> Result<(), ProgramError> {
 
 pub fn set_authority<'a>(
     ctx: CpiContext<'a, SetAuthority<'a>>,
-    authority_type: spl_token_2022::instruction::AuthorityType,
+    authority_type: AuthorityType,
     new_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
     let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
@@ -395,7 +420,7 @@ pub fn set_authority<'a>(
         ctx.program,
         ctx.accounts.account_or_mint.address(),
         new_authority,
-        authority_type,
+        authority_type.into_spl(),
         ctx.accounts.current_authority.address(),
         &signer_addresses,
     )?;

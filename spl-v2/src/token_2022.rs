@@ -138,9 +138,9 @@ pub use crate::token_shared::{
     approve, approve_checked, burn, burn_checked, close_account, freeze_account,
     initialize_account, initialize_account3, initialize_mint, initialize_mint2, mint_to,
     mint_to_checked, revoke, set_authority, sync_native, thaw_account, transfer, transfer_checked,
-    Approve, ApproveChecked, Burn, BurnChecked, CloseAccount, FreezeAccount, InitializeAccount,
-    InitializeAccount3, InitializeMint, InitializeMint2, MintTo, MintToChecked, Revoke,
-    SetAuthority, SyncNative, ThawAccount, Transfer, TransferChecked,
+    Approve, ApproveChecked, AuthorityType, Burn, BurnChecked, CloseAccount, FreezeAccount,
+    InitializeAccount, InitializeAccount3, InitializeMint, InitializeMint2, MintTo, MintToChecked,
+    Revoke, SetAuthority, SyncNative, ThawAccount, Transfer, TransferChecked,
 };
 
 #[derive(ToCpiAccounts)]

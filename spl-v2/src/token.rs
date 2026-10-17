@@ -3,26 +3,12 @@
 //! Layout mirrors `pinocchio-token` — all fields are alignment-1 to support
 //! zerocopy mapping from the account data buffer.
 
-pub use {crate::mint::Mint, anchor_lang::programs::Token};
 pub use spl_token_interface::ID;
+pub use {
+    crate::{mint::Mint, token_shared::AuthorityType},
+    anchor_lang::programs::Token,
+};
 
-/// Authority selected by a `SetAuthority` CPI.
-///
-/// This is defined by Anchor rather than re-exported from the canonical SPL
-/// instruction crate, so the public V2 API does not expose that crate's
-/// instruction-builder types.
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AuthorityType {
-    /// Authority to mint new tokens.
-    MintTokens,
-    /// Authority to freeze token accounts.
-    FreezeAccount,
-    /// Owner of a token account.
-    AccountOwner,
-    /// Authority to close a token account.
-    CloseAccount,
-}
 use {
     anchor_lang::{
         accounts::{Account, Program, SlabInit, SlabSchema},
@@ -32,7 +18,6 @@ use {
     pinocchio::account::AccountView,
     solana_address::Address,
     solana_program_error::ProgramError,
-    spl_token_2022_interface as spl_token_2022,
 };
 
 pub(crate) const COPTION_NONE: [u8; 4] = [0, 0, 0, 0];
@@ -340,26 +325,6 @@ pub use {
 pub type TokenSignerSeeds<'a> = &'a [&'a [&'a [u8]]];
 
 #[inline]
-fn token_2022_authority_type(
-    authority_type: AuthorityType,
-) -> spl_token_2022::instruction::AuthorityType {
-    match authority_type {
-        AuthorityType::MintTokens => {
-            spl_token_2022::instruction::AuthorityType::MintTokens
-        }
-        AuthorityType::FreezeAccount => {
-            spl_token_2022::instruction::AuthorityType::FreezeAccount
-        }
-        AuthorityType::AccountOwner => {
-            spl_token_2022::instruction::AuthorityType::AccountOwner
-        }
-        AuthorityType::CloseAccount => {
-            spl_token_2022::instruction::AuthorityType::CloseAccount
-        }
-    }
-}
-
-#[inline]
 fn token_cpi_ctx<'a, T>(
     program: &'a Address,
     accounts: T,
@@ -376,11 +341,7 @@ pub fn set_authority<'a>(
     authority_type: AuthorityType,
     new_authority: Option<Address>,
 ) -> Result<(), ProgramError> {
-    crate::token_shared::set_authority(
-        ctx,
-        token_2022_authority_type(authority_type),
-        new_authority.as_ref(),
-    )
+    crate::token_shared::set_authority(ctx, authority_type, new_authority.as_ref())
 }
 
 /// Ergonomic CPI helpers for the legacy Token program.
