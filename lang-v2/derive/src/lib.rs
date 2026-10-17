@@ -5492,15 +5492,24 @@ fn process_handler(
         }
         #(#handler_cfg_attrs)*
         impl #ix_lt_decl #ix_struct_name #ix_lt_use {
-            #[cfg(not(target_os = "solana"))]
+            #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
             pub fn to_instruction(
                 self,
                 accounts: impl anchor_lang::ToAccountMetas,
             ) -> anchor_lang::solana_program::instruction::Instruction {
+                let account_metas = accounts
+                    .to_account_metas(None)
+                    .iter()
+                    .map(|meta| anchor_lang::solana_program::instruction::AccountMeta {
+                        pubkey: meta.pubkey,
+                        is_signer: meta.is_signer,
+                        is_writable: meta.is_writable,
+                    })
+                    .collect();
                 anchor_lang::solana_program::instruction::Instruction::new_with_bytes(
                     #program_id,
                     &<Self as anchor_lang::InstructionData>::data(&self),
-                    accounts.to_account_metas(None).as_slice().to_vec(),
+                    account_metas,
                 )
             }
         }
