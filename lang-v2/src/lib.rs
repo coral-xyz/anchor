@@ -25,7 +25,7 @@ pub mod hash;
 mod idl;
 mod instruction;
 #[doc(hidden)]
-#[cfg(feature = "idl-build")]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub mod idl_build;
 pub mod loader;
 pub mod pod;

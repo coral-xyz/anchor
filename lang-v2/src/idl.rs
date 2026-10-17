@@ -1,18 +1,18 @@
 use crate::fixed_vec::FixedVec;
 
-#[cfg(all(
-    feature = "idl-build",
-    not(any(target_os = "solana", target_arch = "bpf"))
-))]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type IdlEntries = std::vec::Vec<&'static str>;
-#[cfg(not(all(
-    feature = "idl-build",
-    not(any(target_os = "solana", target_arch = "bpf"))
-)))]
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type IdlEntries = FixedVec<&'static str, { crate::MAX_ACCOUNT_METAS }>;
 
 /// Compile-time IDL metadata hooks. The registration surface is bounded so
 /// the runtime crate does not require a heap even when IDL support is disabled.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` has no IDL type information",
+    note = "plain structs used as instruction arguments or nested fields need \
+            `#[derive(IdlType)]`; account and event types get this automatically from \
+            `#[account]` / `#[event]`"
+)]
 pub trait IdlAccountType {
     const __IDL_ACCOUNT_ENTRY: Option<&'static str> = None;
     const __IDL_TYPE_DEF: Option<&'static str> = None;
@@ -47,14 +47,14 @@ impl<T: IdlAccountType, const N: usize> IdlAccountType for FixedVec<T, N> {
     }
 }
 
-#[cfg(all(feature = "alloc", not(feature = "idl-build")))]
+#[cfg(all(feature = "alloc", any(target_os = "solana", target_arch = "bpf")))]
 impl<T: IdlAccountType> IdlAccountType for alloc::vec::Vec<T> {
     fn __register_idl_deps(accounts: &mut IdlEntries, types: &mut IdlEntries) {
         T::__register_idl_deps(accounts, types);
     }
 }
 
-#[cfg(all(feature = "alloc", not(feature = "idl-build")))]
+#[cfg(all(feature = "alloc", any(target_os = "solana", target_arch = "bpf")))]
 impl IdlAccountType for alloc::string::String {}
 
 impl<T: IdlAccountType + ?Sized> IdlAccountType for &T {
