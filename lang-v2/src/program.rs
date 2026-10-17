@@ -18,8 +18,8 @@ pub use pinocchio::cpi::{set_return_data, MAX_RETURN_DATA};
 ///
 /// This preserves the v1-shaped `program::get_return_data()` return value while
 /// sourcing the data from Pinocchio's `AccountView`-native CPI module.
-pub fn get_return_data() -> Option<(crate::Address, Vec<u8>)> {
-    pinocchio::cpi::get_return_data().map(|data| (*data.program_id(), data.as_slice().to_vec()))
+pub fn get_return_data() -> Option<(crate::Address, pinocchio::cpi::ReturnData)> {
+    pinocchio::cpi::get_return_data().map(|data| (*data.program_id(), data))
 }
 
 /// Invoke a cross-program instruction using Anchor v2 CPI handles.

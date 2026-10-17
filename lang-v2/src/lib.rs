@@ -3,7 +3,15 @@
 //! `#![no_std]` compatible.
 
 #![cfg_attr(any(target_os = "solana", target_arch = "bpf"), no_std)]
+pub extern crate alloc;
 extern crate self as anchor_lang;
+
+// IDL-only generated helpers still use the allocator on host builds. Keep
+// this hidden compatibility path until the runtime/SBF follow-up removes
+// those implementation details from the generated host surface.
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+#[doc(hidden)]
+pub use alloc as __alloc;
 
 pub mod accounts;
 #[cfg(any(target_os = "solana", target_arch = "bpf"))]
@@ -132,7 +140,7 @@ macro_rules! debug {
 // Re-export wincode for instruction data serialization
 pub use wincode;
 
-pub use fixed_vec::{AccountFlags, AccountFlagsIter, FixedVec};
+pub use fixed_vec::FixedVec;
 pub use idl::{IdlAccountType, IdlEntries};
 /// Maximum number of account metas held by an on-chain V2 inline buffer.
 ///
@@ -156,7 +164,7 @@ pub type InstructionAccountBuffer<'a> =
     FixedVec<pinocchio::instruction::InstructionAccount<'a>, MAX_ACCOUNT_METAS>;
 pub type AccountViewBuffer = FixedVec<pinocchio::account::AccountView, MAX_ACCOUNT_METAS>;
 pub type CpiHandleBuffer<'a> = FixedVec<CpiHandle<'a>, MAX_ACCOUNT_METAS>;
-pub type BoolBuffer = AccountFlags;
+pub type BoolBuffer = FixedVec<bool, MAX_ACCOUNT_METAS>;
 pub type InstructionDataBuffer = FixedVec<u8, MAX_INSTRUCTION_DATA>;
 
 pub type SignerBuffer<'a> = FixedVec<pinocchio::cpi::Signer<'a, 'a>, MAX_ACCOUNT_METAS>;
@@ -191,8 +199,8 @@ pub fn try_push_cpi_handle<'a>(
 }
 
 /// Read-only view of optional-account sentinel flags used by CPI validation.
-/// The compact [`AccountFlags`] representation is used by generated V2 code,
-/// while slices remain accepted by the lower-level public CPI helpers.
+/// The bounded boolean representation is used by generated V2 code, while
+/// slices remain accepted by the lower-level public CPI helpers.
 pub trait OptionalSentinelFlags {
     fn len(&self) -> usize;
     fn get(&self, index: usize) -> bool;
@@ -222,15 +230,15 @@ impl<const N: usize> OptionalSentinelFlags for [bool; N] {
     }
 }
 
-impl OptionalSentinelFlags for AccountFlags {
+impl OptionalSentinelFlags for BoolBuffer {
     #[inline]
     fn len(&self) -> usize {
-        AccountFlags::len(self)
+        FixedVec::len(self)
     }
 
     #[inline]
     fn get(&self, index: usize) -> bool {
-        AccountFlags::get(self, index)
+        self.as_slice().get(index).copied().unwrap_or(false)
     }
 }
 
