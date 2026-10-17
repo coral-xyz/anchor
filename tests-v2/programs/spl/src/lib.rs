@@ -289,7 +289,7 @@ pub mod spl_test {
             &mut ctx.accounts.account_or_mint,
             &ctx.accounts.current_authority,
             &[],
-            token::spl_token::instruction::AuthorityType::CloseAccount,
+            token::AuthorityType::CloseAccount,
             Some(new_authority),
         )?;
         Ok(())
@@ -346,7 +346,7 @@ pub mod spl_test {
             &mut ctx.accounts.account_or_mint,
             &ctx.accounts.authority,
             signer_seeds,
-            token::spl_token::instruction::AuthorityType::CloseAccount,
+            token::AuthorityType::CloseAccount,
             Some(new_authority),
         )?;
         Ok(())
@@ -1225,10 +1225,7 @@ pub mod spl_test {
         )?;
         require_eq!(
             size,
-            token_2022_cpi::ExtensionType::try_calculate_account_len::<
-                token_2022_cpi::spl_token_2022::state::Account,
-            >(&[token_2022_cpi::ExtensionType::ImmutableOwner])
-            .map_err(|_| ProgramError::InvalidInstructionData)? as u64,
+            170,
             ProgramError::InvalidInstructionData
         );
         Ok(())
@@ -1330,7 +1327,7 @@ pub mod spl_test {
         let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::default_account_state_initialize(
             cpi_ctx,
-            &token_2022_cpi::spl_token_2022::state::AccountState::Frozen,
+            &token_2022_cpi::AccountState::Frozen,
         )?;
         Ok(())
     }
