@@ -7,7 +7,30 @@ use {
     spl_pod::optional_keys::OptionalNonZeroPubkey,
 };
 
-pub use super::spl_token_metadata_interface::state::Field;
+/// Metadata field selector used by the V2 CPI helper.
+///
+/// The key variant borrows its key instead of storing the canonical SPL
+/// `String`, so this public API does not require `alloc`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Field<'a> {
+    /// Update the metadata name.
+    Name,
+    /// Update the metadata symbol.
+    Symbol,
+    /// Update the metadata URI.
+    Uri,
+    /// Update a user-defined metadata key.
+    Key(&'a str),
+}
+
+fn into_spl_field(field: Field<'_>) -> spl_token_metadata_interface::state::Field {
+    match field {
+        Field::Name => spl_token_metadata_interface::state::Field::Name,
+        Field::Symbol => spl_token_metadata_interface::state::Field::Symbol,
+        Field::Uri => spl_token_metadata_interface::state::Field::Uri,
+        Field::Key(key) => spl_token_metadata_interface::state::Field::Key(key.to_owned()),
+    }
+}
 
 #[derive(ToCpiAccounts)]
 pub struct TokenMetadataInitialize<'a> {
@@ -79,11 +102,12 @@ pub fn token_metadata_update_authority<'a>(
 
 pub fn token_metadata_update_field<'a>(
     ctx: CpiContext<'a, TokenMetadataUpdateField<'a>>,
-    field: Field,
+    field: Field<'_>,
     value: &str,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
+    let field = into_spl_field(field);
     let ix = spl_token_metadata_interface::instruction::update_field(
         &program,
         ctx.accounts.metadata.address(),
