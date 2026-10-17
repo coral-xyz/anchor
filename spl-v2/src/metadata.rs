@@ -1077,12 +1077,12 @@ mod tests {
             mint: mint_view.to_cpi_handle(),
         };
 
-        let metas = accounts.to_instruction_accounts().unwrap();
+        let metas = accounts.to_instruction_accounts();
         assert!(metas[0].is_writable);
         assert!(!metas[1].is_writable);
         assert!(metas[2].is_writable);
 
-        let handles = accounts.to_cpi_handles().unwrap();
+        let handles = accounts.to_cpi_handles();
         assert!(handles[0].is_writable());
         assert!(!handles[1].is_writable());
         assert!(handles[2].is_writable());
@@ -1109,12 +1109,12 @@ mod tests {
             mint: mint_view.to_cpi_handle(),
         };
 
-        let metas = accounts.to_instruction_accounts().unwrap();
+        let metas = accounts.to_instruction_accounts();
         assert!(metas[0].is_writable);
         assert!(!metas[1].is_writable);
         assert!(metas[1].is_signer);
 
-        let handles = accounts.to_cpi_handles().unwrap();
+        let handles = accounts.to_cpi_handles();
         assert!(handles[0].is_writable());
         assert!(!handles[1].is_writable());
 
