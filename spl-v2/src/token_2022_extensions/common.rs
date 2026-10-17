@@ -1,6 +1,6 @@
 use {
-    alloc::vec::Vec, pinocchio::address::Address, solana_program_error::ProgramError,
-    solana_pubkey::Pubkey,
+    pinocchio::address::Address,
+    solana_program_error::ProgramError,
 };
 
 #[cfg(any(feature = "guardrails", test))]
@@ -17,8 +17,4 @@ pub(crate) fn validate_token_2022_program(program: &Address) -> Result<(), Progr
 #[inline]
 pub(crate) fn validate_token_2022_program(_program: &Address) -> Result<(), ProgramError> {
     Ok(())
-}
-
-pub(crate) fn pubkey_refs(pubkeys: &[Pubkey]) -> Vec<&Pubkey> {
-    pubkeys.iter().collect()
 }

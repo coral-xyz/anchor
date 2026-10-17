@@ -14,7 +14,7 @@ use {
         testing::{AccountBuffer, MIN_ACCOUNT_BUF},
         unchecked_invoke_signed_fixed, Address, AnchorAccount, AnchorDeserialize, AnchorSerialize,
         CpiContext, CpiHandle, CpiHandleMut, Discriminator, Owner, ToCpiAccounts, ToCpiHandle,
-        ToCpiHandleMut,
+        ToCpiHandleMut, MAX_ACCOUNT_METAS,
     },
     bytemuck::{Pod, Zeroable},
     pinocchio::instruction::InstructionAccount,
@@ -360,6 +360,19 @@ fn fixed_invoke_rejects_address_mismatch() {
     let metas = [InstructionAccount::new(&other, false, false)];
 
     let err = unchecked_invoke_signed_fixed(&ID, &[], &metas, &[handle], &[]).unwrap_err();
+
+    assert_eq!(err, ProgramError::InvalidArgument);
+}
+
+#[test]
+fn fixed_invoke_rejects_more_than_inline_account_budget() {
+    let buffer = account_view([1; 32], false);
+    let view = unsafe { buffer.view() };
+    let handle = CpiHandle::readonly(&view);
+    let metas = core::array::from_fn(|_| InstructionAccount::new(handle.address(), false, false));
+    let handles = [handle; MAX_ACCOUNT_METAS + 1];
+
+    let err = unchecked_invoke_signed_fixed(&ID, &[], &metas, &handles, &[]).unwrap_err();
 
     assert_eq!(err, ProgramError::InvalidArgument);
 }
@@ -791,4 +804,14 @@ fn unchecked_handle_api_is_available() {
     };
 
     unsafe { program::invoke_unchecked(&ix, &[]) }.unwrap();
+}
+
+#[test]
+fn host_optional_sentinel_flags_are_not_inline_capped() {
+    let mut flags = anchor_lang::BoolBuffer::new();
+    for _ in 0..=MAX_ACCOUNT_METAS {
+        anchor_lang::try_push_bool(&mut flags, false).unwrap();
+    }
+
+    assert_eq!(flags.len(), MAX_ACCOUNT_METAS + 1);
 }

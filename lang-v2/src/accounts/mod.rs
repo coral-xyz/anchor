@@ -1,5 +1,6 @@
-mod borsh_account;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 mod boxed;
+mod borsh_account;
 mod interface;
 mod program;
 mod serialized_account;

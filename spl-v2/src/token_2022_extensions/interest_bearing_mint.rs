@@ -1,6 +1,11 @@
 use {
     super::common::validate_token_2022_program,
-    crate::{token_2022::spl_token_2022, token_shared::multisig_signer_addresses},
+    crate::{
+        token_shared::{
+            push_optional_zero_address, token_data_subinstruction,
+            TokenInstructionData,
+        },
+    },
     anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
@@ -24,14 +29,10 @@ pub fn interest_bearing_mint_initialize<'a>(
     rate: i16,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let ix = spl_token_2022::extension::interest_bearing_mint::instruction::initialize(
-        &program,
-        ctx.accounts.mint.address(),
-        rate_authority.copied(),
-        rate,
-    )?;
-    ctx.invoke_ix(ix)
+    let mut data: TokenInstructionData = token_data_subinstruction(33, 0)?;
+    push_optional_zero_address(&mut data, rate_authority)?;
+    crate::token_shared::extend_token_data(&mut data, &rate.to_le_bytes())?;
+    ctx.invoke(&data)
 }
 
 pub fn interest_bearing_mint_update_rate<'a>(
@@ -39,14 +40,7 @@ pub fn interest_bearing_mint_update_rate<'a>(
     rate: i16,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let program = *ctx.program;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::extension::interest_bearing_mint::instruction::update_rate(
-        &program,
-        ctx.accounts.mint.address(),
-        ctx.accounts.rate_authority.address(),
-        &signer_addresses,
-        rate,
-    )?;
-    ctx.invoke_ix(ix)
+    let mut data = token_data_subinstruction(33, 1)?;
+    crate::token_shared::extend_token_data(&mut data, &rate.to_le_bytes())?;
+    ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }

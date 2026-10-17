@@ -4,14 +4,39 @@ use {
         cursor::{AccountBitvec, AccountCursor},
         loader::AccountLoader,
     },
+    core::mem::MaybeUninit,
     pinocchio::{account::AccountView, address::Address},
     solana_program_error::ProgramError,
 };
 
+/// Stack storage for the declared account views of one instruction. Generated
+/// `Accounts` implementations choose the concrete array length at compile
+/// time, so dispatch does not reserve space for all 256 transaction accounts.
+#[doc(hidden)]
+pub trait AccountViewStorage {
+    fn new() -> Self
+    where
+        Self: Sized;
+
+    fn as_mut_slice(&mut self) -> &mut [MaybeUninit<AccountView>];
+}
+
+impl<const N: usize> AccountViewStorage for [MaybeUninit<AccountView>; N] {
+    #[inline(always)]
+    fn new() -> Self {
+        [const { MaybeUninit::uninit() }; N]
+    }
+
+    #[inline(always)]
+    fn as_mut_slice(&mut self) -> &mut [MaybeUninit<AccountView>] {
+        self
+    }
+}
+
 /// Trait that `#[derive(Accounts)]` implements on account structs.
 ///
 /// `try_accounts` receives a pre-walked `&[AccountView]` slice (from a
-/// single `walk_n(HEADER_SIZE)` in [`run_handler`]) rather than the raw
+/// single `walk_n_into(HEADER_SIZE)` in [`run_handler`]) rather than the raw
 /// cursor. This lets `Nested<Inner>` fields pass a sub-slice to
 /// `Inner::validate_accounts` without re-walking the cursor or fighting
 /// borrow-checker splits.
@@ -44,6 +69,11 @@ pub trait TryAccounts: Bumps + Sized {
     /// Parsed instruction args carried alongside validated accounts.
     /// Accounts structs without `#[instruction(...)]` use `()`.
     type IxArgs<'ix>;
+
+    /// Compile-time-sized storage for the flattened declared account views.
+    /// The derive supplies an array sized to `HEADER_SIZE`, avoiding a
+    /// transaction-wide 256-account stack reservation.
+    type ViewStorage: AccountViewStorage;
 
     /// `base_offset` is the index of the first view in the global bitvec.
     /// Top-level callers pass 0; `Nested<T>` passes its field's offset so
@@ -80,7 +110,7 @@ pub trait TryAccounts: Bumps + Sized {
 
 /// Run a handler inside a fully-constructed [`Context`].
 ///
-/// Walks all declared accounts in one `walk_n(HEADER_SIZE)` call, then
+/// Walks all declared accounts in one `walk_n_into(HEADER_SIZE)` call, then
 /// passes the views slice to `T::validate_accounts` for per-field loading and
 /// constraint checking. The residual cursor (past the declared accounts) is
 /// handed to `Context` for lazy `remaining_accounts()` access.
@@ -97,7 +127,10 @@ pub fn run_handler<'a, T: TryAccounts, R>(
     }
     let (ctx_accounts, bumps, ix_args) = {
         let mut loader = AccountLoader::new(cursor);
-        let (views, duplicates) = loader.walk_n(T::HEADER_SIZE);
+        let mut view_storage = T::ViewStorage::new();
+        let (views, duplicates) = unsafe {
+            loader.walk_n_into(T::HEADER_SIZE, view_storage.as_mut_slice())
+        };
         // Single AND+test across the whole struct tree — replaces the
         // per-mut-field `__duplicates.get()` checks the derive used to
         // emit at each field site. `MUT_MASK == [0; 4]` (no mut fields

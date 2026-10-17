@@ -1,6 +1,6 @@
 use {
     crate::cursor::AccountCursor,
-    pinocchio::{account::AccountView, address::Address},
+    pinocchio::address::Address,
     solana_program_error::ProgramError,
 };
 
@@ -60,7 +60,7 @@ enum RemainingAccounts<'a> {
     },
     /// Cached result of walking `remaining-accounts`; will return an error if
     /// duplicate mutable constraints are violated.
-    Cached(Result<alloc::vec::Vec<AccountView>, ProgramError>),
+    Cached(Result<crate::AccountViewBuffer, ProgramError>),
 }
 
 impl<'a> RemainingAccounts<'a> {
@@ -91,13 +91,12 @@ impl<'a, T: Bumps> Context<'a, T> {
         }
     }
 
-    /// Returns trailing accounts beyond the declared `T` fields as an
-    /// owned `Vec<AccountView>`. First call walks the cursor and caches
-    /// the resulting `Result`; subsequent calls replay the cache (clone
-    /// of the vec on success, clone of the error on failure). Caching
-    /// the error is important: the walk advances an unsafe cursor, and
-    /// a handler that calls this again after an error must not trigger
-    /// another `cursor.next()` loop.
+    /// Returns trailing accounts beyond the declared `T` fields as a borrowed
+    /// slice. First call walks the cursor and caches the resulting `Result`;
+    /// subsequent calls replay the cache without copying the account views.
+    /// Caching the error is important: the walk advances an unsafe cursor, and
+    /// a handler that calls this again after an error must not trigger another
+    /// `cursor.next()` loop.
     ///
     /// After each cursor advance, re-tests the cursor's duplicate bitvec
     /// against the active mutable mask. If a trailing account's dup index
@@ -111,19 +110,21 @@ impl<'a, T: Bumps> Context<'a, T> {
     /// a trailing slot's bit overlaps with an active declared mut slot's bit,
     /// which by construction means the runtime resolved the trailing slot as a
     /// dup of that declared mut account.
-    pub fn remaining_accounts(&mut self) -> Result<alloc::vec::Vec<AccountView>, ProgramError> {
+    pub fn remaining_accounts(
+        &mut self,
+    ) -> Result<&mut [pinocchio::account::AccountView], ProgramError> {
         if self.remaining_accounts.is_unparsed() {
             self.remaining_accounts = RemainingAccounts::Cached(self.walk_remaining());
         }
 
-        match &self.remaining_accounts {
-            RemainingAccounts::Cached(Ok(accs)) => Ok(accs.clone()),
+        match &mut self.remaining_accounts {
+            RemainingAccounts::Cached(Ok(accs)) => Ok(accs.as_mut()),
             RemainingAccounts::Cached(Err(err)) => Err(err.clone()),
             RemainingAccounts::Unparsed { .. } => unreachable!(),
         }
     }
 
-    fn walk_remaining(&mut self) -> Result<alloc::vec::Vec<AccountView>, ProgramError> {
+    fn walk_remaining(&mut self) -> Result<crate::AccountViewBuffer, ProgramError> {
         let RemainingAccounts::Unparsed {
             ref mut cursor,
             remaining,
@@ -131,14 +132,18 @@ impl<'a, T: Bumps> Context<'a, T> {
         else {
             unreachable!()
         };
-        let mut v = alloc::vec::Vec::with_capacity(remaining as usize);
+        let mut v = crate::AccountViewBuffer::new();
         let mut_mask = self.mut_mask.as_ref();
         for _ in 0..remaining {
             // SAFETY: cursor is positioned at the start of the remaining
             // region and `remaining_num` is the exact number of accounts
             // to walk. Walking stops on the first mut-alias error so we
             // never advance past the remaining region.
+            #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
             v.push(unsafe { cursor.next() });
+            #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+            v.try_push(unsafe { cursor.next() })
+                .map_err(|_| ProgramError::InvalidArgument)?;
             if let Some(dups) = cursor.duplicates() {
                 if dups.intersects(mut_mask) {
                     return Err(crate::ErrorCode::ConstraintDuplicateMutableAccount.into());

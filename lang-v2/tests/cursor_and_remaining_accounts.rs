@@ -13,9 +13,9 @@
 //!      yields the earlier `AccountView` from the lookup array — not
 //!      an `AccountView` pointing at the dup slot.
 //!   3. `Context::remaining_accounts` walks the cursor lazily on first
-//!      call, caches the resulting `Vec<AccountView>`, and returns a
-//!      fresh clone on each subsequent call without advancing the
-//!      cursor or double-populating the cache.
+//!      call, caches the resulting account views, and returns borrowed
+//!      access on subsequent calls without advancing the cursor or copying
+//!      the cache.
 //!
 //! Run: `cargo test -p anchor-lang --features testing --test cursor_and_remaining_accounts`
 
@@ -29,6 +29,11 @@ use {
     pinocchio::account::AccountView,
     solana_address::Address,
 };
+
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+use anchor_lang::MAX_ACCOUNT_METAS;
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+use solana_program_error::ProgramError;
 
 // A placeholder header struct that implements `Bumps` so we can construct
 // a `Context<DummyHeader>` without needing the full `#[derive(Accounts)]`
@@ -241,7 +246,7 @@ fn remaining_account_views_expose_compat_helpers() {
         MutMask::Static(EMPTY_MUT_MASK),
     );
 
-    let mut remaining = ctx.remaining_accounts().expect("walk");
+    let remaining = ctx.remaining_accounts().expect("walk");
     assert_eq!(remaining[0].key().to_bytes(), unique_addr(1));
     assert!(!remaining[0].data_is_empty());
     assert_eq!(remaining[0].try_data_len().unwrap(), 16);
@@ -272,6 +277,32 @@ fn remaining_accounts_returns_empty_when_nothing_trails() {
     assert!(ctx.remaining_accounts().expect("walk").is_empty());
 }
 
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+#[test]
+fn remaining_accounts_over_inline_budget_returns_error() {
+    let records: Vec<_> = (0..(MAX_ACCOUNT_METAS + 1) as u8).map(non_dup).collect();
+    let mut sbf = SbfInputBuffer::build(&records);
+    let mut lookup = fresh_lookup();
+    let mut cursor =
+        unsafe { AccountCursor::new(sbf.as_mut_ptr(), lookup.as_mut_ptr() as *mut AccountView) };
+    let _ = unsafe { cursor.walk_n(0) };
+
+    let program_id = Address::new_from_array([0x42; 32]);
+    let mut ctx: Context<'_, DummyHeader> = Context::new(
+        &program_id,
+        DummyHeader,
+        (),
+        &mut cursor,
+        records.len() as u8,
+        MutMask::Static(EMPTY_MUT_MASK),
+    );
+
+    assert_eq!(
+        ctx.remaining_accounts().unwrap_err(),
+        ProgramError::InvalidArgument
+    );
+}
+
 #[test]
 fn remaining_accounts_caches_and_does_not_re_walk_cursor() {
     // If the cache were bypassed, the second `remaining_accounts` call
@@ -294,16 +325,18 @@ fn remaining_accounts_caches_and_does_not_re_walk_cursor() {
         MutMask::Static(EMPTY_MUT_MASK),
     );
 
-    let first = ctx.remaining_accounts().expect("first walk");
+    let first_addresses = {
+        let first = ctx.remaining_accounts().expect("first walk");
+        [first[0].address().to_bytes(), first[1].address().to_bytes()]
+    };
     let second = ctx.remaining_accounts().expect("second walk");
 
     // Structural equality via address, since AccountView is Copy and the
     // cache returns a clone each call.
-    assert_eq!(first.len(), 2);
+    assert_eq!(first_addresses.len(), 2);
     assert_eq!(second.len(), 2);
-    for (a, b) in first.iter().zip(second.iter()) {
-        assert_eq!(a.address().to_bytes(), b.address().to_bytes());
-    }
+    assert_eq!(first_addresses[0], second[0].address().to_bytes());
+    assert_eq!(first_addresses[1], second[1].address().to_bytes());
     // Cursor must have advanced by exactly `remaining_num` (2), not
     // twice that — verifies caching short-circuits the walk.
     //

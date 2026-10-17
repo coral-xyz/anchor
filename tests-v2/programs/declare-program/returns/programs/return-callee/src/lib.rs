@@ -1,4 +1,3 @@
-use anchor_lang::__alloc::{string::String, vec::Vec};
 use anchor_lang::prelude::*;
 
 declare_id!("BF748KR4UhPq7xbhFQYd7yFKmh5UYdqed9GbD6oZvEyu");
@@ -20,9 +19,23 @@ pub struct ReturnStore {
 #[derive(Clone, anchor_lang::AnchorDeserialize, anchor_lang::AnchorSerialize)]
 pub struct ReturnPayload {
     pub amount: u64,
-    pub label: String,
-    pub samples: Vec<u16>,
+    pub label: anchor_lang::__idl::string::String,
+    pub samples: anchor_lang::__idl::vec::Vec<u16>,
     pub maybe_authority: Option<Address>,
+}
+
+fn return_payload_label() -> anchor_lang::__idl::string::String {
+    #[cfg(not(target_os = "solana"))]
+    {
+        anchor_lang::__idl::string::String::from("return-payload")
+    }
+
+    #[cfg(target_os = "solana")]
+    {
+        let mut label = anchor_lang::__idl::string::String::new();
+        label.extend_from_slice(b"return-payload");
+        label
+    }
 }
 
 #[program]
@@ -69,12 +82,12 @@ pub mod return_callee {
             .saturating_add(ctx.accounts.data.calls as u64);
         ctx.accounts.data.last_base = base;
         ctx.accounts.data.last_result = amount;
-        let mut samples = Vec::new();
+        let mut samples = anchor_lang::__idl::vec::Vec::new();
         samples.push(bonus);
         samples.push(ctx.accounts.data.calls);
         Ok(ReturnPayload {
             amount,
-            label: String::from("return-payload"),
+            label: return_payload_label(),
             samples,
             maybe_authority: Some(*ctx.accounts.authority.address()),
         })
@@ -146,8 +159,8 @@ pub mod return_callee {
         ctx.accounts.data.last_result = amount;
         Ok(ReturnPayload {
             amount,
-            label: String::new(),
-            samples: Vec::new(),
+            label: anchor_lang::__idl::string::String::new(),
+            samples: anchor_lang::__idl::vec::Vec::new(),
             maybe_authority: None,
         })
     }

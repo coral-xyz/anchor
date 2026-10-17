@@ -586,8 +586,8 @@ impl<C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'_, C, 
     /// ```
     #[must_use]
     pub fn accounts(mut self, accounts: impl ToAccountMetas) -> Self {
-        let mut metas = accounts.to_account_metas(None);
-        self.accounts.append(&mut metas);
+        let metas = accounts.to_account_metas(None);
+        self.accounts.extend(metas.iter().cloned());
         self
     }
 

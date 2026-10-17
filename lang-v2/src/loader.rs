@@ -10,7 +10,7 @@ use {
 /// Sequential account loader for `#[derive(Accounts)]`.
 ///
 /// Thin wrapper around an [`AccountCursor`]. The dispatcher bulk-walks the
-/// declared account region with [`Self::walk_n`], and specialized init paths
+/// declared account region with [`Self::walk_n_into`], and specialized init paths
 /// can still walk individual accounts through `next_view` / `load_next` /
 /// `next_mut`.
 ///
@@ -31,16 +31,39 @@ impl<'a> AccountLoader<'a> {
         self.cursor.consumed()
     }
 
-    /// Walk N accounts in bulk, returning a slice of raw `AccountView`s
-    /// and the duplicate tracking bitvec.
-    /// Cursor math runs in a tight loop before any validation happens.
+    /// Walk N accounts in bulk using the legacy caller-provided lookup table.
+    ///
+    /// Generated dispatch uses [`Self::walk_n_into`] so its stack storage is
+    /// sized to the instruction's declared accounts. This method remains for
+    /// low-level callers that construct [`AccountCursor::new`] with a lookup
+    /// array and preserves the original `AccountLoader` API.
     ///
     /// # Safety
     ///
-    /// Caller must ensure N does not exceed the remaining accounts.
+    /// The cursor must have been created with [`AccountCursor::new`] and a
+    /// lookup array large enough for every account walked so far and every
+    /// duplicate index in the input. `n` must not exceed the remaining
+    /// accounts.
     #[inline(always)]
-    pub fn walk_n(&mut self, n: usize) -> (&[AccountView], Option<&AccountBitvec>) {
-        unsafe { self.cursor.walk_n(n) }
+    pub unsafe fn walk_n(&mut self, n: usize) -> (&[AccountView], Option<&AccountBitvec>) {
+        self.cursor.walk_n(n)
+    }
+
+    /// Walk N accounts in bulk into caller-provided storage, returning a slice
+    /// of raw `AccountView`s and the duplicate tracking bitvec. Cursor math
+    /// runs in a tight loop before any validation happens.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure `n` does not exceed the remaining accounts and that
+    /// `output` has capacity for at least `n` initialized views.
+    #[inline(always)]
+    pub unsafe fn walk_n_into<'views>(
+        &mut self,
+        n: usize,
+        output: &'views mut [core::mem::MaybeUninit<AccountView>],
+    ) -> (&'views [AccountView], Option<&AccountBitvec>) {
+        unsafe { self.cursor.walk_n_into(n, output) }
     }
 
     /// Walk one account from the cursor and return the raw `AccountView`.

@@ -21,10 +21,13 @@
 use {
     bytemuck::{Pod, Zeroable},
     solana_address::Address,
-    spl_token_2022_interface::extension::{
-        Extension as SplExtension, ExtensionType as SplExtensionType,
-    },
+    crate::protocol::token_2022::extension::ExtensionType as SplExtensionType,
 };
+
+/// Marker implemented by the fixed-size extension layouts defined below.
+pub trait SplExtension {
+    const TYPE: SplExtensionType;
+}
 
 // ---------------------------------------------------------------------------
 // TLV parser adapter

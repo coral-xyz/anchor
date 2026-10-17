@@ -1475,7 +1475,7 @@ pub mod spl_test {
             update_authority: ctx.accounts.update_authority.cpi_handle(),
         };
         let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
-        token_2022_ext_cpi::token_metadata_remove_key(cpi_ctx, "field".into(), true)?;
+        token_2022_ext_cpi::token_metadata_remove_key(cpi_ctx, "field", true)?;
         Ok(())
     }
 
@@ -1493,9 +1493,9 @@ pub mod spl_test {
         let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::token_metadata_initialize(
             cpi_ctx,
-            "name".into(),
-            "SYM".into(),
-            "https://example.invalid".into(),
+            "name",
+            "SYM",
+            "https://example.invalid",
         )?;
         Ok(())
     }
@@ -1528,7 +1528,7 @@ pub mod spl_test {
         token_2022_ext_cpi::token_metadata_update_field(
             cpi_ctx,
             token_2022_ext_cpi::token_metadata::Field::Name,
-            "name".into(),
+            "name",
         )?;
         Ok(())
     }

@@ -4,23 +4,211 @@
 //! multisigs. For a multisig, pass the member signer handles in canonical
 //! order through [`CpiContext::with_remaining_accounts`].
 
-extern crate alloc;
-
 #[cfg(feature = "guardrails")]
 use anchor_lang::{require, Id};
 use {
-    alloc::vec::Vec,
     anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
-    spl_token_2022_interface as spl_token_2022,
+    crate::protocol::token_2022::{self as spl_token_2022},
 };
+
+#[cfg(test)]
+use anchor_lang::FixedVec;
+
+pub(crate) type TokenInstructionData = anchor_lang::FixedVec<u8, 256>;
+
+#[inline]
+pub(crate) fn push_remaining_account<'a>(
+    accounts: &mut anchor_lang::CpiHandleBuffer<'a>,
+    account: anchor_lang::CpiHandle<'a>,
+) -> Result<(), ProgramError> {
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+    {
+        accounts
+            .try_push(account)
+            .map_err(|_| ProgramError::InvalidInstructionData)
+    }
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    {
+        accounts.push(account);
+        Ok(())
+    }
+}
+
+#[inline]
+pub(crate) fn token_data(opcode: u8) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = TokenInstructionData::new();
+    data.try_push(opcode)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    Ok(data)
+}
+
+#[inline]
+pub(crate) fn token_data_u64(
+    opcode: u8,
+    amount: u64,
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data(opcode)?;
+    extend_token_data(&mut data, &amount.to_le_bytes())?;
+    Ok(data)
+}
+
+#[inline]
+pub(crate) fn token_data_u64_u8(
+    opcode: u8,
+    amount: u64,
+    value: u8,
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data_u64(opcode, amount)?;
+    data.try_push(value)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    Ok(data)
+}
+
+#[inline]
+pub(crate) fn token_data_address(
+    opcode: u8,
+    address: &Address,
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data(opcode)?;
+    extend_token_data(&mut data, address.as_ref())?;
+    Ok(data)
+}
+
+#[inline]
+pub(crate) fn token_data_option_address(
+    opcode: u8,
+    address: Option<&Address>,
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data(opcode)?;
+    match address {
+        Some(address) => {
+            data.try_push(1)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            extend_token_data(&mut data, address.as_ref())?;
+        }
+        None => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
+    }
+    Ok(data)
+}
+
+#[inline]
+pub(crate) fn token_data_subinstruction(
+    opcode: u8,
+    subinstruction: u8,
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data(opcode)?;
+    data.try_push(subinstruction)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    Ok(data)
+}
+
+#[inline]
+pub(crate) fn push_optional_zero_address(
+    data: &mut TokenInstructionData,
+    address: Option<&Address>,
+) -> Result<(), ProgramError> {
+    match address {
+        Some(address) => extend_token_data(data, address.as_ref()),
+        None => extend_token_data(data, &[0; 32]),
+    }
+}
+
+#[inline]
+pub(crate) fn push_coption_address(
+    data: &mut TokenInstructionData,
+    address: Option<&Address>,
+) -> Result<(), ProgramError> {
+    match address {
+        Some(address) => {
+            data.try_push(1)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            extend_token_data(data, address.as_ref())?;
+        }
+        None => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
+    }
+    Ok(())
+}
+
+#[inline]
+pub(crate) fn extend_token_data(
+    data: &mut TokenInstructionData,
+    bytes: &[u8],
+) -> Result<(), ProgramError> {
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+    {
+        data.try_extend_from_slice(bytes)
+            .map_err(|_| ProgramError::InvalidInstructionData)
+    }
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+    {
+        data.extend_from_slice(bytes);
+        Ok(())
+    }
+}
+
+#[inline]
+fn authority_type_byte(authority_type: &spl_token_2022::instruction::AuthorityType) -> u8 {
+    use spl_token_2022::instruction::AuthorityType;
+    match authority_type {
+        AuthorityType::MintTokens => 0,
+        AuthorityType::FreezeAccount => 1,
+        AuthorityType::AccountOwner => 2,
+        AuthorityType::CloseAccount => 3,
+        AuthorityType::TransferFeeConfig => 4,
+        AuthorityType::WithheldWithdraw => 5,
+        AuthorityType::CloseMint => 6,
+        AuthorityType::InterestRate => 7,
+        AuthorityType::PermanentDelegate => 8,
+        AuthorityType::ConfidentialTransferMint => 9,
+        AuthorityType::TransferHookProgramId => 10,
+        AuthorityType::ConfidentialTransferFeeConfig => 11,
+        AuthorityType::MetadataPointer => 12,
+        AuthorityType::GroupPointer => 13,
+        AuthorityType::GroupMemberPointer => 14,
+        AuthorityType::ScaledUiAmount => 15,
+        AuthorityType::Pause => 16,
+    }
+}
+
+#[inline]
+fn token_data_set_authority(
+    authority_type: &spl_token_2022::instruction::AuthorityType,
+    new_authority: Option<&Address>,
+) -> Result<TokenInstructionData, ProgramError> {
+    let mut data = token_data(6)?;
+    data.try_push(authority_type_byte(authority_type))
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    match new_authority {
+        Some(address) => {
+            data.try_push(1)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            extend_token_data(&mut data, address.as_ref())?;
+        }
+        None => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
+    }
+    Ok(data)
+}
 
 /// SPL Token encodes a multisig authority by marking the authority account
 /// non-signer and appending each member signer to the instruction. Token CPI
 /// callers provide those member handles through `remaining_accounts`.
-pub(crate) fn multisig_signer_addresses<'a>(accounts: &[CpiHandle<'a>]) -> Vec<&'a Address> {
-    accounts.iter().map(CpiHandle::address).collect()
+#[cfg(test)]
+pub(crate) fn multisig_signer_addresses<'a>(
+    accounts: &[CpiHandle<'a>],
+) -> FixedVec<&'a Address, { anchor_lang::MAX_ACCOUNT_METAS }> {
+    let mut addresses = FixedVec::new();
+    for account in accounts {
+        addresses.push(account.address());
+    }
+    addresses
 }
 
 #[cfg(feature = "guardrails")]
@@ -189,25 +377,15 @@ pub struct SyncNative<'a> {
 pub fn initialize_account<'a>(
     ctx: CpiContext<'a, InitializeAccount<'a>>,
 ) -> Result<(), ProgramError> {
-    let ix = spl_token_2022::instruction::initialize_account(
-        ctx.program,
-        ctx.accounts.account.address(),
-        ctx.accounts.mint.address(),
-        ctx.accounts.authority.address(),
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data(1)?;
+    ctx.invoke(&data)
 }
 
 pub fn initialize_account3<'a>(
     ctx: CpiContext<'a, InitializeAccount3<'a>>,
 ) -> Result<(), ProgramError> {
-    let ix = spl_token_2022::instruction::initialize_account3(
-        ctx.program,
-        ctx.accounts.account.address(),
-        ctx.accounts.mint.address(),
-        ctx.accounts.authority.address(),
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_address(18, ctx.accounts.authority.address())?;
+    ctx.invoke(&data)
 }
 
 pub fn initialize_mint<'a>(
@@ -216,14 +394,21 @@ pub fn initialize_mint<'a>(
     authority: &Address,
     freeze_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
-    let ix = spl_token_2022::instruction::initialize_mint(
-        ctx.program,
-        ctx.accounts.mint.address(),
-        authority,
-        freeze_authority,
-        decimals,
-    )?;
-    ctx.invoke_ix(ix)
+    let mut data = token_data(0)?;
+    data.try_push(decimals)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    extend_token_data(&mut data, authority.as_ref())?;
+    match freeze_authority {
+        Some(address) => {
+            data.try_push(1)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            extend_token_data(&mut data, address.as_ref())?;
+        }
+        None => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
+    }
+    ctx.invoke(&data)
 }
 
 pub fn initialize_mint2<'a>(
@@ -232,28 +417,26 @@ pub fn initialize_mint2<'a>(
     authority: &Address,
     freeze_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
-    let ix = spl_token_2022::instruction::initialize_mint2(
-        ctx.program,
-        ctx.accounts.mint.address(),
-        authority,
-        freeze_authority,
-        decimals,
-    )?;
-    ctx.invoke_ix(ix)
+    let mut data = token_data(20)?;
+    data.try_push(decimals)
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    extend_token_data(&mut data, authority.as_ref())?;
+    match freeze_authority {
+        Some(address) => {
+            data.try_push(1)
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            extend_token_data(&mut data, address.as_ref())?;
+        }
+        None => data
+            .try_push(0)
+            .map_err(|_| ProgramError::InvalidInstructionData)?,
+    }
+    ctx.invoke(&data)
 }
 
 pub fn transfer<'a>(ctx: CpiContext<'a, Transfer<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    #[allow(deprecated)]
-    let ix = spl_token_2022::instruction::transfer(
-        ctx.program,
-        ctx.accounts.from.address(),
-        ctx.accounts.to.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-        amount,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_u64(3, amount)?;
+    ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn transfer_checked<'a>(
@@ -261,31 +444,13 @@ pub fn transfer_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::transfer_checked(
-        ctx.program,
-        ctx.accounts.from.address(),
-        ctx.accounts.mint.address(),
-        ctx.accounts.to.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-        amount,
-        decimals,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_u64_u8(12, amount, decimals)?;
+    ctx.invoke_with_signer_override(&data, Some((3, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn mint_to<'a>(ctx: CpiContext<'a, MintTo<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::mint_to(
-        ctx.program,
-        ctx.accounts.mint.address(),
-        ctx.accounts.to.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-        amount,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_u64(7, amount)?;
+    ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn mint_to_checked<'a>(
@@ -293,30 +458,13 @@ pub fn mint_to_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::mint_to_checked(
-        ctx.program,
-        ctx.accounts.mint.address(),
-        ctx.accounts.to.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-        amount,
-        decimals,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_u64_u8(14, amount, decimals)?;
+    ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn burn<'a>(ctx: CpiContext<'a, Burn<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::burn(
-        ctx.program,
-        ctx.accounts.from.address(),
-        ctx.accounts.mint.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-        amount,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_u64(8, amount)?;
+    ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn burn_checked<'a>(
@@ -324,30 +472,13 @@ pub fn burn_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::burn_checked(
-        ctx.program,
-        ctx.accounts.from.address(),
-        ctx.accounts.mint.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-        amount,
-        decimals,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_u64_u8(15, amount, decimals)?;
+    ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn approve<'a>(ctx: CpiContext<'a, Approve<'a>>, amount: u64) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::approve(
-        ctx.program,
-        ctx.accounts.to.address(),
-        ctx.accounts.delegate.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-        amount,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_u64(4, amount)?;
+    ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn approve_checked<'a>(
@@ -355,29 +486,13 @@ pub fn approve_checked<'a>(
     amount: u64,
     decimals: u8,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::approve_checked(
-        ctx.program,
-        ctx.accounts.to.address(),
-        ctx.accounts.mint.address(),
-        ctx.accounts.delegate.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-        amount,
-        decimals,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_u64_u8(13, amount, decimals)?;
+    ctx.invoke_with_signer_override(&data, Some((3, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn revoke<'a>(ctx: CpiContext<'a, Revoke<'a>>) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::revoke(
-        ctx.program,
-        ctx.accounts.source.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data(5)?;
+    ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn set_authority<'a>(
@@ -385,57 +500,28 @@ pub fn set_authority<'a>(
     authority_type: spl_token_2022::instruction::AuthorityType,
     new_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::set_authority(
-        ctx.program,
-        ctx.accounts.account_or_mint.address(),
-        new_authority,
-        authority_type,
-        ctx.accounts.current_authority.address(),
-        &signer_addresses,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_set_authority(&authority_type, new_authority)?;
+    ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn close_account<'a>(ctx: CpiContext<'a, CloseAccount<'a>>) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::close_account(
-        ctx.program,
-        ctx.accounts.account.address(),
-        ctx.accounts.destination.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data(9)?;
+    ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn freeze_account<'a>(ctx: CpiContext<'a, FreezeAccount<'a>>) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::freeze_account(
-        ctx.program,
-        ctx.accounts.account.address(),
-        ctx.accounts.mint.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data(10)?;
+    ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn thaw_account<'a>(ctx: CpiContext<'a, ThawAccount<'a>>) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::instruction::thaw_account(
-        ctx.program,
-        ctx.accounts.account.address(),
-        ctx.accounts.mint.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data(11)?;
+    ctx.invoke_with_signer_override(&data, Some((2, ctx.remaining_accounts.len() == 0)))
 }
 
 pub fn sync_native<'a>(ctx: CpiContext<'a, SyncNative<'a>>) -> Result<(), ProgramError> {
-    let ix = spl_token_2022::instruction::sync_native(ctx.program, ctx.accounts.account.address())?;
-    ctx.invoke_ix(ix)
+    let data = token_data(17)?;
+    ctx.invoke(&data)
 }
 
 #[cfg(test)]
@@ -443,9 +529,7 @@ mod tests {
     use {
         super::*,
         anchor_lang::{
-            programs::Token,
             testing::{AccountBuffer, MIN_ACCOUNT_BUF},
-            Id,
         },
     };
 
@@ -467,25 +551,8 @@ mod tests {
         ];
         let signer_addresses = multisig_signer_addresses(&handles);
 
-        #[allow(deprecated)]
-        let ix = spl_token_2022::instruction::transfer(
-            &Token::id(),
-            &Address::new_from_array([1; 32]),
-            &Address::new_from_array([2; 32]),
-            &Address::new_from_array([3; 32]),
-            &signer_addresses,
-            7,
-        )
-        .unwrap();
-
-        assert_eq!(ix.accounts.len(), 5);
-        assert!(
-            !ix.accounts[2].is_signer,
-            "multisig account is not a signer"
-        );
-        assert!(ix.accounts[3].is_signer);
-        assert!(ix.accounts[4].is_signer);
-        assert_eq!(ix.accounts[3].pubkey.as_ref(), [4; 32].as_slice());
-        assert_eq!(ix.accounts[4].pubkey.as_ref(), [5; 32].as_slice());
+        assert_eq!(signer_addresses.len(), 2);
+        assert_eq!(signer_addresses[0].as_ref(), [4; 32].as_slice());
+        assert_eq!(signer_addresses[1].as_ref(), [5; 32].as_slice());
     }
 }

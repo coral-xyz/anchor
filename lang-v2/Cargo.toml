@@ -7,13 +7,12 @@ description = "Anchor v2: trait-based account system for Solana (no_std)"
 license = "Apache-2.0"
 
 [features]
-default = ["alloc", "guardrails"]
-alloc = ["pinocchio/alloc"]
+default = ["guardrails"]
 idl-build = []
 # Opt-in v1-compat shims for users porting anchor-lang code. Currently
 # exposes v1-style shims such as `debug!`, `error!`, `err!`, and `pubkey!`.
 # Default-off because some shims preserve syntax while keeping v2's cheaper
-# runtime model, and `debug!` still heap-allocates through `alloc::format!`.
+# runtime model.
 compat = ["dep:solana-program-log", "solana-address/decode"]
 # Runtime safety nets that catch caller bugs the Rust borrow checker
 # can't see statically. Default-on. Disabling saves CU at the cost of
@@ -45,19 +44,24 @@ anchor-derive-accounts = { workspace = true }
 pinocchio = { workspace = true, features = ["copy", "account-resize"] }
 pinocchio-system = "0.6.1"
 solana-address = { workspace = true, features = ["bytemuck", "syscalls", "curve25519", "wincode"] }
-solana-instruction = { workspace = true, default-features = false }
 solana-program-error.workspace = true
-solana-msg = { workspace = true, default-features = false, features = ["alloc"] }
+solana-msg = { workspace = true, default-features = false }
 solana-program-memory.workspace = true
 solana-program-log = { workspace = true, features = ["macro"], optional = true }
 solana-sha256-hasher = { workspace = true, features = ["sha2"] }
+bytemuck = { version = "1", features = ["derive"] }
+wincode = { version = "0.6", default-features = false, features = ["derive"] }
+
+[target.'cfg(not(any(target_os = "solana", target_arch = "bpf")))'.dependencies]
+sha2 = "0.10"
+# Owned instruction builders, system-instruction compatibility, rent helpers,
+# and collection-backed serialization are host/client APIs. Keeping these
+# features target-local prevents them from entering an SBF dependency graph.
+solana-instruction = { workspace = true, features = ["std"] }
+solana-msg = { workspace = true, features = ["alloc"] }
 solana-system-interface = { workspace = true, features = ["bincode"] }
 solana-sysvar.workspace = true
-bytemuck = { version = "1", features = ["derive"] }
-wincode = { version = "0.6", features = ["derive"] }
-
-[target.'cfg(not(target_os = "solana"))'.dependencies]
-sha2 = "0.10"
+wincode = { version = "0.6", default-features = false, features = ["derive", "std"] }
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
@@ -67,6 +71,7 @@ level = "warn"
 # local `idl-build` through `anchor-lang/idl-build`.
 check-cfg = [
     'cfg(target_os, values("solana"))',
+    'cfg(target_arch, values("bpf"))',
     'cfg(feature, values("idl-build"))',
     'cfg(kani)',
     'cfg(miri)',

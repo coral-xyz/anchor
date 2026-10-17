@@ -1,16 +1,15 @@
-extern crate alloc;
-
 use {
     crate::{address_eq, require, Address, CpiHandle},
-    alloc::vec::Vec,
     core::{mem::MaybeUninit, slice::from_raw_parts},
     pinocchio::{
         cpi::{CpiAccount, Seed, Signer},
         instruction::{InstructionAccount, InstructionView},
     },
-    solana_instruction::Instruction,
     solana_program_error::{ProgramError, ProgramResult},
 };
+
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+use solana_instruction::Instruction;
 
 pub use pinocchio::cpi::{set_return_data, MAX_RETURN_DATA};
 
@@ -18,8 +17,13 @@ pub use pinocchio::cpi::{set_return_data, MAX_RETURN_DATA};
 ///
 /// This preserves the v1-shaped `program::get_return_data()` return value while
 /// sourcing the data from Pinocchio's `AccountView`-native CPI module.
-pub fn get_return_data() -> Option<(crate::Address, Vec<u8>)> {
-    pinocchio::cpi::get_return_data().map(|data| (*data.program_id(), data.as_slice().to_vec()))
+///
+/// The returned Pinocchio buffer is bounded by Solana's 1 KiB return-data
+/// limit, avoiding a second large stack allocation on SBF. Callers that need
+/// an owned instruction-data buffer should copy `ReturnData::as_slice()` into
+/// their own bounded buffer.
+pub fn get_return_data() -> Option<(crate::Address, pinocchio::cpi::ReturnData)> {
+    pinocchio::cpi::get_return_data().map(|data| (*data.program_id(), data))
 }
 
 /// Invoke a cross-program instruction using Anchor v2 CPI handles.
@@ -33,38 +37,126 @@ pub fn get_return_data() -> Option<(crate::Address, Vec<u8>)> {
 /// [`invoke_with_optional_sentinels`] / [`invoke_signed_with_optional_sentinels`]
 /// (or [`crate::CpiContext`]) so required readonly program-id accounts still
 /// require matching handles.
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn invoke<'a>(instruction: &Instruction, account_handles: &[CpiHandle<'a>]) -> ProgramResult {
     invoke_signed(instruction, account_handles, &[])
+}
+
+/// Invoke a borrowed instruction view using borrowed account handles.
+///
+/// This is the allocator-free CPI entry point. It accepts Pinocchio's
+/// borrowed instruction representation directly, validates account ordering,
+/// writability, signer requirements, and borrow state, then uses only
+/// fixed-capacity stack buffers for the syscall arguments.
+#[inline]
+pub fn invoke_view<'a, 'b, 'c, 'd, 'seeds>(
+    instruction: &InstructionView<'a, 'b, 'c, 'd>,
+    account_handles: &[CpiHandle<'a>],
+    signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
+) -> ProgramResult {
+    let empty_flags: &[bool] = &[];
+    invoke_view_with_optional_sentinels(instruction, account_handles, signer_seeds, empty_flags)
+}
+
+/// Borrowed CPI entry point with an explicit mask for optional program-id
+/// sentinel accounts.
+#[inline]
+pub fn invoke_view_with_optional_sentinels<'a, 'b, 'c, 'd, 'seeds, F>(
+    instruction: &InstructionView<'a, 'b, 'c, 'd>,
+    account_handles: &[CpiHandle<'a>],
+    signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
+    optional_sentinel_flags: &F,
+) -> ProgramResult
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+{
+    let cpi_account_count = validate_instruction_accounts(
+        instruction.accounts,
+        instruction.program_id,
+        account_handles,
+        optional_sentinel_flags,
+        signer_seeds.is_empty(),
+    )?;
+    let _borrow_guards = crate::enter_cpi(account_handles)?;
+    let cpi_accounts = cpi_accounts(account_handles)?;
+    let cpi_accounts = unsafe {
+        from_raw_parts(
+            cpi_accounts.as_ptr() as *const CpiAccount,
+            cpi_account_count,
+        )
+    };
+
+    // SAFETY: validation proves that the handles correspond to the non-
+    // sentinel instruction accounts, and every CpiAccount was initialized
+    // from its corresponding AccountView before the syscall.
+    match signer_seeds {
+        [] => unsafe {
+            pinocchio::cpi::invoke_signed_unchecked(instruction, cpi_accounts, &[]);
+        },
+        [seeds] => {
+            let signer = signer_from_seeds(seeds);
+            unsafe {
+                pinocchio::cpi::invoke_signed_unchecked(
+                    instruction,
+                    cpi_accounts,
+                    &[signer],
+                );
+            }
+        }
+        signer_seeds => {
+            let signers = signers(signer_seeds)?;
+            unsafe {
+                pinocchio::cpi::invoke_signed_unchecked(instruction, cpi_accounts, &signers);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Like [`invoke`], but marks instruction-account indices that are intentional
 /// optional `None` program-id sentinels (parallel to
 /// [`crate::ToCpiAccounts::optional_account_sentinel_flags`]).
-pub fn invoke_with_optional_sentinels<'a>(
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+pub fn invoke_with_optional_sentinels<'a, F>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
-    optional_sentinel_flags: &[bool],
-) -> ProgramResult {
-    invoke_signed_with_optional_sentinels(instruction, account_handles, &[], optional_sentinel_flags)
+    optional_sentinel_flags: &F,
+) -> ProgramResult
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+{
+    invoke_signed_with_optional_sentinels(
+        instruction,
+        account_handles,
+        &[],
+        optional_sentinel_flags,
+    )
 }
 
 /// Invoke a cross-program instruction with PDA signer seeds using Anchor v2
 /// CPI handles.
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub fn invoke_signed<'a, 'seeds>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
 ) -> ProgramResult {
-    invoke_signed_with_optional_sentinels(instruction, account_handles, signer_seeds, &[])
+    let empty_flags: &[bool] = &[];
+    invoke_signed_with_optional_sentinels(instruction, account_handles, signer_seeds, empty_flags)
 }
 
 /// Like [`invoke_signed`], with an explicit optional-sentinel mask.
-pub fn invoke_signed_with_optional_sentinels<'a, 'seeds>(
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+pub fn invoke_signed_with_optional_sentinels<'a, 'seeds, F>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
-    optional_sentinel_flags: &[bool],
-) -> ProgramResult {
+    optional_sentinel_flags: &F,
+) -> ProgramResult
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+{
     let instruction_accounts = instruction_accounts(instruction);
     validate_instruction_accounts(
         &instruction_accounts,
@@ -94,6 +186,7 @@ pub fn invoke_signed_with_optional_sentinels<'a, 'seeds>(
 /// The caller must ensure no live Rust references or stale `AccountView` data
 /// borrows can be invalidated by the callee. Prefer [`invoke`] unless this is
 /// being used through a higher-level API that already enforces those lifetimes.
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub unsafe fn invoke_unchecked<'a>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
@@ -110,12 +203,21 @@ pub unsafe fn invoke_unchecked<'a>(
 /// borrows can be invalidated by the callee. Prefer [`invoke_signed`] unless
 /// this is being used through a higher-level API that already enforces those
 /// lifetimes.
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub unsafe fn invoke_signed_unchecked<'a, 'seeds>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
 ) -> ProgramResult {
-    unsafe { invoke_signed_unchecked_with_optional_sentinels(instruction, account_handles, signer_seeds, &[]) }
+    let empty_flags: &[bool] = &[];
+    unsafe {
+        invoke_signed_unchecked_with_optional_sentinels(
+            instruction,
+            account_handles,
+            signer_seeds,
+            empty_flags,
+        )
+    }
 }
 
 /// Like [`invoke_signed_unchecked`], with an explicit optional-sentinel mask.
@@ -123,40 +225,65 @@ pub unsafe fn invoke_signed_unchecked<'a, 'seeds>(
 /// # Safety
 ///
 /// Same as [`invoke_signed_unchecked`].
-pub unsafe fn invoke_signed_unchecked_with_optional_sentinels<'a, 'seeds>(
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+pub unsafe fn invoke_signed_unchecked_with_optional_sentinels<'a, 'seeds, F>(
     instruction: &Instruction,
     account_handles: &[CpiHandle<'a>],
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
-    optional_sentinel_flags: &[bool],
-) -> ProgramResult {
+    optional_sentinel_flags: &F,
+) -> ProgramResult
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+{
     let instruction_accounts = instruction_accounts(instruction);
-    let cpi_account_count = required_cpi_account_count(
+    let cpi_account_count = walk_instruction_account_bindings(
         &instruction_accounts,
         &instruction.program_id,
         account_handles,
         optional_sentinel_flags,
+        |_, _| Ok(()),
     )?;
     let instruction_view = InstructionView {
         program_id: &instruction.program_id,
         accounts: &instruction_accounts,
         data: &instruction.data,
     };
-    let signers = signers(signer_seeds);
-    let _borrow_guards = crate::enter_cpi(account_handles);
-    let cpi_accounts = cpi_accounts(account_handles);
+    let _borrow_guards = crate::enter_cpi(account_handles)?;
+    let cpi_accounts = cpi_accounts(account_handles)?;
+    let cpi_accounts = unsafe {
+        from_raw_parts(
+            cpi_accounts.as_ptr() as *const CpiAccount,
+            cpi_account_count,
+        )
+    };
 
     // SAFETY:
     // - `cpi_accounts` was fully initialized from the provided handles.
     // - This function's caller upholds the unchecked CPI aliasing contract.
-    unsafe {
-        pinocchio::cpi::invoke_signed_unchecked(
-            &instruction_view,
-            from_raw_parts(
-                cpi_accounts.as_ptr() as *const CpiAccount,
-                cpi_account_count,
-            ),
-            &signers,
-        );
+    match signer_seeds {
+        [] => unsafe {
+            pinocchio::cpi::invoke_signed_unchecked(&instruction_view, cpi_accounts, &[]);
+        },
+        [seeds] => {
+            let signer = signer_from_seeds(seeds);
+            unsafe {
+                pinocchio::cpi::invoke_signed_unchecked(
+                    &instruction_view,
+                    cpi_accounts,
+                    &[signer],
+                );
+            }
+        }
+        signer_seeds => {
+            let signers = signers(signer_seeds)?;
+            unsafe {
+                pinocchio::cpi::invoke_signed_unchecked(
+                    &instruction_view,
+                    cpi_accounts,
+                    &signers,
+                );
+            }
+        }
     }
 
     Ok(())
@@ -167,6 +294,9 @@ pub(crate) fn validate_fixed_instruction_accounts<'a, const N: usize>(
     handles: &[CpiHandle<'a>; N],
     enforce_signers: bool,
 ) -> ProgramResult {
+    if N > crate::MAX_ACCOUNT_METAS {
+        return Err(ProgramError::InvalidArgument);
+    }
     for (account, handle) in instruction_accounts.iter().zip(handles) {
         require!(
             address_eq(account.address, handle.address())
@@ -193,43 +323,39 @@ pub(crate) fn validate_fixed_instruction_accounts<'a, const N: usize>(
     Ok(())
 }
 
-pub(crate) fn validate_instruction_accounts<'a>(
+pub(crate) fn validate_instruction_accounts<'a, F>(
     instruction_accounts: &[InstructionAccount<'a>],
     program_id: &Address,
     account_handles: &[CpiHandle<'a>],
-    optional_sentinel_flags: &[bool],
+    optional_sentinel_flags: &F,
     enforce_signers: bool,
-) -> ProgramResult {
-    let bindings = resolve_instruction_account_bindings(
+) -> Result<usize, ProgramError>
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+{
+    walk_instruction_account_bindings(
         instruction_accounts,
         program_id,
         account_handles,
         optional_sentinel_flags,
-    )?;
-
-    for (account, binding) in instruction_accounts.iter().zip(bindings) {
-        let Some(handle_index) = binding else {
-            continue;
-        };
-        let handle = &account_handles[handle_index];
-
-        if account.is_writable {
-            if handle.requires_borrow_check() {
-                handle.account_view().check_borrow_mut()?;
+        |account, handle| {
+            if account.is_writable {
+                if handle.requires_borrow_check() {
+                    handle.account_view().check_borrow_mut()?;
+                }
+            } else if handle.requires_borrow_check() {
+                handle.account_view().check_borrow()?;
             }
-        } else if handle.requires_borrow_check() {
-            handle.account_view().check_borrow()?;
-        }
 
-        if enforce_signers && account.is_signer {
-            require!(
-                handle.account_view().is_signer(),
-                ProgramError::MissingRequiredSignature
-            );
-        }
-    }
-
-    Ok(())
+            if enforce_signers && account.is_signer {
+                require!(
+                    handle.account_view().is_signer(),
+                    ProgramError::MissingRequiredSignature
+                );
+            }
+            Ok(())
+        },
+    )
 }
 
 fn is_optional_instruction_account_sentinel_candidate(
@@ -239,168 +365,129 @@ fn is_optional_instruction_account_sentinel_candidate(
     !account.is_writable && !account.is_signer && address_eq(account.address, program_id)
 }
 
-fn is_skippable_optional_sentinel(
+fn is_skippable_optional_sentinel<F: crate::OptionalSentinelFlags + ?Sized>(
     program_id: &Address,
     account: &InstructionAccount<'_>,
-    optional_sentinel_flags: &[bool],
+    optional_sentinel_flags: &F,
     instruction_index: usize,
 ) -> bool {
-    optional_sentinel_flags
-        .get(instruction_index)
-        .copied()
-        .unwrap_or(false)
+    optional_sentinel_flags.get(instruction_index)
         && is_optional_instruction_account_sentinel_candidate(program_id, account)
 }
 
-fn required_cpi_account_count<'a>(
+fn walk_instruction_account_bindings<'a, F, V>(
     instruction_accounts: &[InstructionAccount<'a>],
     program_id: &Address,
     account_handles: &[CpiHandle<'a>],
-    optional_sentinel_flags: &[bool],
-) -> Result<usize, ProgramError> {
-    Ok(resolve_instruction_account_bindings(
-        instruction_accounts,
-        program_id,
-        account_handles,
-        optional_sentinel_flags,
-    )?
-    .into_iter()
-    .flatten()
-    .count())
-}
-
-fn resolve_instruction_account_bindings<'a>(
-    instruction_accounts: &[InstructionAccount<'a>],
-    program_id: &Address,
-    account_handles: &[CpiHandle<'a>],
-    optional_sentinel_flags: &[bool],
-) -> Result<Vec<Option<usize>>, ProgramError> {
-    let cols = account_handles.len() + 1;
-    let rows = instruction_accounts.len() + 1;
-    let mut can_match = alloc::vec![false; rows * cols];
-
-    for handle_index in 0..=account_handles.len() {
-        can_match[(rows - 1) * cols + handle_index] = true;
-    }
-
-    for instruction_index in (0..instruction_accounts.len()).rev() {
-        let account = &instruction_accounts[instruction_index];
-        for handle_index in (0..=account_handles.len()).rev() {
-            let can_consume = handle_index < account_handles.len()
-                && instruction_account_matches_handle(account, &account_handles[handle_index])
-                && can_match[(instruction_index + 1) * cols + (handle_index + 1)];
-            let can_skip = is_skippable_optional_sentinel(
-                program_id,
-                account,
-                optional_sentinel_flags,
-                instruction_index,
-            ) && can_match[(instruction_index + 1) * cols + handle_index];
-            can_match[instruction_index * cols + handle_index] = can_consume || can_skip;
-        }
-    }
-
-    require!(
-        can_match[0],
-        if account_handles.len()
-            < minimum_required_handle_count(
-                instruction_accounts,
-                program_id,
-                optional_sentinel_flags
-            )
-        {
-            ProgramError::NotEnoughAccountKeys
-        } else {
-            ProgramError::InvalidArgument
-        }
-    );
-
-    let mut bindings = Vec::with_capacity(instruction_accounts.len());
+    optional_sentinel_flags: &F,
+    mut on_match: V,
+) -> Result<usize, ProgramError>
+where
+    F: crate::OptionalSentinelFlags + ?Sized,
+    V: FnMut(&InstructionAccount<'a>, &CpiHandle<'a>) -> ProgramResult,
+{
     let mut handle_index = 0;
+    let mut cpi_account_count = 0;
 
     for (instruction_index, account) in instruction_accounts.iter().enumerate() {
-        // Prefer skipping intentional Option::None sentinels so a later
-        // required program-id account can still consume a matching handle.
         let can_skip = is_skippable_optional_sentinel(
             program_id,
             account,
             optional_sentinel_flags,
             instruction_index,
-        ) && can_match[(instruction_index + 1) * cols + handle_index];
+        ) && (handle_index >= account_handles.len()
+            || instruction_accounts[instruction_index + 1..]
+                .iter()
+                .enumerate()
+                .any(|(offset, later)| {
+                    let later_index = instruction_index + 1 + offset;
+                    !is_skippable_optional_sentinel(
+                        program_id,
+                        later,
+                        optional_sentinel_flags,
+                        later_index,
+                    ) && instruction_account_matches_handle(later, &account_handles[handle_index])
+                }));
         if can_skip {
-            bindings.push(None);
             continue;
         }
 
-        let can_consume = handle_index < account_handles.len()
-            && instruction_account_matches_handle(account, &account_handles[handle_index])
-            && can_match[(instruction_index + 1) * cols + (handle_index + 1)];
-        if can_consume {
-            bindings.push(Some(handle_index));
-            handle_index += 1;
-            continue;
+        let Some(handle) = account_handles.get(handle_index) else {
+            return Err(ProgramError::NotEnoughAccountKeys);
+        };
+        if !instruction_account_matches_handle(account, handle) {
+            return Err(ProgramError::InvalidArgument);
         }
 
-        debug_assert!(
-            false,
-            "validated instruction-account matching must reconstruct"
-        );
-        bindings.push(None);
+        on_match(account, handle)?;
+        handle_index += 1;
+        cpi_account_count += 1;
     }
 
-    Ok(bindings)
-}
+    if handle_index != account_handles.len() {
+        return Err(ProgramError::InvalidArgument);
+    }
 
-fn minimum_required_handle_count(
-    instruction_accounts: &[InstructionAccount<'_>],
-    program_id: &Address,
-    optional_sentinel_flags: &[bool],
-) -> usize {
-    instruction_accounts
-        .iter()
-        .enumerate()
-        .filter(|(index, account)| {
-            !is_skippable_optional_sentinel(program_id, account, optional_sentinel_flags, *index)
-        })
-        .count()
+    Ok(cpi_account_count)
 }
 
 fn instruction_account_matches_handle(
     account: &InstructionAccount<'_>,
     handle: &CpiHandle<'_>,
 ) -> bool {
-    address_eq(account.address, handle.address())
-        && (!account.is_writable || handle.is_writable())
+    address_eq(account.address, handle.address()) && (!account.is_writable || handle.is_writable())
 }
 
-fn instruction_accounts(instruction: &Instruction) -> Vec<InstructionAccount<'_>> {
-    instruction
-        .accounts
-        .iter()
-        .map(|meta| InstructionAccount::new(&meta.pubkey, meta.is_writable, meta.is_signer))
-        .collect()
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+fn instruction_accounts(instruction: &Instruction) -> crate::InstructionAccountBuffer<'_> {
+    let mut accounts = crate::InstructionAccountBuffer::new();
+    for meta in &instruction.accounts {
+        accounts.push(InstructionAccount::new(
+            &meta.pubkey,
+            meta.is_writable,
+            meta.is_signer,
+        ));
+    }
+    accounts
 }
 
-fn signers<'seeds>(signer_seeds: &'seeds [&'seeds [&'seeds [u8]]]) -> Vec<Signer<'seeds, 'seeds>> {
-    signer_seeds
-        .iter()
-        .map(|seeds| {
-            // SAFETY: `Seed` has the same in-memory representation as `&[u8]`;
-            // this is the conversion used by `CpiContext::invoke` as well.
-            let cpi_seeds: &[Seed] =
-                unsafe { from_raw_parts(seeds.as_ptr() as *const Seed, seeds.len()) };
-            Signer::from(cpi_seeds)
-        })
-        .collect()
+fn signers<'seeds>(
+    signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
+) -> Result<crate::SignerBuffer<'seeds>, ProgramError> {
+    let mut out = crate::SignerBuffer::new();
+    for seeds in signer_seeds {
+        let signer = signer_from_seeds(seeds);
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+        out.push(signer);
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+        out.try_push(signer)
+            .map_err(|_| ProgramError::InvalidArgument)?;
+    }
+    Ok(out)
 }
 
-fn cpi_accounts<'a>(account_handles: &[CpiHandle<'a>]) -> Vec<MaybeUninit<CpiAccount<'a>>> {
-    let mut accounts = Vec::with_capacity(account_handles.len());
-    // SAFETY: `MaybeUninit<CpiAccount>` does not require initialization.
-    unsafe { accounts.set_len(account_handles.len()) };
+#[inline(always)]
+fn signer_from_seeds<'seeds>(seeds: &'seeds [&'seeds [u8]]) -> Signer<'seeds, 'seeds> {
+    // SAFETY: `Seed` has the same in-memory representation as `&[u8]`.
+    let cpi_seeds: &[Seed] =
+        unsafe { from_raw_parts(seeds.as_ptr() as *const Seed, seeds.len()) };
+    Signer::from(cpi_seeds)
+}
 
-    for (handle, slot) in account_handles.iter().zip(accounts.iter_mut()) {
-        CpiAccount::init_from_account_view(handle.account_view(), slot);
+pub(crate) fn cpi_accounts<'a>(
+    account_handles: &[CpiHandle<'a>],
+) -> Result<crate::CpiAccountBuffer<'a>, ProgramError> {
+    let mut accounts = crate::CpiAccountBuffer::new();
+    for handle in account_handles {
+        let mut slot = MaybeUninit::uninit();
+        CpiAccount::init_from_account_view(handle.account_view(), &mut slot);
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+        accounts.push(slot);
+        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+        accounts
+            .try_push(slot)
+            .map_err(|_| ProgramError::InvalidArgument)?;
     }
 
-    accounts
+    Ok(accounts)
 }

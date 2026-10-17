@@ -1,6 +1,6 @@
 use {
     super::common::validate_token_2022_program,
-    crate::{token_2022::spl_token_2022, token_shared::multisig_signer_addresses},
+    crate::token_shared::token_data_subinstruction,
     anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
@@ -23,34 +23,19 @@ pub fn pausable_initialize<'a>(
     authority: &Address,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let ix = spl_token_2022::extension::pausable::instruction::initialize(
-        ctx.program,
-        ctx.accounts.mint.address(),
-        authority,
-    )?;
-    ctx.invoke_ix(ix)
+    let mut data = token_data_subinstruction(44, 0)?;
+    crate::token_shared::extend_token_data(&mut data, authority.as_ref())?;
+    ctx.invoke(&data)
 }
 
 pub fn pausable_pause<'a>(ctx: CpiContext<'a, PausableToggle<'a>>) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::extension::pausable::instruction::pause(
-        ctx.program,
-        ctx.accounts.mint.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_subinstruction(44, 1)?;
+    ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }
 
 pub fn pausable_resume<'a>(ctx: CpiContext<'a, PausableToggle<'a>>) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
-    let ix = spl_token_2022::extension::pausable::instruction::resume(
-        ctx.program,
-        ctx.accounts.mint.address(),
-        ctx.accounts.authority.address(),
-        &signer_addresses,
-    )?;
-    ctx.invoke_ix(ix)
+    let data = token_data_subinstruction(44, 2)?;
+    ctx.invoke_with_signer_override(&data, Some((1, ctx.remaining_accounts.is_empty())))
 }
