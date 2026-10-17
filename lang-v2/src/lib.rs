@@ -6,16 +6,12 @@
 pub extern crate alloc;
 extern crate self as anchor_lang;
 
-// IDL-only generated helpers still use the allocator on host builds. Keep
-// this hidden compatibility path until the runtime/SBF follow-up removes
-// those implementation details from the generated host surface.
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+// IDL-only generated helpers still use the allocator. The runtime follow-up
+// will move the target-specific implementation out of this API branch.
 #[doc(hidden)]
-pub use alloc as __alloc;
+pub extern crate alloc as __alloc;
 
 pub mod accounts;
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-mod account_meta;
 pub mod context;
 mod context_cpi;
 pub mod cpi;
@@ -50,7 +46,6 @@ pub use solana_address::{address, declare_id};
 /// Implementation detail of [`solana_msg`] - re-exported for macro access only.
 #[doc(hidden)]
 pub use solana_msg;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[doc(hidden)]
 pub mod __idl {
     pub use std::{
@@ -62,62 +57,6 @@ pub mod __idl {
         vec::Vec,
     };
 }
-
-/// No-alloc compatibility namespace used by generated `declare_program!`
-/// bindings. Host builds keep the standard library's owned collections so
-/// client APIs remain unchanged. On-chain generated bindings use bounded
-/// transient buffers instead; callers must stay within this explicit limit or
-/// split the instruction.
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-#[doc(hidden)]
-pub mod __idl {
-    pub mod string {
-        pub type String = crate::FixedVec<u8, { crate::MAX_IDL_SEQUENCE }>;
-    }
-
-    pub mod vec {
-        pub type Vec<T> = crate::FixedVec<T, { crate::MAX_IDL_SEQUENCE }>;
-    }
-}
-
-/// Format a message into a bounded stack buffer and send it to the Solana log
-/// syscall. This is the no-`alloc` implementation used by the on-chain
-/// `msg!` macro.
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub fn sol_log_fmt(args: core::fmt::Arguments<'_>) {
-    struct LogWriter {
-        bytes: FixedVec<u8, 256>,
-    }
-
-    impl core::fmt::Write for LogWriter {
-        fn write_str(&mut self, value: &str) -> core::fmt::Result {
-            self.bytes
-                .try_extend_from_slice(value.as_bytes())
-                .map_err(|_| core::fmt::Error)
-        }
-    }
-
-    let mut writer = LogWriter {
-        bytes: FixedVec::new(),
-    };
-    let _ = core::fmt::write(&mut writer, args);
-    // Formatting only writes valid UTF-8, so this conversion cannot fail.
-    let message = unsafe { core::str::from_utf8_unchecked(writer.bytes.as_slice()) };
-    solana_msg::sol_log(message);
-}
-
-/// Logs a message without introducing an allocator into the SBF dependency
-/// graph. Host builds retain `solana_msg`'s normal formatting behavior;
-/// on-chain builds format into a bounded stack buffer.
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-#[macro_export]
-macro_rules! msg {
-    ($($arg:tt)*) => {{
-        $crate::sol_log_fmt(core::format_args!($($arg)*));
-    }};
-}
-
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 #[macro_export]
 macro_rules! msg {
     ($($arg:tt)*) => {{
@@ -370,10 +309,7 @@ pub use cpi::create_account_with_signers;
 /// `solana_program::pubkey::Pubkey` to [`Address`], but external Solana crates
 /// may still expose nominally distinct `Pubkey` newtypes with the same 32-byte
 /// representation.
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub use solana_instruction::account_meta::AccountMeta;
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub use account_meta::AccountMeta;
 pub use {
     accounts::{AccountInitialize, SlabInit},
     anchor_derive_accounts::{
@@ -413,15 +349,11 @@ pub mod solana_program {
     }
 
     pub mod instruction {
-        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         pub use solana_instruction::*;
-        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
-        pub use crate::account_meta::AccountMeta;
     }
 
     #[cfg(feature = "compat")]
     pub use crate::pubkey;
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub use solana_system_interface::instruction as system_instruction;
 
     #[cfg(feature = "compat")]
@@ -429,7 +361,6 @@ pub mod solana_program {
         pub type Pubkey = crate::Address;
     }
 
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     pub mod rent {
         pub use solana_sysvar::rent::*;
     }
