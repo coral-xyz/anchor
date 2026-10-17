@@ -14,6 +14,33 @@ pub use anchor_lang::programs::Token2022;
 pub use spl_token_2022_interface::{extension::ExtensionType, native_mint, ID};
 pub(crate) use spl_token_2022_interface as spl_token_2022;
 
+/// Default state for a Token-2022 account.
+///
+/// This small Anchor-owned enum keeps the public extension CPI helpers from
+/// exposing the canonical SPL state module. The CPI implementation converts it
+/// to the canonical wire value internally.
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum AccountState {
+    /// The account has not been initialized.
+    #[default]
+    Uninitialized,
+    /// The account is initialized and usable.
+    Initialized,
+    /// The account is frozen.
+    Frozen,
+}
+
+impl From<AccountState> for spl_token_2022::state::AccountState {
+    fn from(state: AccountState) -> Self {
+        match state {
+            AccountState::Uninitialized => Self::Uninitialized,
+            AccountState::Initialized => Self::Initialized,
+            AccountState::Frozen => Self::Frozen,
+        }
+    }
+}
+
 pub use crate::token_shared::{
     approve, approve_checked, burn, burn_checked, close_account, freeze_account,
     initialize_account, initialize_account3, initialize_mint, initialize_mint2, mint_to,
