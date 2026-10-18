@@ -1305,6 +1305,12 @@ impl Merge for _TestToml {
                     if let Some(startup_wait) = other_test.startup_wait {
                         my_test.startup_wait = Some(startup_wait);
                     }
+                    if let Some(shutdown_wait) = other_test.shutdown_wait {
+                        my_test.shutdown_wait = Some(shutdown_wait);
+                    }
+                    if let Some(upgradeable) = other_test.upgradeable {
+                        my_test.upgradeable = Some(upgradeable);
+                    }
                     if let Some(other_genesis) = other_test.genesis {
                         match &mut my_test.genesis {
                             Some(my_genesis) => {
@@ -2382,5 +2388,91 @@ ledger = "ledgers/local"
         let validator = parsed.test.unwrap().validator.unwrap();
 
         assert_eq!(validator.ledger, "ledgers/local");
+    }
+
+    #[test]
+    fn test_toml_extends_overrides_shutdown_wait_and_upgradeable() {
+        let dir = tempfile::tempdir().unwrap();
+        let suite_dir = dir.path().join("tests").join("suite");
+        fs::create_dir_all(&suite_dir).unwrap();
+
+        let base_toml = suite_dir.join("Base.toml");
+        fs::write(
+            &base_toml,
+            r#"
+[scripts]
+test = "true"
+
+[test]
+shutdown_wait = 1000
+upgradeable = false
+"#,
+        )
+        .unwrap();
+
+        let test_toml = suite_dir.join("Test.toml");
+        fs::write(
+            &test_toml,
+            r#"
+extends = ["Base.toml"]
+
+[scripts]
+test = "true"
+
+[test]
+shutdown_wait = 2000
+upgradeable = true
+"#,
+        )
+        .unwrap();
+
+        let parsed = TestToml::from_path(test_toml).unwrap();
+        let test = parsed.test.unwrap();
+
+        assert_eq!(test.shutdown_wait, 2000);
+        assert!(test.upgradeable);
+    }
+
+    #[test]
+    fn test_toml_extends_inherits_shutdown_wait_and_upgradeable() {
+        let dir = tempfile::tempdir().unwrap();
+        let suite_dir = dir.path().join("tests").join("suite");
+        fs::create_dir_all(&suite_dir).unwrap();
+
+        let base_toml = suite_dir.join("Base.toml");
+        fs::write(
+            &base_toml,
+            r#"
+[scripts]
+test = "true"
+
+[test]
+shutdown_wait = 1000
+upgradeable = true
+"#,
+        )
+        .unwrap();
+
+        let test_toml = suite_dir.join("Test.toml");
+        fs::write(
+            &test_toml,
+            r#"
+extends = ["Base.toml"]
+
+[scripts]
+test = "true"
+
+[test]
+startup_wait = 1000
+"#,
+        )
+        .unwrap();
+
+        let parsed = TestToml::from_path(test_toml).unwrap();
+        let test = parsed.test.unwrap();
+
+        assert_eq!(test.shutdown_wait, 1000);
+        assert!(test.upgradeable);
+        assert_eq!(test.startup_wait, 1000);
     }
 }
