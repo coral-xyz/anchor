@@ -5462,6 +5462,15 @@ fn process_handler(
     } else {
         (quote! {}, quote! {})
     };
+    // Keep generated on-chain CPI frames proportional to the instruction
+    // being serialized. The public `InstructionData` buffer remains bounded
+    // by the transaction limit, but using that full buffer inside every CPI
+    // wrapper needlessly reserves 1232 bytes on the SBF stack.
+    let ix_max_data_len = if has_ref_args {
+        quote! { anchor_lang::MAX_INSTRUCTION_DATA }
+    } else {
+        quote! { ::core::mem::size_of::<Self>() + Self::DISCRIMINATOR.len() }
+    };
     let instruction_struct = quote! {
         #(#handler_cfg_attrs)*
         #[derive(anchor_lang::AnchorSerialize)]
@@ -5474,20 +5483,46 @@ fn process_handler(
         }
         #(#handler_cfg_attrs)*
         impl #ix_lt_decl anchor_lang::InstructionData for #ix_struct_name #ix_lt_use {
+            #[cfg(any(target_os = "solana", target_arch = "bpf"))]
             fn try_data(&self) -> anchor_lang::Result<anchor_lang::InstructionDataBuffer> {
                 let mut data = anchor_lang::InstructionDataBuffer::new();
-                anchor_lang::try_extend_instruction_data(&mut data, Self::DISCRIMINATOR)?;
-                anchor_lang::wincode::config::serialize_into(
-                    &mut data,
-                    self,
-                    anchor_lang::BORSH_CONFIG,
-                )
-                    .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
+                self.__try_data_into(&mut data)?;
                 Ok(data)
             }
 
+            #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+            fn try_data(&self) -> anchor_lang::Result<anchor_lang::InstructionDataBuffer> {
+                Ok(self.data())
+            }
+
             fn data(&self) -> anchor_lang::InstructionDataBuffer {
-                self.try_data().expect("instruction serialization exceeded the fixed buffer")
+                let mut data = anchor_lang::InstructionDataBuffer::new();
+                self.__try_data_into(&mut data)
+                    .expect("instruction serialization exceeded the fixed buffer");
+                data
+            }
+        }
+
+        #(#handler_cfg_attrs)*
+        impl #ix_lt_decl #ix_struct_name #ix_lt_use {
+            #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+            #[doc(hidden)]
+            pub const __MAX_DATA_LEN: usize = #ix_max_data_len;
+
+            #[doc(hidden)]
+            pub fn __try_data_into<const N: usize>(
+                &self,
+                data: &mut anchor_lang::FixedVec<u8, N>,
+            ) -> anchor_lang::Result<()> {
+                data.try_extend_from_slice(Self::DISCRIMINATOR)
+                    .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
+                anchor_lang::wincode::config::serialize_into(
+                    data,
+                    self,
+                    anchor_lang::BORSH_CONFIG,
+                )
+                .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
+                Ok(())
             }
         }
         #(#handler_cfg_attrs)*
@@ -5589,10 +5624,18 @@ fn process_handler(
                 let __ix = super::instruction::#ix_struct_name {
                     #(#extra_arg_names,)*
                 };
+                #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+                let mut __data = anchor_lang::FixedVec::<
+                    u8,
+                    { super::instruction::#ix_struct_name::__MAX_DATA_LEN },
+                >::new();
+                #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+                __ix.__try_data_into(&mut __data)?;
+                #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
                 let __data = <
                     super::instruction::#ix_struct_name #ix_lt_use_local
                     as anchor_lang::InstructionData
-                >::data(&__ix);
+                >::try_data(&__ix)?;
                 __ctx.invoke(&__data)?;
                 #ret_value
             }
