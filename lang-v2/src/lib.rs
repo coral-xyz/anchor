@@ -466,6 +466,10 @@ pub trait ToAccountMetas {
 
 /// Serializes instruction data: discriminator prefix + LE-encoded args.
 pub trait InstructionData: Discriminator {
+    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
+    fn try_data(&self) -> core::result::Result<InstructionDataBuffer, solana_program_error::ProgramError>;
+
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     fn data(&self) -> InstructionDataBuffer;
 
     /// Fallible instruction serialization for allocator-free runtime paths.
@@ -473,6 +477,7 @@ pub trait InstructionData: Discriminator {
     /// Existing implementations that only provide `data()` remain source
     /// compatible. Generated V2 instruction types override this method so a
     /// full buffer reports `InvalidInstructionData` instead of panicking.
+    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     fn try_data(&self) -> core::result::Result<InstructionDataBuffer, solana_program_error::ProgramError> {
         Ok(self.data())
     }

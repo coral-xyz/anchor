@@ -42,6 +42,7 @@ where
     }
 }
 
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl CpiInstruction for solana_instruction::Instruction {
     #[inline]
     fn program_id(&self) -> &Address {

@@ -74,9 +74,9 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     /// from [`ToCpiAccounts`], appends remaining accounts, validates borrow
     /// state, then calls `invoke_signed_unchecked`.
     pub fn invoke(&self, data: &[u8]) -> ProgramResult {
-        let mut instruction_accounts = self.accounts.to_instruction_accounts();
-        let mut handles = self.accounts.to_cpi_handles();
-        let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags();
+        let mut instruction_accounts = self.accounts.to_instruction_accounts()?;
+        let mut handles = self.accounts.to_cpi_handles()?;
+        let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags()?;
 
         // Append remaining accounts using the handle's writable/signer flags
         // so PDA remaining accounts marked with `as_signer()` emit signer metas.
@@ -172,10 +172,10 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
             ProgramError::IncorrectProgramId
         );
 
-        let mut handles = self.accounts.to_cpi_handles();
+        let mut handles = self.accounts.to_cpi_handles()?;
         handles.extend(self.remaining_accounts.iter().copied());
 
-        let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags();
+        let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags()?;
         let instruction_account_count = crate::program::instruction_account_count(&ix);
         require!(
             optional_sentinel_flags.len() <= instruction_account_count,

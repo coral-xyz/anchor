@@ -89,7 +89,7 @@ fn derive_to_cpi_accounts_emits_metas_and_erased_handles() {
         absent: None,
     };
 
-    let metas = accounts.to_instruction_accounts();
+    let metas = accounts.to_instruction_accounts().expect("metas");
     assert_eq!(metas.len(), 8);
     assert_eq!(*metas[0].address, Address::new_from_array([1; 32]));
     assert!(!metas[0].is_writable);
@@ -116,7 +116,7 @@ fn derive_to_cpi_accounts_emits_metas_and_erased_handles() {
     assert!(!metas[7].is_writable);
     assert!(!metas[7].is_signer);
 
-    let handles = accounts.to_cpi_handles();
+    let handles = accounts.to_cpi_handles().expect("handles");
     assert_eq!(handles.len(), 7);
     assert!(!handles[0].is_writable());
     assert!(handles[1].is_writable());
@@ -126,7 +126,9 @@ fn derive_to_cpi_accounts_emits_metas_and_erased_handles() {
     assert!(!handles[5].is_writable());
     assert!(handles[6].is_writable());
 
-    let flags = accounts.optional_account_sentinel_flags();
+    let flags = accounts
+        .optional_account_sentinel_flags()
+        .expect("sentinel flags");
     assert_eq!(
         flags.as_slice(),
         &[false, false, false, false, false, false, false, true]
@@ -139,9 +141,15 @@ fn derive_to_cpi_accounts_accepts_phantom_only_empty_structs() {
         _phantom: PhantomData,
     };
 
-    assert!(accounts.to_instruction_accounts().is_empty());
-    assert!(accounts.to_cpi_handles().is_empty());
-    assert!(accounts.optional_account_sentinel_flags().is_empty());
+    assert!(accounts
+        .to_instruction_accounts()
+        .expect("metas")
+        .is_empty());
+    assert!(accounts.to_cpi_handles().expect("handles").is_empty());
+    assert!(accounts
+        .optional_account_sentinel_flags()
+        .expect("sentinel flags")
+        .is_empty());
 }
 
 #[test]
@@ -156,7 +164,7 @@ fn derive_to_cpi_accounts_duplicate_readonly_erases_handle_mut() {
         writable: writable_view.to_cpi_handle_mut(),
     };
 
-    let metas = accounts.to_instruction_accounts();
+    let metas = accounts.to_instruction_accounts().expect("metas");
     assert_eq!(metas.len(), 4);
     assert_eq!(*metas[0].address, Address::new_from_array([1; 32]));
     assert!(!metas[0].is_writable);
@@ -167,7 +175,7 @@ fn derive_to_cpi_accounts_duplicate_readonly_erases_handle_mut() {
     assert_eq!(*metas[3].address, Address::new_from_array([2; 32]));
     assert!(metas[3].is_writable);
 
-    let handles = accounts.to_cpi_handles();
+    let handles = accounts.to_cpi_handles().expect("handles");
     assert_eq!(handles.len(), 4);
     assert!(!handles[0].is_writable());
     assert!(!handles[1].is_writable());
@@ -196,8 +204,8 @@ fn derive_to_cpi_accounts_optional_readonly_normalizes_writable_handles() {
 }
 
 fn assert_optional_readonly_is_readonly(accounts: &OptionalReadonlyCpi<'_>) {
-    let metas = accounts.to_instruction_accounts();
-    let handles = accounts.to_cpi_handles();
+    let metas = accounts.to_instruction_accounts().expect("metas");
+    let handles = accounts.to_cpi_handles().expect("handles");
     assert_eq!(metas.len(), 1);
     assert!(!metas[0].is_writable);
     assert_eq!(handles.len(), 1);

@@ -413,35 +413,37 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
             CpiFieldKind::Phantom => quote! {},
             CpiFieldKind::Nested => quote! {
                 __accounts.extend(
-                    anchor_lang::ToCpiAccounts::to_instruction_accounts(&self.#ident).iter().cloned(),
+                    anchor_lang::ToCpiAccounts::to_instruction_accounts(&self.#ident)?
+                        .iter()
+                        .cloned(),
                 );
             },
             CpiFieldKind::Readonly | CpiFieldKind::Writable => quote! {
-                __accounts.push(
+                __accounts.try_push(
                     anchor_lang::pinocchio::instruction::InstructionAccount::new(
                         self.#ident.address(),
                         #writable,
                         #signer,
                     ),
-                );
+                ).map_err(|_| anchor_lang::Error::InvalidArgument)?;
             },
             CpiFieldKind::OptionalReadonly | CpiFieldKind::OptionalWritable => quote! {
                 match self.#ident {
                     ::core::option::Option::Some(__account) => {
-                        __accounts.push(
+                        __accounts.try_push(
                             anchor_lang::pinocchio::instruction::InstructionAccount::new(
                                 __account.address(),
                                 #writable,
                                 #signer,
                             ),
-                        );
+                        ).map_err(|_| anchor_lang::Error::InvalidArgument)?;
                     }
                     ::core::option::Option::None => {
-                        __accounts.push(
+                        __accounts.try_push(
                             anchor_lang::pinocchio::instruction::InstructionAccount::readonly(
                                 &#accounts_program_id,
                             ),
-                        );
+                        ).map_err(|_| anchor_lang::Error::InvalidArgument)?;
                     }
                 }
             },
@@ -452,23 +454,33 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
         CpiFieldKind::Phantom => quote! {},
         CpiFieldKind::Nested => quote! {
             __handles.extend(
-                anchor_lang::ToCpiAccounts::to_cpi_handles(&self.#ident).iter().cloned(),
+                anchor_lang::ToCpiAccounts::to_cpi_handles(&self.#ident)?
+                    .iter()
+                    .cloned(),
             );
         },
         CpiFieldKind::Readonly => quote! {
-            __handles.push(self.#ident.into_readonly());
+            __handles
+                .try_push(self.#ident.into_readonly())
+                .map_err(|_| anchor_lang::Error::InvalidArgument)?;
         },
         CpiFieldKind::Writable => quote! {
-            __handles.push(self.#ident.into());
+            __handles
+                .try_push(self.#ident.into())
+                .map_err(|_| anchor_lang::Error::InvalidArgument)?;
         },
         CpiFieldKind::OptionalReadonly => quote! {
             if let ::core::option::Option::Some(__account) = self.#ident {
-                __handles.push(__account.into_readonly());
+                __handles
+                    .try_push(__account.into_readonly())
+                    .map_err(|_| anchor_lang::Error::InvalidArgument)?;
             }
         },
         CpiFieldKind::OptionalWritable => quote! {
             if let ::core::option::Option::Some(__account) = self.#ident {
-                __handles.push(__account.into());
+                __handles
+                    .try_push(__account.into())
+                    .map_err(|_| anchor_lang::Error::InvalidArgument)?;
             }
         },
     });
@@ -477,16 +489,20 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
         CpiFieldKind::Phantom => quote! {},
         CpiFieldKind::Nested => quote! {
             __flags.extend(
-                anchor_lang::ToCpiAccounts::optional_account_sentinel_flags(&self.#ident)
+                anchor_lang::ToCpiAccounts::optional_account_sentinel_flags(&self.#ident)?
                     .iter()
                     .copied(),
             );
         },
         CpiFieldKind::Readonly | CpiFieldKind::Writable => quote! {
-            __flags.push(false);
+            __flags
+                .try_push(false)
+                .map_err(|_| anchor_lang::Error::InvalidArgument)?;
         },
         CpiFieldKind::OptionalReadonly | CpiFieldKind::OptionalWritable => quote! {
-            __flags.push(self.#ident.is_none());
+            __flags
+                .try_push(self.#ident.is_none())
+                .map_err(|_| anchor_lang::Error::InvalidArgument)?;
         },
     });
 
@@ -496,24 +512,24 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
         {
             fn to_instruction_accounts(
                 &self,
-            ) -> anchor_lang::InstructionAccountBuffer<#cpi_lifetime> {
+            ) -> anchor_lang::Result<anchor_lang::InstructionAccountBuffer<#cpi_lifetime>> {
                 let mut __accounts = anchor_lang::InstructionAccountBuffer::new();
                 #(#meta_steps)*
-                __accounts
+                Ok(__accounts)
             }
 
             fn to_cpi_handles(
                 &self,
-            ) -> anchor_lang::CpiHandleBuffer<#cpi_lifetime> {
+            ) -> anchor_lang::Result<anchor_lang::CpiHandleBuffer<#cpi_lifetime>> {
                 let mut __handles = anchor_lang::CpiHandleBuffer::new();
                 #(#handle_steps)*
-                __handles
+                Ok(__handles)
             }
 
-            fn optional_account_sentinel_flags(&self) -> anchor_lang::BoolBuffer {
+            fn optional_account_sentinel_flags(&self) -> anchor_lang::Result<anchor_lang::BoolBuffer> {
                 let mut __flags = anchor_lang::BoolBuffer::new();
                 #(#flag_steps)*
-                __flags
+                Ok(__flags)
             }
         }
     }
@@ -4074,6 +4090,7 @@ fn gen_declare_program_events(idl: &serde_json::Value) -> syn::Result<TokenStrea
                         Ok(data)
                     }
 
+                    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
                     fn data(&self) -> anchor_lang::InstructionDataBuffer {
                         self.try_data().expect("event serialization exceeded the fixed buffer")
                     }
@@ -4096,6 +4113,7 @@ fn gen_declare_program_events(idl: &serde_json::Value) -> syn::Result<TokenStrea
                         Ok(data)
                     }
 
+                    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
                     fn data(&self) -> anchor_lang::InstructionDataBuffer {
                         self.try_data().expect("event serialization exceeded the fixed buffer")
                     }
@@ -5495,6 +5513,7 @@ fn process_handler(
                 Ok(self.data())
             }
 
+            #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
             fn data(&self) -> anchor_lang::InstructionDataBuffer {
                 let mut data = anchor_lang::InstructionDataBuffer::new();
                 self.__try_data_into(&mut data)
@@ -6416,6 +6435,7 @@ pub fn event(attr: TokenStream, item: TokenStream) -> TokenStream {
                         .map_err(|_| anchor_lang::Error::InvalidInstructionData)
                 }
 
+                #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
                 fn data(&self) -> anchor_lang::InstructionDataBuffer {
                     self.try_data().expect("event serialization exceeded the fixed buffer")
                 }
@@ -6590,6 +6610,7 @@ pub fn event(attr: TokenStream, item: TokenStream) -> TokenStream {
                         Ok(())
                     }
 
+                    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
                     fn data(&self) -> anchor_lang::InstructionDataBuffer {
                         self.try_data().expect("event serialization exceeded the fixed buffer")
                     }
@@ -6789,7 +6810,9 @@ pub fn emit(input: TokenStream) -> TokenStream {
     let data: proc_macro2::TokenStream = input.into();
     TokenStream::from(quote! {
         {
-            anchor_lang::sol_log_data(&[&anchor_lang::Event::data(&#data)]);
+            let mut __event_data = anchor_lang::InstructionDataBuffer::new();
+            anchor_lang::Event::try_data_into(&#data, &mut __event_data)?;
+            anchor_lang::sol_log_data(&[__event_data.as_slice()]);
         }
     })
 }
@@ -6809,30 +6832,34 @@ pub fn emit_cpi(input: TokenStream) -> TokenStream {
             impl<'a> anchor_lang::ToCpiAccounts<'a> for __AnchorEventCpiAccounts<'a> {
                 fn to_instruction_accounts(
                     &self,
-                    ) -> anchor_lang::InstructionAccountBuffer<'a> {
+                    ) -> anchor_lang::Result<anchor_lang::InstructionAccountBuffer<'a>> {
                     let mut __accounts = anchor_lang::InstructionAccountBuffer::new();
-                    __accounts.push(
+                    __accounts.try_push(
                         anchor_lang::pinocchio::instruction::InstructionAccount::readonly_signer(
                             self.event_authority.address(),
                         ),
-                    );
-                    __accounts
+                    ).map_err(|_| anchor_lang::Error::InvalidArgument)?;
+                    Ok(__accounts)
                 }
 
                 fn to_cpi_handles(
                     &self,
-                ) -> anchor_lang::CpiHandleBuffer<'a> {
+                ) -> anchor_lang::Result<anchor_lang::CpiHandleBuffer<'a>> {
                     let mut __handles = anchor_lang::CpiHandleBuffer::new();
-                    __handles.push(self.event_authority);
                     __handles
+                        .try_push(self.event_authority)
+                        .map_err(|_| anchor_lang::Error::InvalidArgument)?;
+                    Ok(__handles)
                 }
 
                 fn optional_account_sentinel_flags(
                     &self,
-                ) -> anchor_lang::BoolBuffer {
+                ) -> anchor_lang::Result<anchor_lang::BoolBuffer> {
                     let mut __flags = anchor_lang::BoolBuffer::new();
-                    __flags.push(false);
                     __flags
+                        .try_push(false)
+                        .map_err(|_| anchor_lang::Error::InvalidArgument)?;
+                    Ok(__flags)
                 }
             }
 
