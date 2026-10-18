@@ -350,7 +350,7 @@ fn hash_pda_seeds(seeds: &[&[u8]], program_id: &Address) -> Result<Address, Prog
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::vec;
+    use alloc::vec;
 
     fn program_id() -> Address {
         Address::new_from_array([7; 32])

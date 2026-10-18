@@ -6396,20 +6396,24 @@ pub fn event(attr: TokenStream, item: TokenStream) -> TokenStream {
 
             impl anchor_lang::Event for #name {
                 fn try_data(&self) -> anchor_lang::Result<anchor_lang::InstructionDataBuffer> {
-                    let disc = <Self as anchor_lang::Discriminator>::DISCRIMINATOR;
-                    // 256-byte preallocation matches instruction-data
-                    // emission. Wincode has no `encoded_size()` yet, so this
-                    // is a best-guess that avoids a reallocation for typical
-                    // event shapes.
                     let mut buf = anchor_lang::InstructionDataBuffer::new();
-                    anchor_lang::try_extend_instruction_data(&mut buf, disc)?;
+                    self.try_data_into(&mut buf)?;
+                    Ok(buf)
+                }
+
+                fn try_data_into<const N: usize>(
+                    &self,
+                    buf: &mut anchor_lang::FixedVec<u8, N>,
+                ) -> anchor_lang::Result<()> {
+                    let disc = <Self as anchor_lang::Discriminator>::DISCRIMINATOR;
+                    buf.try_extend_from_slice(disc)
+                        .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
                     anchor_lang::wincode::config::serialize_into(
-                        &mut buf,
+                        buf,
                         self,
                         anchor_lang::BORSH_CONFIG,
                     )
-                        .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
-                    Ok(buf)
+                        .map_err(|_| anchor_lang::Error::InvalidInstructionData)
                 }
 
                 fn data(&self) -> anchor_lang::InstructionDataBuffer {
@@ -6560,20 +6564,30 @@ pub fn event(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                 impl anchor_lang::Event for #name {
                     fn try_data(&self) -> anchor_lang::Result<anchor_lang::InstructionDataBuffer> {
+                        let mut buf = anchor_lang::InstructionDataBuffer::new();
+                        self.try_data_into(&mut buf)?;
+                        Ok(buf)
+                    }
+
+                    fn try_data_into<const N: usize>(
+                        &self,
+                        buf: &mut anchor_lang::FixedVec<u8, N>,
+                    ) -> anchor_lang::Result<()> {
                         const SIZE: usize = ::core::mem::size_of::<#name>();
                         let disc = <Self as anchor_lang::Discriminator>::DISCRIMINATOR;
-                        let mut buf = anchor_lang::InstructionDataBuffer::new();
-                        anchor_lang::try_extend_instruction_data(&mut buf, disc)?;
+                        buf.try_extend_from_slice(disc)
+                            .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
                         let start = buf.len();
-                        anchor_lang::try_extend_instruction_data(&mut buf, &[0u8; SIZE])?;
+                        buf.try_extend_from_slice(&[0u8; SIZE])
+                            .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
                         unsafe {
                             ::core::ptr::copy_nonoverlapping(
                                 self as *const Self as *const u8,
-                                buf.as_mut_ptr().add(start),
+                                buf.as_mut_slice().as_mut_ptr().add(start),
                                 SIZE,
                             );
                         }
-                        Ok(buf)
+                        Ok(())
                     }
 
                     fn data(&self) -> anchor_lang::InstructionDataBuffer {
@@ -6824,10 +6838,14 @@ pub fn emit_cpi(input: TokenStream) -> TokenStream {
 
             let __event_authority =
                 anchor_lang::AnchorAccount::cpi_handle(&ctx.accounts.event_authority);
-            let __event_data = anchor_lang::Event::data(&#event_struct);
-            let mut __ix_data = anchor_lang::InstructionDataBuffer::new();
-            __ix_data.extend_from_slice(anchor_lang::event::EVENT_IX_TAG_LE);
-            __ix_data.extend_from_slice(&__event_data);
+            let mut __ix_data = anchor_lang::FixedVec::<
+                u8,
+                { anchor_lang::MAX_EVENT_CPI_DATA },
+            >::new();
+            __ix_data
+                .try_extend_from_slice(anchor_lang::event::EVENT_IX_TAG_LE)
+                .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
+            anchor_lang::Event::try_data_into(&#event_struct, &mut __ix_data)?;
 
             let __event_authority_bump = [ctx.bumps.event_authority];
             let __event_authority_seeds: &[&[u8]] =

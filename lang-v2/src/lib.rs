@@ -144,6 +144,9 @@ pub const MAX_ACCOUNT_METAS: usize = 64;
 #[doc(hidden)]
 pub const MAX_RUNTIME_ACCOUNT_METAS: usize = 16;
 pub const MAX_INSTRUCTION_DATA: usize = 1232;
+/// Maximum encoded event-CPI payload kept inline by the generated `emit_cpi!`
+/// path. Direct event serialization still uses `MAX_INSTRUCTION_DATA`.
+pub const MAX_EVENT_CPI_DATA: usize = 256 + 8;
 /// Maximum number of elements in an allocator-free collection emitted by
 /// generated on-chain IDL bindings.
 pub const MAX_IDL_SEQUENCE: usize = 256;

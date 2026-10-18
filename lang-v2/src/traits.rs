@@ -256,10 +256,8 @@ impl Drop for CpiBorrowGuard {
     }
 }
 
-pub(crate) fn enter_cpi<'a>(
-    handles: &[CpiHandle<'a>],
-) -> crate::FixedVec<CpiBorrowGuard, { crate::MAX_ACCOUNT_METAS }> {
-    let mut guards = crate::FixedVec::new();
+pub(crate) fn enter_cpi<'a>(handles: &[CpiHandle<'a>]) -> alloc::vec::Vec<CpiBorrowGuard> {
+    let mut guards = alloc::vec::Vec::new();
     for handle in handles {
         if let Some(guard) = handle.enter_cpi() {
             guards.push(guard);

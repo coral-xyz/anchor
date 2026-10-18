@@ -11,9 +11,6 @@ use {
     solana_program_error::{ProgramError, ProgramResult},
 };
 
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-use crate::InstructionAccountBuffer;
-
 pub use pinocchio::cpi::{set_return_data, MAX_RETURN_DATA};
 
 /// Get the return data from an invoked program.
@@ -377,38 +374,16 @@ fn instruction_account_matches_handle(
         && (!account.is_writable || handle.is_writable())
 }
 
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-type InstructionAccountStorage<'a> = InstructionAccountBuffer<'a>;
-
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 type InstructionAccountStorage<'a> = Vec<InstructionAccount<'a>>;
 
 pub(crate) fn instruction_accounts<'a, I: CpiInstruction + ?Sized>(
     instruction: &'a I,
 ) -> Result<InstructionAccountStorage<'a>, ProgramError> {
     let mut accounts = InstructionAccountStorage::new();
-    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
-    let mut result = Ok(());
     instruction.for_each_account(&mut |address, is_writable, is_signer| {
         let account = InstructionAccount::new(address, is_writable, is_signer);
-        #[cfg(any(target_os = "solana", target_arch = "bpf"))]
-        {
-            if result.is_err() {
-                return;
-            }
-            result = accounts
-                .try_push(account)
-                .map_err(|_| ProgramError::InvalidArgument);
-        }
-        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-        {
-            accounts.push(account);
-        }
+        accounts.push(account);
     });
-    #[cfg(any(target_os = "solana", target_arch = "bpf"))]
-    return result.map(|()| accounts);
-
-    #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
     Ok(accounts)
 }
 

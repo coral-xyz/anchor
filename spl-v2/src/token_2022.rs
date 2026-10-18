@@ -1,10 +1,13 @@
 //! Token-2022 CPI helpers and interface re-exports.
 
+extern crate alloc;
+
 pub(crate) use spl_token_2022_interface as spl_token_2022;
 use {
+    alloc::vec::Vec,
     crate::token_shared::multisig_signer_addresses,
     anchor_lang::{
-        require_eq, try_extend_instruction_data, CpiContext, CpiHandle, CpiHandleMut, FixedVec,
+        require_eq, try_extend_instruction_data, CpiContext, CpiHandle, CpiHandleMut,
         InstructionDataBuffer, ToCpiAccounts,
     },
     pinocchio::address::Address,
@@ -93,18 +96,10 @@ impl ExtensionType {
     }
 }
 
-const MAX_EXTENSION_TYPES: usize = 32;
-
 fn into_spl_extension_types(
     extension_types: &[ExtensionType],
-) -> Result<FixedVec<spl_token_2022::extension::ExtensionType, MAX_EXTENSION_TYPES>, ProgramError> {
-    let mut result = FixedVec::new();
-    for extension_type in extension_types {
-        result
-            .try_push(extension_type.into_spl())
-            .map_err(|_| ProgramError::InvalidArgument)?;
-    }
-    Ok(result)
+) -> Vec<spl_token_2022::extension::ExtensionType> {
+    extension_types.iter().map(|extension_type| extension_type.into_spl()).collect()
 }
 
 /// Default state for a Token-2022 account.
@@ -220,7 +215,7 @@ pub fn get_account_data_size<'a>(
     ctx: CpiContext<'a, GetAccountDataSize<'a>>,
     extension_types: &[ExtensionType],
 ) -> Result<u64, ProgramError> {
-    let extension_types = into_spl_extension_types(extension_types)?;
+    let extension_types = into_spl_extension_types(extension_types);
     let ix = spl_token_2022::instruction::get_account_data_size(
         ctx.program,
         ctx.accounts.mint.address(),
@@ -296,8 +291,8 @@ pub fn reallocate<'a>(
     ctx: CpiContext<'a, Reallocate<'a>>,
     extension_types: &[ExtensionType],
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
-    let extension_types = into_spl_extension_types(extension_types)?;
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
+    let extension_types = into_spl_extension_types(extension_types);
     let ix = spl_token_2022::instruction::reallocate(
         ctx.program,
         ctx.accounts.account.address(),
@@ -312,7 +307,7 @@ pub fn reallocate<'a>(
 pub fn withdraw_excess_lamports<'a>(
     ctx: CpiContext<'a, WithdrawExcessLamports<'a>>,
 ) -> Result<(), ProgramError> {
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
     let ix = spl_token_2022::instruction::withdraw_excess_lamports(
         ctx.program,
         ctx.accounts.source.address(),

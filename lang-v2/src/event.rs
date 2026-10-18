@@ -26,6 +26,20 @@ pub trait Event: Discriminator {
     /// Serialize the event: discriminator bytes followed by event data.
     fn data(&self) -> InstructionDataBuffer;
 
+    /// Serialize the event into a caller-provided bounded buffer.
+    ///
+    /// Generated events override this to avoid creating the full instruction
+    /// data buffer on the SBF stack when used with `emit_cpi!`.
+    fn try_data_into<const N: usize>(
+        &self,
+        buffer: &mut crate::FixedVec<u8, N>,
+    ) -> Result<(), solana_program_error::ProgramError> {
+        let data = self.try_data()?;
+        buffer
+            .try_extend_from_slice(data.as_slice())
+            .map_err(|_| solana_program_error::ProgramError::InvalidInstructionData)
+    }
+
     /// Fallible event serialization for bounded API buffers.
     fn try_data(&self) -> Result<InstructionDataBuffer, solana_program_error::ProgramError> {
         Ok(self.data())

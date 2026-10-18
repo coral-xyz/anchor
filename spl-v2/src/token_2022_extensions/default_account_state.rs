@@ -38,7 +38,7 @@ pub fn default_account_state_update<'a>(
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
-    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts)?;
+    let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
     let ix =
         spl_token_2022::extension::default_account_state::instruction::update_default_account_state(
             &program,

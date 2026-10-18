@@ -10,6 +10,8 @@
 //! pub vault: Account<TokenAccount>,
 //! ```
 
+extern crate alloc;
+
 #[cfg(feature = "guardrails")]
 use anchor_lang::require;
 use {
