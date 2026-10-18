@@ -41,7 +41,7 @@ impl IntoInstructionAccountMetas for Vec<AnchorAccountMeta> {
 impl IntoInstructionAccountMetas for AccountMetaBuffer {
     fn into_instruction_account_metas(self) -> Vec<AccountMeta> {
         self.iter()
-            .map(|meta: &AnchorAccountMeta| AccountMeta {
+            .map(|meta| AccountMeta {
                 pubkey: meta.pubkey,
                 is_signer: meta.is_signer,
                 is_writable: meta.is_writable,

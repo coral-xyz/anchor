@@ -4,10 +4,8 @@ use crate::Address;
 
 /// Metadata for one account in a V2 instruction.
 ///
-/// This is intentionally owned by `anchor-lang` rather than re-exported from
-/// `solana-instruction`. The SDK's `AccountMeta` is a host-side construction
-/// type backed by an allocation-heavy `Instruction`; exposing it here would
-/// make the V2 trait surface depend on `alloc`.
+/// This remains an Anchor-owned type on every target. Host-only instruction
+/// builders explicitly convert it to the SDK's `AccountMeta` at the boundary.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[repr(C)]
 pub struct AccountMeta {

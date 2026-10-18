@@ -147,11 +147,9 @@ pub const MAX_INSTRUCTION_DATA: usize = 1232;
 /// Maximum number of elements in an allocator-free collection emitted by
 /// generated on-chain IDL bindings.
 pub const MAX_IDL_SEQUENCE: usize = 256;
-/// Account-meta storage used by generated account builders. Host/client builds
-/// use the public transaction-sized capacity; on-chain builds use the smaller
-/// transient capacity until the follow-up stack work replaces these arrays
-/// with borrowed views. Keeping both forms allocator-free prevents a target
-/// alias from exposing `Vec` through rustdoc or generated APIs.
+/// Account-meta storage used by generated account builders. Both host and
+/// on-chain builds expose the bounded public API; host-only instruction
+/// builders convert this buffer into the SDK's owned `Vec` at the boundary.
 #[cfg(any(target_os = "solana", target_arch = "bpf"))]
 pub type AccountMetaBuffer = FixedVec<AccountMeta, MAX_RUNTIME_ACCOUNT_METAS>;
 #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
