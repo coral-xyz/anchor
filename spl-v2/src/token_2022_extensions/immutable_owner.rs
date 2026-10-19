@@ -19,5 +19,5 @@ pub fn immutable_owner_initialize<'a>(
         &program,
         ctx.accounts.token_account.address(),
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }

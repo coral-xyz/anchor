@@ -7,7 +7,7 @@
 
 extern crate alloc;
 
-pub(crate) use mpl_token_metadata;
+pub use mpl_token_metadata;
 
 use {
     anchor_lang::{
@@ -24,426 +24,6 @@ use {
 };
 
 pub const ID: Address = anchor_lang::address!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
-
-/// Maximum lengths enforced by the Metaplex Token Metadata program.
-pub const MAX_NAME_LENGTH: usize = 32;
-pub const MAX_SYMBOL_LENGTH: usize = 10;
-pub const MAX_URI_LENGTH: usize = 200;
-pub const MAX_CREATORS: usize = 5;
-
-/// A UTF-8 string with storage determined at compile time.
-///
-/// This is used by the public metadata account views instead of exposing the
-/// canonical Metaplex `String` fields. Values are validated when they cross
-/// the account boundary, so `as_str` is infallible.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct BoundedString<const N: usize> {
-    bytes: [u8; N],
-    len: u16,
-}
-
-impl<const N: usize> BoundedString<N> {
-    #[inline]
-    pub const fn new() -> Self {
-        Self {
-            bytes: [0; N],
-            len: 0,
-        }
-    }
-
-    #[inline]
-    pub fn try_from_str(value: &str) -> Result<Self> {
-        if value.len() > N || value.len() > u16::MAX as usize {
-            return Err(ProgramError::InvalidInstructionData);
-        }
-
-        let mut result = Self::new();
-        result.bytes[..value.len()].copy_from_slice(value.as_bytes());
-        result.len = value.len() as u16;
-        Ok(result)
-    }
-
-    #[inline]
-    pub const fn len(&self) -> usize {
-        self.len as usize
-    }
-
-    #[inline]
-    pub const fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-
-    #[inline]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.bytes[..self.len()]
-    }
-
-    #[inline]
-    pub fn as_str(&self) -> &str {
-        // SAFETY: the only constructor validates UTF-8 and the backing bytes
-        // are private, so the invariant cannot be broken by callers.
-        unsafe { core::str::from_utf8_unchecked(self.as_bytes()) }
-    }
-}
-
-impl<const N: usize> Default for BoundedString<N> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-pub type MetadataName = BoundedString<MAX_NAME_LENGTH>;
-pub type MetadataSymbol = BoundedString<MAX_SYMBOL_LENGTH>;
-pub type MetadataUri = BoundedString<MAX_URI_LENGTH>;
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Key {
-    Uninitialized,
-    EditionV1,
-    MasterEditionV1,
-    ReservationListV1,
-    MetadataV1,
-    ReservationListV2,
-    MasterEditionV2,
-    EditionMarker,
-    UseAuthorityRecord,
-    CollectionAuthorityRecord,
-    TokenOwnedEscrow,
-    TokenRecord,
-    MetadataDelegate,
-    EditionMarkerV2,
-    HolderDelegate,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Creator {
-    pub address: Pubkey,
-    pub verified: bool,
-    pub share: u8,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Collection {
-    pub verified: bool,
-    pub key: Pubkey,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum UseMethod {
-    Burn,
-    Multiple,
-    Single,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Uses {
-    pub use_method: UseMethod,
-    pub remaining: u64,
-    pub total: u64,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum CollectionDetails {
-    V1 { size: u64 },
-    V2 { padding: [u8; 8] },
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ProgrammableConfig {
-    V1 { rule_set: Option<Pubkey> },
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TokenStandard {
-    NonFungible,
-    FungibleAsset,
-    Fungible,
-    NonFungibleEdition,
-    ProgrammableNonFungible,
-    ProgrammableNonFungibleEdition,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct DataV2<'a> {
-    pub name: &'a str,
-    pub symbol: &'a str,
-    pub uri: &'a str,
-    pub seller_fee_basis_points: u16,
-    pub creators: Option<&'a [Creator]>,
-    pub collection: Option<Collection>,
-    pub uses: Option<Uses>,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TokenState {
-    Unlocked,
-    Locked,
-    Listed,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TokenDelegateRole {
-    Sale,
-    Transfer,
-    Utility,
-    Staking,
-    Standard,
-    LockedTransfer,
-    Migration,
-}
-
-pub type CreatorBuffer = anchor_lang::FixedVec<Creator, MAX_CREATORS>;
-
-/// Allocator-neutral view of a Metaplex metadata account.
-#[derive(Clone, Debug)]
-pub struct MetadataData {
-    pub key: Key,
-    pub update_authority: Pubkey,
-    pub mint: Pubkey,
-    pub name: MetadataName,
-    pub symbol: MetadataSymbol,
-    pub uri: MetadataUri,
-    pub seller_fee_basis_points: u16,
-    pub creators: Option<CreatorBuffer>,
-    pub primary_sale_happened: bool,
-    pub is_mutable: bool,
-    pub edition_nonce: Option<u8>,
-    pub token_standard: Option<TokenStandard>,
-    pub collection: Option<Collection>,
-    pub uses: Option<Uses>,
-    pub collection_details: Option<CollectionDetails>,
-    pub programmable_config: Option<ProgrammableConfig>,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct MasterEditionData {
-    pub key: Key,
-    pub supply: u64,
-    pub max_supply: Option<u64>,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TokenRecordData {
-    pub key: Key,
-    pub bump: u8,
-    pub state: TokenState,
-    pub rule_set_revision: Option<u64>,
-    pub delegate: Option<Pubkey>,
-    pub delegate_role: Option<TokenDelegateRole>,
-    pub locked_transfer: Option<Pubkey>,
-}
-
-impl<'a> DataV2<'a> {
-    fn into_mpl(self) -> mpl_token_metadata::types::DataV2 {
-        mpl_token_metadata::types::DataV2 {
-            name: self.name.into(),
-            symbol: self.symbol.into(),
-            uri: self.uri.into(),
-            seller_fee_basis_points: self.seller_fee_basis_points,
-            creators: self.creators.map(|creators| {
-                creators
-                    .iter()
-                    .map(|creator| mpl_token_metadata::types::Creator {
-                        address: creator.address,
-                        verified: creator.verified,
-                        share: creator.share,
-                    })
-                    .collect()
-            }),
-            collection: self
-                .collection
-                .map(|collection| mpl_token_metadata::types::Collection {
-                    verified: collection.verified,
-                    key: collection.key,
-                }),
-            uses: self.uses.map(|uses| mpl_token_metadata::types::Uses {
-                use_method: match uses.use_method {
-                    UseMethod::Burn => mpl_token_metadata::types::UseMethod::Burn,
-                    UseMethod::Multiple => mpl_token_metadata::types::UseMethod::Multiple,
-                    UseMethod::Single => mpl_token_metadata::types::UseMethod::Single,
-                },
-                remaining: uses.remaining,
-                total: uses.total,
-            }),
-        }
-    }
-}
-
-fn collection_details_to_mpl(
-    details: CollectionDetails,
-) -> mpl_token_metadata::types::CollectionDetails {
-    match details {
-        CollectionDetails::V1 { size } => mpl_token_metadata::types::CollectionDetails::V1 { size },
-        CollectionDetails::V2 { padding } => {
-            mpl_token_metadata::types::CollectionDetails::V2 { padding }
-        }
-    }
-}
-
-impl MetadataData {
-    fn from_mpl(data: mpl_token_metadata::accounts::Metadata) -> Result<Self> {
-        let creators = data
-            .creators
-            .map(|values| {
-                let mut creators = CreatorBuffer::new();
-                for creator in values {
-                    creators
-                        .try_push(Creator {
-                            address: creator.address,
-                            verified: creator.verified,
-                            share: creator.share,
-                        })
-                        .map_err(|_| ProgramError::InvalidAccountData)?;
-                }
-                Ok::<CreatorBuffer, ProgramError>(creators)
-            })
-            .transpose()?;
-
-        Ok(Self {
-            key: key_from_mpl(data.key),
-            update_authority: data.update_authority,
-            mint: data.mint,
-            name: MetadataName::try_from_str(&data.name)
-                .map_err(|_| ProgramError::InvalidAccountData)?,
-            symbol: MetadataSymbol::try_from_str(&data.symbol)
-                .map_err(|_| ProgramError::InvalidAccountData)?,
-            uri: MetadataUri::try_from_str(&data.uri)
-                .map_err(|_| ProgramError::InvalidAccountData)?,
-            seller_fee_basis_points: data.seller_fee_basis_points,
-            creators,
-            primary_sale_happened: data.primary_sale_happened,
-            is_mutable: data.is_mutable,
-            edition_nonce: data.edition_nonce,
-            token_standard: data.token_standard.map(token_standard_from_mpl),
-            collection: data.collection.map(|collection| Collection {
-                verified: collection.verified,
-                key: collection.key,
-            }),
-            uses: data.uses.map(uses_from_mpl),
-            collection_details: data.collection_details.map(collection_details_from_mpl),
-            programmable_config: data.programmable_config.map(programmable_config_from_mpl),
-        })
-    }
-}
-
-impl MasterEditionData {
-    fn from_mpl(data: mpl_token_metadata::accounts::MasterEdition) -> Self {
-        Self {
-            key: key_from_mpl(data.key),
-            supply: data.supply,
-            max_supply: data.max_supply,
-        }
-    }
-}
-
-impl TokenRecordData {
-    fn from_mpl(data: mpl_token_metadata::accounts::TokenRecord) -> Self {
-        Self {
-            key: key_from_mpl(data.key),
-            bump: data.bump,
-            state: token_state_from_mpl(data.state),
-            rule_set_revision: data.rule_set_revision,
-            delegate: data.delegate,
-            delegate_role: data.delegate_role.map(token_delegate_role_from_mpl),
-            locked_transfer: data.locked_transfer,
-        }
-    }
-}
-
-fn key_from_mpl(key: mpl_token_metadata::types::Key) -> Key {
-    match key {
-        mpl_token_metadata::types::Key::Uninitialized => Key::Uninitialized,
-        mpl_token_metadata::types::Key::EditionV1 => Key::EditionV1,
-        mpl_token_metadata::types::Key::MasterEditionV1 => Key::MasterEditionV1,
-        mpl_token_metadata::types::Key::ReservationListV1 => Key::ReservationListV1,
-        mpl_token_metadata::types::Key::MetadataV1 => Key::MetadataV1,
-        mpl_token_metadata::types::Key::ReservationListV2 => Key::ReservationListV2,
-        mpl_token_metadata::types::Key::MasterEditionV2 => Key::MasterEditionV2,
-        mpl_token_metadata::types::Key::EditionMarker => Key::EditionMarker,
-        mpl_token_metadata::types::Key::UseAuthorityRecord => Key::UseAuthorityRecord,
-        mpl_token_metadata::types::Key::CollectionAuthorityRecord => Key::CollectionAuthorityRecord,
-        mpl_token_metadata::types::Key::TokenOwnedEscrow => Key::TokenOwnedEscrow,
-        mpl_token_metadata::types::Key::TokenRecord => Key::TokenRecord,
-        mpl_token_metadata::types::Key::MetadataDelegate => Key::MetadataDelegate,
-        mpl_token_metadata::types::Key::EditionMarkerV2 => Key::EditionMarkerV2,
-        mpl_token_metadata::types::Key::HolderDelegate => Key::HolderDelegate,
-    }
-}
-
-fn token_standard_from_mpl(value: mpl_token_metadata::types::TokenStandard) -> TokenStandard {
-    match value {
-        mpl_token_metadata::types::TokenStandard::NonFungible => TokenStandard::NonFungible,
-        mpl_token_metadata::types::TokenStandard::FungibleAsset => TokenStandard::FungibleAsset,
-        mpl_token_metadata::types::TokenStandard::Fungible => TokenStandard::Fungible,
-        mpl_token_metadata::types::TokenStandard::NonFungibleEdition => {
-            TokenStandard::NonFungibleEdition
-        }
-        mpl_token_metadata::types::TokenStandard::ProgrammableNonFungible => {
-            TokenStandard::ProgrammableNonFungible
-        }
-        mpl_token_metadata::types::TokenStandard::ProgrammableNonFungibleEdition => {
-            TokenStandard::ProgrammableNonFungibleEdition
-        }
-    }
-}
-
-fn uses_from_mpl(value: mpl_token_metadata::types::Uses) -> Uses {
-    Uses {
-        use_method: match value.use_method {
-            mpl_token_metadata::types::UseMethod::Burn => UseMethod::Burn,
-            mpl_token_metadata::types::UseMethod::Multiple => UseMethod::Multiple,
-            mpl_token_metadata::types::UseMethod::Single => UseMethod::Single,
-        },
-        remaining: value.remaining,
-        total: value.total,
-    }
-}
-
-fn collection_details_from_mpl(
-    value: mpl_token_metadata::types::CollectionDetails,
-) -> CollectionDetails {
-    match value {
-        mpl_token_metadata::types::CollectionDetails::V1 { size } => CollectionDetails::V1 { size },
-        mpl_token_metadata::types::CollectionDetails::V2 { padding } => {
-            CollectionDetails::V2 { padding }
-        }
-    }
-}
-
-fn programmable_config_from_mpl(
-    value: mpl_token_metadata::types::ProgrammableConfig,
-) -> ProgrammableConfig {
-    match value {
-        mpl_token_metadata::types::ProgrammableConfig::V1 { rule_set } => {
-            ProgrammableConfig::V1 { rule_set }
-        }
-    }
-}
-
-fn token_state_from_mpl(value: mpl_token_metadata::types::TokenState) -> TokenState {
-    match value {
-        mpl_token_metadata::types::TokenState::Unlocked => TokenState::Unlocked,
-        mpl_token_metadata::types::TokenState::Locked => TokenState::Locked,
-        mpl_token_metadata::types::TokenState::Listed => TokenState::Listed,
-    }
-}
-
-fn token_delegate_role_from_mpl(
-    value: mpl_token_metadata::types::TokenDelegateRole,
-) -> TokenDelegateRole {
-    match value {
-        mpl_token_metadata::types::TokenDelegateRole::Sale => TokenDelegateRole::Sale,
-        mpl_token_metadata::types::TokenDelegateRole::Transfer => TokenDelegateRole::Transfer,
-        mpl_token_metadata::types::TokenDelegateRole::Utility => TokenDelegateRole::Utility,
-        mpl_token_metadata::types::TokenDelegateRole::Staking => TokenDelegateRole::Staking,
-        mpl_token_metadata::types::TokenDelegateRole::Standard => TokenDelegateRole::Standard,
-        mpl_token_metadata::types::TokenDelegateRole::LockedTransfer => {
-            TokenDelegateRole::LockedTransfer
-        }
-        mpl_token_metadata::types::TokenDelegateRole::Migration => TokenDelegateRole::Migration,
-    }
-}
-
 pub fn approve_collection_authority<'info>(
     ctx: CpiContext<'info, ApproveCollectionAuthority<'info>>,
 ) -> Result<()> {
@@ -458,7 +38,7 @@ pub fn approve_collection_authority<'info>(
         update_authority: *ctx.accounts.update_authority.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn bubblegum_set_collection_size<'info>(
@@ -478,7 +58,7 @@ pub fn bubblegum_set_collection_size<'info>(
             set_collection_size_args: mpl_token_metadata::types::SetCollectionSizeArgs { size },
         },
     );
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn burn_edition_nft<'info>(ctx: CpiContext<'info, BurnEditionNft<'info>>) -> Result<()> {
@@ -495,7 +75,7 @@ pub fn burn_edition_nft<'info>(ctx: CpiContext<'info, BurnEditionNft<'info>>) ->
         spl_token_program: *ctx.accounts.spl_token.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 /// Burn an NFT by closing its token, metadata and edition accounts.
@@ -527,14 +107,14 @@ pub fn burn_nft<'info>(
         token_account: *ctx.accounts.token.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn create_metadata_accounts_v3<'info>(
     ctx: CpiContext<'info, CreateMetadataAccountsV3<'info>>,
-    data: DataV2<'_>,
+    data: mpl_token_metadata::types::DataV2,
     is_mutable: bool,
-    collection_details: Option<CollectionDetails>,
+    collection_details: Option<mpl_token_metadata::types::CollectionDetails>,
 ) -> Result<()> {
     let ix = mpl_token_metadata::instructions::CreateMetadataAccountV3 {
         metadata: *ctx.accounts.metadata.address(),
@@ -550,18 +130,18 @@ pub fn create_metadata_accounts_v3<'info>(
     }
     .instruction(
         mpl_token_metadata::instructions::CreateMetadataAccountV3InstructionArgs {
-            collection_details: collection_details.map(collection_details_to_mpl),
-            data: data.into_mpl(),
+            collection_details,
+            data,
             is_mutable,
         },
     );
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn update_metadata_accounts_v2<'info>(
     ctx: CpiContext<'info, UpdateMetadataAccountsV2<'info>>,
     new_update_authority: Option<Pubkey>,
-    data: Option<DataV2<'_>>,
+    data: Option<mpl_token_metadata::types::DataV2>,
     primary_sale_happened: Option<bool>,
     is_mutable: Option<bool>,
 ) -> Result<()> {
@@ -572,12 +152,12 @@ pub fn update_metadata_accounts_v2<'info>(
     .instruction(
         mpl_token_metadata::instructions::UpdateMetadataAccountV2InstructionArgs {
             new_update_authority,
-            data: data.map(DataV2::into_mpl),
+            data,
             primary_sale_happened,
             is_mutable,
         },
     );
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn create_master_edition_v3<'info>(
@@ -598,7 +178,7 @@ pub fn create_master_edition_v3<'info>(
     .instruction(
         mpl_token_metadata::instructions::CreateMasterEditionV3InstructionArgs { max_supply },
     );
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn mint_new_edition_from_master_edition_via_token<'info>(
@@ -627,14 +207,14 @@ pub fn mint_new_edition_from_master_edition_via_token<'info>(
                 mpl_token_metadata::types::MintNewEditionFromMasterEditionViaTokenArgs { edition },
         },
     );
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn revoke_collection_authority<'info>(
     ctx: CpiContext<'info, RevokeCollectionAuthority<'info>>,
 ) -> Result<()> {
     let ix = revoke_collection_authority_ix(&ctx.accounts);
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn set_collection_size<'info>(
@@ -643,7 +223,7 @@ pub fn set_collection_size<'info>(
     size: u64,
 ) -> Result<()> {
     let ix = set_collection_size_ix(&ctx.accounts, collection_authority_record, size);
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 fn revoke_collection_authority_ix(
@@ -695,7 +275,7 @@ pub fn verify_collection<'info>(
         payer: *ctx.accounts.payer.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn verify_sized_collection_item<'info>(
@@ -712,7 +292,7 @@ pub fn verify_sized_collection_item<'info>(
         payer: *ctx.accounts.payer.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn set_and_verify_collection<'info>(
@@ -730,7 +310,7 @@ pub fn set_and_verify_collection<'info>(
         update_authority: *ctx.accounts.update_authority.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn set_and_verify_sized_collection_item<'info>(
@@ -748,7 +328,7 @@ pub fn set_and_verify_sized_collection_item<'info>(
         update_authority: *ctx.accounts.update_authority.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn freeze_delegated_account<'info>(
@@ -762,7 +342,7 @@ pub fn freeze_delegated_account<'info>(
         token_program: *ctx.accounts.token_program.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn thaw_delegated_account<'info>(
@@ -776,7 +356,7 @@ pub fn thaw_delegated_account<'info>(
         token_program: *ctx.accounts.token_program.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn update_primary_sale_happened_via_token<'info>(
@@ -788,7 +368,7 @@ pub fn update_primary_sale_happened_via_token<'info>(
         token: *ctx.accounts.token.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn set_token_standard<'info>(
@@ -802,7 +382,7 @@ pub fn set_token_standard<'info>(
         update_authority: *ctx.accounts.update_authority.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn sign_metadata<'info>(ctx: CpiContext<'info, SignMetadata<'info>>) -> Result<()> {
@@ -811,7 +391,7 @@ pub fn sign_metadata<'info>(ctx: CpiContext<'info, SignMetadata<'info>>) -> Resu
         metadata: *ctx.accounts.metadata.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn remove_creator_verification<'info>(
@@ -822,7 +402,7 @@ pub fn remove_creator_verification<'info>(
         metadata: *ctx.accounts.metadata.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn utilize<'info>(
@@ -845,7 +425,7 @@ pub fn utilize<'info>(
         use_authority_record,
     }
     .instruction(mpl_token_metadata::instructions::UtilizeInstructionArgs { number_of_uses });
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn unverify_collection<'info>(
@@ -864,7 +444,7 @@ pub fn unverify_collection<'info>(
         metadata: *ctx.accounts.metadata.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn unverify_sized_collection_item<'info>(
@@ -884,7 +464,7 @@ pub fn unverify_sized_collection_item<'info>(
         payer: *ctx.accounts.payer.address(),
     }
     .instruction();
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 #[derive(ToCpiAccounts)]
@@ -1147,10 +727,10 @@ pub struct UnverifySizedCollectionItem<'info> {
     pub collection_master_edition_account: CpiHandle<'info>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MetadataAccount {
     view: Option<AccountView>,
-    data: MetadataData,
+    data: mpl_token_metadata::accounts::Metadata,
 }
 
 impl MetadataAccount {
@@ -1229,7 +809,7 @@ impl MetadataAccount {
 
 impl AccountDeserialize for MetadataAccount {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
-        let data = MetadataData::from_mpl(Self::parse(buf)?)?;
+        let data = Self::parse(buf)?;
         Ok(Self { view: None, data })
     }
 
@@ -1239,12 +819,12 @@ impl AccountDeserialize for MetadataAccount {
 }
 
 impl AnchorAccount for MetadataAccount {
-    type Data = MetadataData;
+    type Data = mpl_token_metadata::accounts::Metadata;
 
     fn load(view: AccountView) -> Result<Self> {
         require!(view.owned_by(&ID), ProgramError::IllegalOwner);
         let data_ref = view.try_borrow()?;
-        let data = MetadataData::from_mpl(Self::parse(&mut &data_ref[..])?)?;
+        let data = Self::parse(&mut &data_ref[..])?;
         drop(data_ref);
         Ok(Self {
             view: Some(view),
@@ -1260,7 +840,7 @@ impl AnchorAccount for MetadataAccount {
 }
 
 impl Deref for MetadataAccount {
-    type Target = MetadataData;
+    type Target = mpl_token_metadata::accounts::Metadata;
 
     fn deref(&self) -> &Self::Target {
         &self.data
@@ -1272,7 +852,7 @@ impl IdlAccountType for MetadataAccount {}
 #[derive(Clone, Debug, PartialEq)]
 pub struct MasterEditionAccount {
     view: Option<AccountView>,
-    data: MasterEditionData,
+    data: mpl_token_metadata::accounts::MasterEdition,
 }
 
 impl MasterEditionAccount {
@@ -1289,7 +869,7 @@ impl MasterEditionAccount {
 
 impl AccountDeserialize for MasterEditionAccount {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
-        let data = MasterEditionData::from_mpl(Self::parse(buf)?);
+        let data = Self::parse(buf)?;
         Ok(Self { view: None, data })
     }
 
@@ -1299,12 +879,12 @@ impl AccountDeserialize for MasterEditionAccount {
 }
 
 impl AnchorAccount for MasterEditionAccount {
-    type Data = MasterEditionData;
+    type Data = mpl_token_metadata::accounts::MasterEdition;
 
     fn load(view: AccountView) -> Result<Self> {
         require!(view.owned_by(&ID), ProgramError::IllegalOwner);
         let data_ref = view.try_borrow()?;
-        let data = MasterEditionData::from_mpl(Self::parse(&mut &data_ref[..])?);
+        let data = Self::parse(&mut &data_ref[..])?;
         drop(data_ref);
         Ok(Self {
             view: Some(view),
@@ -1320,7 +900,7 @@ impl AnchorAccount for MasterEditionAccount {
 }
 
 impl Deref for MasterEditionAccount {
-    type Target = MasterEditionData;
+    type Target = mpl_token_metadata::accounts::MasterEdition;
 
     fn deref(&self) -> &Self::Target {
         &self.data
@@ -1332,7 +912,7 @@ impl IdlAccountType for MasterEditionAccount {}
 #[derive(Clone, Debug, PartialEq)]
 pub struct TokenRecordAccount {
     view: Option<AccountView>,
-    data: TokenRecordData,
+    data: mpl_token_metadata::accounts::TokenRecord,
 }
 
 impl TokenRecordAccount {
@@ -1407,10 +987,7 @@ impl AccountDeserialize for TokenRecordAccount {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
         let (data, consumed) = Self::parse_prefix(buf)?;
         *buf = &buf[consumed..];
-        Ok(Self {
-            view: None,
-            data: TokenRecordData::from_mpl(data),
-        })
+        Ok(Self { view: None, data })
     }
 
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
@@ -1419,7 +996,7 @@ impl AccountDeserialize for TokenRecordAccount {
 }
 
 impl AnchorAccount for TokenRecordAccount {
-    type Data = TokenRecordData;
+    type Data = mpl_token_metadata::accounts::TokenRecord;
 
     fn load(view: AccountView) -> Result<Self> {
         require!(view.owned_by(&ID), ProgramError::IllegalOwner);
@@ -1428,7 +1005,7 @@ impl AnchorAccount for TokenRecordAccount {
         drop(data_ref);
         Ok(Self {
             view: Some(view),
-            data: TokenRecordData::from_mpl(data),
+            data,
         })
     }
 
@@ -1440,7 +1017,7 @@ impl AnchorAccount for TokenRecordAccount {
 }
 
 impl Deref for TokenRecordAccount {
-    type Target = TokenRecordData;
+    type Target = mpl_token_metadata::accounts::TokenRecord;
 
     fn deref(&self) -> &Self::Target {
         &self.data
@@ -1502,7 +1079,7 @@ mod tests {
 
         let metas = accounts
             .to_instruction_accounts()
-            .expect("metadata CPI account metas should fit");
+            .expect("metadata CPI accounts should fit");
         assert!(metas[0].is_writable);
         assert!(!metas[1].is_writable);
         assert!(metas[2].is_writable);
@@ -1538,7 +1115,7 @@ mod tests {
 
         let metas = accounts
             .to_instruction_accounts()
-            .expect("metadata CPI account metas should fit");
+            .expect("metadata CPI accounts should fit");
         assert!(metas[0].is_writable);
         assert!(!metas[1].is_writable);
         assert!(metas[1].is_signer);

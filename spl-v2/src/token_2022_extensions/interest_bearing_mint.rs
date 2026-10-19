@@ -31,7 +31,7 @@ pub fn interest_bearing_mint_initialize<'a>(
         rate_authority.copied(),
         rate,
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn interest_bearing_mint_update_rate<'a>(
@@ -48,5 +48,5 @@ pub fn interest_bearing_mint_update_rate<'a>(
         &signer_addresses,
         rate,
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }

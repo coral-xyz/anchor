@@ -31,7 +31,7 @@ pub fn metadata_pointer_initialize<'a>(
         authority.copied(),
         metadata_address.copied(),
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn metadata_pointer_update<'a>(
@@ -48,5 +48,5 @@ pub fn metadata_pointer_update<'a>(
         &signer_addresses,
         metadata_address.copied(),
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }

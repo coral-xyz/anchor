@@ -69,7 +69,7 @@ pub fn transfer_fee_initialize<'a>(
         transfer_fee_basis_points,
         maximum_fee,
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn transfer_fee_set<'a>(
@@ -88,7 +88,7 @@ pub fn transfer_fee_set<'a>(
         transfer_fee_basis_points,
         maximum_fee,
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn transfer_checked_with_fee<'a>(
@@ -111,12 +111,12 @@ pub fn transfer_checked_with_fee<'a>(
         decimals,
         fee,
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn harvest_withheld_tokens_to_mint<'a>(
     ctx: CpiContext<'a, HarvestWithheldTokensToMint<'a>>,
-    sources: &[CpiHandleMut<'a>],
+    sources: Vec<CpiHandleMut<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
@@ -127,13 +127,18 @@ pub fn harvest_withheld_tokens_to_mint<'a>(
         ctx.accounts.mint.address(),
         &source_refs,
     )?;
-    let mut remaining_accounts = ctx.remaining_accounts.clone();
-    for source in sources.iter().copied() {
+    let mut remaining_accounts = anchor_lang::CpiHandleBuffer::new();
+    for source in sources {
         remaining_accounts
             .try_push(source.into())
             .map_err(|_| ProgramError::InvalidArgument)?;
     }
-    crate::token_shared::invoke_cpi(&ctx.with_remaining_accounts(remaining_accounts), ix)
+    for account in &ctx.remaining_accounts {
+        remaining_accounts
+            .try_push(*account)
+            .map_err(|_| ProgramError::InvalidArgument)?;
+    }
+    ctx.with_remaining_accounts(remaining_accounts).invoke_ix(ix)
 }
 
 pub fn withdraw_withheld_tokens_from_mint<'a>(
@@ -150,12 +155,12 @@ pub fn withdraw_withheld_tokens_from_mint<'a>(
             ctx.accounts.authority.address(),
             &signer_addresses,
         )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn withdraw_withheld_tokens_from_accounts<'a>(
     ctx: CpiContext<'a, WithdrawWithheldTokensFromAccounts<'a>>,
-    sources: &[CpiHandleMut<'a>],
+    sources: Vec<CpiHandleMut<'a>>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
@@ -172,10 +177,10 @@ pub fn withdraw_withheld_tokens_from_accounts<'a>(
             &source_refs,
         )?;
     let mut remaining_accounts = ctx.remaining_accounts.clone();
-    for source in sources.iter().copied() {
+    for source in sources {
         remaining_accounts
             .try_push(CpiHandle::from(source))
             .map_err(|_| ProgramError::InvalidArgument)?;
     }
-    crate::token_shared::invoke_cpi(&ctx.with_remaining_accounts(remaining_accounts), ix)
+    ctx.with_remaining_accounts(remaining_accounts).invoke_ix(ix)
 }

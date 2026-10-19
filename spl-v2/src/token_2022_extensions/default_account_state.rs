@@ -19,7 +19,7 @@ pub struct DefaultAccountStateUpdate<'a> {
 
 pub fn default_account_state_initialize<'a>(
     ctx: CpiContext<'a, DefaultAccountStateInitialize<'a>>,
-    state: &crate::token_2022::AccountState,
+    state: &spl_token_2022::state::AccountState,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
@@ -27,14 +27,14 @@ pub fn default_account_state_initialize<'a>(
         spl_token_2022::extension::default_account_state::instruction::initialize_default_account_state(
             &program,
             ctx.accounts.mint.address(),
-            &(*state).into(),
+            state,
         )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn default_account_state_update<'a>(
     ctx: CpiContext<'a, DefaultAccountStateUpdate<'a>>,
-    state: &crate::token_2022::AccountState,
+    state: &spl_token_2022::state::AccountState,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
@@ -45,7 +45,7 @@ pub fn default_account_state_update<'a>(
             ctx.accounts.mint.address(),
             ctx.accounts.freeze_authority.address(),
             &signer_addresses,
-            &(*state).into(),
+            state,
         )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }

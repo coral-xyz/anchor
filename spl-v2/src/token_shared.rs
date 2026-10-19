@@ -10,75 +10,17 @@ extern crate alloc;
 use anchor_lang::{require, Id};
 use {
     alloc::vec::Vec,
-    anchor_lang::{
-        CpiContext, CpiHandle, CpiHandleMut, CpiInstruction, ToCpiAccounts,
-    },
+    anchor_lang::{CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
     pinocchio::address::Address,
     solana_program_error::ProgramError,
     spl_token_2022_interface as spl_token_2022,
 };
-
-/// Authority selected by a `SetAuthority` CPI.
-///
-/// This is shared by the Token and Token-2022 facades so neither public API
-/// exposes the canonical SPL instruction enum.
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AuthorityType {
-    MintTokens,
-    FreezeAccount,
-    AccountOwner,
-    CloseAccount,
-}
-
-impl AuthorityType {
-    #[inline]
-    fn into_spl(self) -> spl_token_2022::instruction::AuthorityType {
-        match self {
-            Self::MintTokens => spl_token_2022::instruction::AuthorityType::MintTokens,
-            Self::FreezeAccount => spl_token_2022::instruction::AuthorityType::FreezeAccount,
-            Self::AccountOwner => spl_token_2022::instruction::AuthorityType::AccountOwner,
-            Self::CloseAccount => spl_token_2022::instruction::AuthorityType::CloseAccount,
-        }
-    }
-}
 
 /// SPL Token encodes a multisig authority by marking the authority account
 /// non-signer and appending each member signer to the instruction. Token CPI
 /// callers provide those member handles through `remaining_accounts`.
 pub(crate) fn multisig_signer_addresses<'a>(accounts: &[CpiHandle<'a>]) -> Vec<&'a Address> {
     accounts.iter().map(CpiHandle::address).collect()
-}
-
-/// Adapter for the canonical SPL builders until they are migrated to
-/// Pinocchio instruction views. Keeping the adapter local avoids exposing the
-/// allocator-backed instruction type through Anchor's CPI API.
-struct CanonicalInstruction<'a>(&'a solana_instruction::Instruction);
-
-impl CpiInstruction for CanonicalInstruction<'_> {
-    #[inline]
-    fn program_id(&self) -> &Address {
-        &self.0.program_id
-    }
-
-    #[inline]
-    fn data(&self) -> &[u8] {
-        &self.0.data
-    }
-
-    #[inline]
-    fn for_each_account<'a>(&'a self, visit: &mut dyn FnMut(&'a Address, bool, bool)) {
-        for account in &self.0.accounts {
-            visit(&account.pubkey, account.is_writable, account.is_signer);
-        }
-    }
-}
-
-pub(crate) fn invoke_cpi<'a, T: ToCpiAccounts<'a>>(
-    ctx: &CpiContext<'a, T>,
-    ix: solana_instruction::Instruction,
-) -> Result<(), ProgramError> {
-    ctx.invoke_ix(CanonicalInstruction(&ix))
 }
 
 #[cfg(feature = "guardrails")]
@@ -253,7 +195,7 @@ pub fn initialize_account<'a>(
         ctx.accounts.mint.address(),
         ctx.accounts.authority.address(),
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn initialize_account3<'a>(
@@ -265,7 +207,7 @@ pub fn initialize_account3<'a>(
         ctx.accounts.mint.address(),
         ctx.accounts.authority.address(),
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn initialize_mint<'a>(
@@ -281,7 +223,7 @@ pub fn initialize_mint<'a>(
         freeze_authority,
         decimals,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn initialize_mint2<'a>(
@@ -297,7 +239,7 @@ pub fn initialize_mint2<'a>(
         freeze_authority,
         decimals,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn transfer<'a>(ctx: CpiContext<'a, Transfer<'a>>, amount: u64) -> Result<(), ProgramError> {
@@ -311,7 +253,7 @@ pub fn transfer<'a>(ctx: CpiContext<'a, Transfer<'a>>, amount: u64) -> Result<()
         &signer_addresses,
         amount,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn transfer_checked<'a>(
@@ -330,7 +272,7 @@ pub fn transfer_checked<'a>(
         amount,
         decimals,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn mint_to<'a>(ctx: CpiContext<'a, MintTo<'a>>, amount: u64) -> Result<(), ProgramError> {
@@ -343,7 +285,7 @@ pub fn mint_to<'a>(ctx: CpiContext<'a, MintTo<'a>>, amount: u64) -> Result<(), P
         &signer_addresses,
         amount,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn mint_to_checked<'a>(
@@ -361,7 +303,7 @@ pub fn mint_to_checked<'a>(
         amount,
         decimals,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn burn<'a>(ctx: CpiContext<'a, Burn<'a>>, amount: u64) -> Result<(), ProgramError> {
@@ -374,7 +316,7 @@ pub fn burn<'a>(ctx: CpiContext<'a, Burn<'a>>, amount: u64) -> Result<(), Progra
         &signer_addresses,
         amount,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn burn_checked<'a>(
@@ -392,7 +334,7 @@ pub fn burn_checked<'a>(
         amount,
         decimals,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn approve<'a>(ctx: CpiContext<'a, Approve<'a>>, amount: u64) -> Result<(), ProgramError> {
@@ -405,7 +347,7 @@ pub fn approve<'a>(ctx: CpiContext<'a, Approve<'a>>, amount: u64) -> Result<(), 
         &signer_addresses,
         amount,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn approve_checked<'a>(
@@ -424,7 +366,7 @@ pub fn approve_checked<'a>(
         amount,
         decimals,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn revoke<'a>(ctx: CpiContext<'a, Revoke<'a>>) -> Result<(), ProgramError> {
@@ -435,12 +377,12 @@ pub fn revoke<'a>(ctx: CpiContext<'a, Revoke<'a>>) -> Result<(), ProgramError> {
         ctx.accounts.authority.address(),
         &signer_addresses,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn set_authority<'a>(
     ctx: CpiContext<'a, SetAuthority<'a>>,
-    authority_type: AuthorityType,
+    authority_type: spl_token_2022::instruction::AuthorityType,
     new_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
     let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
@@ -448,11 +390,11 @@ pub fn set_authority<'a>(
         ctx.program,
         ctx.accounts.account_or_mint.address(),
         new_authority,
-        authority_type.into_spl(),
+        authority_type,
         ctx.accounts.current_authority.address(),
         &signer_addresses,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn close_account<'a>(ctx: CpiContext<'a, CloseAccount<'a>>) -> Result<(), ProgramError> {
@@ -464,7 +406,7 @@ pub fn close_account<'a>(ctx: CpiContext<'a, CloseAccount<'a>>) -> Result<(), Pr
         ctx.accounts.authority.address(),
         &signer_addresses,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn freeze_account<'a>(ctx: CpiContext<'a, FreezeAccount<'a>>) -> Result<(), ProgramError> {
@@ -476,7 +418,7 @@ pub fn freeze_account<'a>(ctx: CpiContext<'a, FreezeAccount<'a>>) -> Result<(), 
         ctx.accounts.authority.address(),
         &signer_addresses,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn thaw_account<'a>(ctx: CpiContext<'a, ThawAccount<'a>>) -> Result<(), ProgramError> {
@@ -488,12 +430,12 @@ pub fn thaw_account<'a>(ctx: CpiContext<'a, ThawAccount<'a>>) -> Result<(), Prog
         ctx.accounts.authority.address(),
         &signer_addresses,
     )?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn sync_native<'a>(ctx: CpiContext<'a, SyncNative<'a>>) -> Result<(), ProgramError> {
     let ix = spl_token_2022::instruction::sync_native(ctx.program, ctx.accounts.account.address())?;
-    invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 #[cfg(test)]

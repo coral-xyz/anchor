@@ -24,11 +24,9 @@ pub use {
     default_account_state::*, group_member_pointer::*, group_pointer::*,
     immutable_owner::*, interest_bearing_mint::*, memo_transfer::*, metadata_pointer::*,
     mint_close_authority::*, non_transferable::*, pausable::*, permanent_delegate::*, spl_pod,
-    token_group::*, token_metadata::*, transfer_fee::*,
+    spl_token_metadata_interface, token_group::*, token_metadata::*, transfer_fee::*,
     transfer_hook::*,
 };
-
-pub(crate) use spl_token_metadata_interface;
 
 #[cfg(test)]
 mod tests {

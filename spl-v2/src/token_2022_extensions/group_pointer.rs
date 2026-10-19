@@ -31,7 +31,7 @@ pub fn group_pointer_initialize<'a>(
         authority.copied(),
         group_address.copied(),
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn group_pointer_update<'a>(
@@ -47,7 +47,7 @@ pub fn group_pointer_update<'a>(
         &signer_addresses,
         group_address,
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 fn group_pointer_update_ix(

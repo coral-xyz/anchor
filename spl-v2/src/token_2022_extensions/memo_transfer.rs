@@ -24,7 +24,7 @@ pub fn memo_transfer_initialize<'a>(
         ctx.accounts.owner.address(),
         &signer_addresses,
     )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
 
 pub fn memo_transfer_disable<'a>(
@@ -40,5 +40,5 @@ pub fn memo_transfer_disable<'a>(
             ctx.accounts.owner.address(),
             &signer_addresses,
         )?;
-    crate::token_shared::invoke_cpi(&ctx, ix)
+    ctx.invoke_ix(ix)
 }
