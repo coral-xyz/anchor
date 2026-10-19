@@ -20,7 +20,7 @@ use {
 };
 
 const ANCHOR_MSRV: &str = "1.89.0";
-const ANCHOR_V2_TEMPLATE_VERSION: &str = "2.0.0";
+const ANCHOR_V2_TEMPLATE_VERSION: &str = "2.0.0-rc.2";
 // Host-side v2 tests depend on Agave and LiteSVM from anchor-next, which require newer Rust.
 const ANCHOR_V2_HOST_RUST_VERSION: &str = "1.97.1";
 
