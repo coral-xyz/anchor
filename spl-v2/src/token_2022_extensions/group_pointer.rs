@@ -31,7 +31,7 @@ pub fn group_pointer_initialize<'a>(
         authority.copied(),
         group_address.copied(),
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn group_pointer_update<'a>(
@@ -47,7 +47,7 @@ pub fn group_pointer_update<'a>(
         &signer_addresses,
         group_address,
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 fn group_pointer_update_ix(
@@ -117,6 +117,12 @@ mod tests {
             authority: CpiHandle::readonly(&authority_view),
         };
 
-        assert_eq!(accounts.to_cpi_handles().len(), 2);
+        assert_eq!(
+            accounts
+                .to_cpi_handles()
+                .expect("group pointer CPI handles should fit")
+                .len(),
+            2
+        );
     }
 }

@@ -221,7 +221,7 @@ pub fn get_account_data_size<'a>(
         ctx.accounts.mint.address(),
         extension_types.as_slice(),
     )?;
-    ctx.invoke_ix(ix)?;
+    crate::token_shared::invoke_cpi(&ctx, ix)?;
     let data = return_data_from(ctx.program)?;
     let bytes: [u8; 8] = data
         .as_slice()
@@ -239,7 +239,7 @@ pub fn initialize_mint_close_authority<'a>(
         ctx.accounts.mint.address(),
         close_authority,
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn initialize_immutable_owner<'a>(
@@ -249,7 +249,7 @@ pub fn initialize_immutable_owner<'a>(
         ctx.program,
         ctx.accounts.account.address(),
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn amount_to_ui_amount<'a>(
@@ -261,7 +261,7 @@ pub fn amount_to_ui_amount<'a>(
         ctx.accounts.account.address(),
         amount,
     )?;
-    ctx.invoke_ix(ix)?;
+    crate::token_shared::invoke_cpi(&ctx, ix)?;
     let return_data = return_data_from(ctx.program)?;
     let mut output = InstructionDataBuffer::new();
     try_extend_instruction_data(&mut output, return_data.as_slice())?;
@@ -278,7 +278,7 @@ pub fn ui_amount_to_amount<'a>(
         ctx.accounts.account.address(),
         ui_amount,
     )?;
-    ctx.invoke_ix(ix)?;
+    crate::token_shared::invoke_cpi(&ctx, ix)?;
     let data = return_data_from(ctx.program)?;
     let bytes: [u8; 8] = data
         .as_slice()
@@ -301,7 +301,7 @@ pub fn reallocate<'a>(
         &signer_addresses,
         extension_types.as_slice(),
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn withdraw_excess_lamports<'a>(
@@ -315,7 +315,7 @@ pub fn withdraw_excess_lamports<'a>(
         ctx.accounts.authority.address(),
         &signer_addresses,
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn create_native_mint<'a>(
@@ -323,7 +323,7 @@ pub fn create_native_mint<'a>(
 ) -> Result<(), ProgramError> {
     let ix =
         spl_token_2022::instruction::create_native_mint(ctx.program, ctx.accounts.payer.address())?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn initialize_non_transferable_mint<'a>(
@@ -333,7 +333,7 @@ pub fn initialize_non_transferable_mint<'a>(
         ctx.program,
         ctx.accounts.mint.address(),
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn initialize_permanent_delegate<'a>(
@@ -345,5 +345,5 @@ pub fn initialize_permanent_delegate<'a>(
         ctx.accounts.mint.address(),
         permanent_delegate,
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }

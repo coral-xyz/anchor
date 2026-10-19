@@ -31,7 +31,7 @@ pub fn transfer_hook_initialize<'a>(
         authority.copied(),
         transfer_hook_program_id.copied(),
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn transfer_hook_update<'a>(
@@ -48,5 +48,5 @@ pub fn transfer_hook_update<'a>(
         &signer_addresses,
         transfer_hook_program_id.copied(),
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }

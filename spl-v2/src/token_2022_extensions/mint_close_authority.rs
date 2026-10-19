@@ -23,5 +23,5 @@ pub fn mint_close_authority_initialize<'a>(
         ctx.accounts.mint.address(),
         close_authority.as_ref(),
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }

@@ -22,5 +22,5 @@ pub fn permanent_delegate_initialize<'a>(
         ctx.accounts.mint.address(),
         permanent_delegate,
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }

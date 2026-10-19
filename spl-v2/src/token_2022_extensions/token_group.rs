@@ -39,7 +39,7 @@ pub fn token_group_initialize<'a>(
         update_authority.copied(),
         max_size,
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn token_member_initialize<'a>(
@@ -55,5 +55,5 @@ pub fn token_member_initialize<'a>(
         ctx.accounts.group.address(),
         ctx.accounts.group_update_authority.address(),
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }

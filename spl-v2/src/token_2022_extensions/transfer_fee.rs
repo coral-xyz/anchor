@@ -69,7 +69,7 @@ pub fn transfer_fee_initialize<'a>(
         transfer_fee_basis_points,
         maximum_fee,
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn transfer_fee_set<'a>(
@@ -88,7 +88,7 @@ pub fn transfer_fee_set<'a>(
         transfer_fee_basis_points,
         maximum_fee,
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn transfer_checked_with_fee<'a>(
@@ -111,7 +111,7 @@ pub fn transfer_checked_with_fee<'a>(
         decimals,
         fee,
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn harvest_withheld_tokens_to_mint<'a>(
@@ -133,8 +133,7 @@ pub fn harvest_withheld_tokens_to_mint<'a>(
             .try_push(source.into())
             .map_err(|_| ProgramError::InvalidArgument)?;
     }
-    ctx.with_remaining_accounts(remaining_accounts)
-        .invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx.with_remaining_accounts(remaining_accounts), ix)
 }
 
 pub fn withdraw_withheld_tokens_from_mint<'a>(
@@ -151,7 +150,7 @@ pub fn withdraw_withheld_tokens_from_mint<'a>(
             ctx.accounts.authority.address(),
             &signer_addresses,
         )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn withdraw_withheld_tokens_from_accounts<'a>(
@@ -178,6 +177,5 @@ pub fn withdraw_withheld_tokens_from_accounts<'a>(
             .try_push(CpiHandle::from(source))
             .map_err(|_| ProgramError::InvalidArgument)?;
     }
-    ctx.with_remaining_accounts(remaining_accounts)
-        .invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx.with_remaining_accounts(remaining_accounts), ix)
 }

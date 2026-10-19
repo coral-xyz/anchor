@@ -19,5 +19,5 @@ pub fn non_transferable_mint_initialize<'a>(
         &program,
         ctx.accounts.mint.address(),
     )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }

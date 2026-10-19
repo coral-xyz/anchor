@@ -29,7 +29,7 @@ pub fn default_account_state_initialize<'a>(
             ctx.accounts.mint.address(),
             &(*state).into(),
         )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn default_account_state_update<'a>(
@@ -47,5 +47,5 @@ pub fn default_account_state_update<'a>(
             &signer_addresses,
             &(*state).into(),
         )?;
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }

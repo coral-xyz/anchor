@@ -458,7 +458,7 @@ pub fn approve_collection_authority<'info>(
         update_authority: *ctx.accounts.update_authority.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn bubblegum_set_collection_size<'info>(
@@ -478,7 +478,7 @@ pub fn bubblegum_set_collection_size<'info>(
             set_collection_size_args: mpl_token_metadata::types::SetCollectionSizeArgs { size },
         },
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn burn_edition_nft<'info>(ctx: CpiContext<'info, BurnEditionNft<'info>>) -> Result<()> {
@@ -495,7 +495,7 @@ pub fn burn_edition_nft<'info>(ctx: CpiContext<'info, BurnEditionNft<'info>>) ->
         spl_token_program: *ctx.accounts.spl_token.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 /// Burn an NFT by closing its token, metadata and edition accounts.
@@ -527,7 +527,7 @@ pub fn burn_nft<'info>(
         token_account: *ctx.accounts.token.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn create_metadata_accounts_v3<'info>(
@@ -555,7 +555,7 @@ pub fn create_metadata_accounts_v3<'info>(
             is_mutable,
         },
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn update_metadata_accounts_v2<'info>(
@@ -577,7 +577,7 @@ pub fn update_metadata_accounts_v2<'info>(
             is_mutable,
         },
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn create_master_edition_v3<'info>(
@@ -598,7 +598,7 @@ pub fn create_master_edition_v3<'info>(
     .instruction(
         mpl_token_metadata::instructions::CreateMasterEditionV3InstructionArgs { max_supply },
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn mint_new_edition_from_master_edition_via_token<'info>(
@@ -627,14 +627,14 @@ pub fn mint_new_edition_from_master_edition_via_token<'info>(
                 mpl_token_metadata::types::MintNewEditionFromMasterEditionViaTokenArgs { edition },
         },
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn revoke_collection_authority<'info>(
     ctx: CpiContext<'info, RevokeCollectionAuthority<'info>>,
 ) -> Result<()> {
     let ix = revoke_collection_authority_ix(&ctx.accounts);
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn set_collection_size<'info>(
@@ -643,7 +643,7 @@ pub fn set_collection_size<'info>(
     size: u64,
 ) -> Result<()> {
     let ix = set_collection_size_ix(&ctx.accounts, collection_authority_record, size);
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 fn revoke_collection_authority_ix(
@@ -695,7 +695,7 @@ pub fn verify_collection<'info>(
         payer: *ctx.accounts.payer.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn verify_sized_collection_item<'info>(
@@ -712,7 +712,7 @@ pub fn verify_sized_collection_item<'info>(
         payer: *ctx.accounts.payer.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn set_and_verify_collection<'info>(
@@ -730,7 +730,7 @@ pub fn set_and_verify_collection<'info>(
         update_authority: *ctx.accounts.update_authority.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn set_and_verify_sized_collection_item<'info>(
@@ -748,7 +748,7 @@ pub fn set_and_verify_sized_collection_item<'info>(
         update_authority: *ctx.accounts.update_authority.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn freeze_delegated_account<'info>(
@@ -762,7 +762,7 @@ pub fn freeze_delegated_account<'info>(
         token_program: *ctx.accounts.token_program.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn thaw_delegated_account<'info>(
@@ -776,7 +776,7 @@ pub fn thaw_delegated_account<'info>(
         token_program: *ctx.accounts.token_program.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn update_primary_sale_happened_via_token<'info>(
@@ -788,7 +788,7 @@ pub fn update_primary_sale_happened_via_token<'info>(
         token: *ctx.accounts.token.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn set_token_standard<'info>(
@@ -802,7 +802,7 @@ pub fn set_token_standard<'info>(
         update_authority: *ctx.accounts.update_authority.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn sign_metadata<'info>(ctx: CpiContext<'info, SignMetadata<'info>>) -> Result<()> {
@@ -811,7 +811,7 @@ pub fn sign_metadata<'info>(ctx: CpiContext<'info, SignMetadata<'info>>) -> Resu
         metadata: *ctx.accounts.metadata.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn remove_creator_verification<'info>(
@@ -822,7 +822,7 @@ pub fn remove_creator_verification<'info>(
         metadata: *ctx.accounts.metadata.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn utilize<'info>(
@@ -845,7 +845,7 @@ pub fn utilize<'info>(
         use_authority_record,
     }
     .instruction(mpl_token_metadata::instructions::UtilizeInstructionArgs { number_of_uses });
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn unverify_collection<'info>(
@@ -864,7 +864,7 @@ pub fn unverify_collection<'info>(
         metadata: *ctx.accounts.metadata.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn unverify_sized_collection_item<'info>(
@@ -884,7 +884,7 @@ pub fn unverify_sized_collection_item<'info>(
         payer: *ctx.accounts.payer.address(),
     }
     .instruction();
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 #[derive(ToCpiAccounts)]
@@ -1500,12 +1500,16 @@ mod tests {
             mint: mint_view.to_cpi_handle(),
         };
 
-        let metas = accounts.to_instruction_accounts();
+        let metas = accounts
+            .to_instruction_accounts()
+            .expect("metadata CPI account metas should fit");
         assert!(metas[0].is_writable);
         assert!(!metas[1].is_writable);
         assert!(metas[2].is_writable);
 
-        let handles = accounts.to_cpi_handles();
+        let handles = accounts
+            .to_cpi_handles()
+            .expect("metadata CPI handles should fit");
         assert!(handles[0].is_writable());
         assert!(!handles[1].is_writable());
         assert!(handles[2].is_writable());
@@ -1532,12 +1536,16 @@ mod tests {
             mint: mint_view.to_cpi_handle(),
         };
 
-        let metas = accounts.to_instruction_accounts();
+        let metas = accounts
+            .to_instruction_accounts()
+            .expect("metadata CPI account metas should fit");
         assert!(metas[0].is_writable);
         assert!(!metas[1].is_writable);
         assert!(metas[1].is_signer);
 
-        let handles = accounts.to_cpi_handles();
+        let handles = accounts
+            .to_cpi_handles()
+            .expect("metadata CPI handles should fit");
         assert!(handles[0].is_writable());
         assert!(!handles[1].is_writable());
 

@@ -80,7 +80,7 @@ pub fn token_metadata_initialize<'a>(
         symbol.to_owned(),
         uri.to_owned(),
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn token_metadata_update_authority<'a>(
@@ -97,7 +97,7 @@ pub fn token_metadata_update_authority<'a>(
         ctx.accounts.current_authority.address(),
         new_authority,
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn token_metadata_update_field<'a>(
@@ -115,7 +115,7 @@ pub fn token_metadata_update_field<'a>(
         field,
         value.to_owned(),
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
 
 pub fn token_metadata_remove_key<'a>(
@@ -132,5 +132,5 @@ pub fn token_metadata_remove_key<'a>(
         key.to_owned(),
         idempotent,
     );
-    ctx.invoke_ix(ix)
+    crate::token_shared::invoke_cpi(&ctx, ix)
 }
