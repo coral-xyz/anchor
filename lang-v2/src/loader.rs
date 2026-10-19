@@ -1,5 +1,9 @@
 use {
-    crate::{cursor::AccountCursor, AnchorAccount},
+    crate::{
+        cursor::{AccountBitvec, AccountCursor},
+        AnchorAccount,
+    },
+    core::mem::MaybeUninit,
     pinocchio::account::AccountView,
     solana_program_error::ProgramError,
 };
@@ -28,15 +32,32 @@ impl<'a> AccountLoader<'a> {
         self.cursor.consumed()
     }
 
-    /// Walk N accounts in bulk, returning a slice of raw `AccountView`s.
+    /// Walk N accounts in bulk, returning a slice of raw `AccountView`s
+    /// and the duplicate tracking bitvec.
     /// Cursor math runs in a tight loop before any validation happens.
     ///
     /// # Safety
     ///
     /// Caller must ensure N does not exceed the remaining accounts.
     #[inline(always)]
-    pub fn walk_n(&mut self, n: usize) -> &[AccountView] {
+    pub fn walk_n(&mut self, n: usize) -> (&[AccountView], Option<&AccountBitvec>) {
         unsafe { self.cursor.walk_n(n) }
+    }
+
+    /// Walk N accounts into caller-provided storage, returning the initialized
+    /// views and duplicate tracking state.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure `n` does not exceed the remaining accounts and that
+    /// `output` has capacity for at least `n` initialized views.
+    #[inline(always)]
+    pub unsafe fn walk_n_into<'views>(
+        &mut self,
+        n: usize,
+        output: &'views mut [MaybeUninit<AccountView>],
+    ) -> (&'views [AccountView], Option<&AccountBitvec>) {
+        unsafe { self.cursor.walk_n_into(n, output) }
     }
 
     /// Walk one account from the cursor and return the raw `AccountView`.
@@ -57,9 +78,14 @@ impl<'a> AccountLoader<'a> {
     }
 
     /// Walk + `T::load_mut()` the next account.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure no other live `&mut` to the same account's data
+    /// exists — see [`AnchorAccount::load_mut`] for the full precondition.
     #[inline(always)]
-    pub fn next_mut<T: AnchorAccount>(&mut self) -> Result<T, ProgramError> {
-        let view = unsafe { self.cursor.next() };
+    pub unsafe fn next_mut<T: AnchorAccount>(&mut self) -> Result<T, ProgramError> {
+        let view = self.cursor.next();
         T::load_mut(view)
     }
 }

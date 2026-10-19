@@ -9,7 +9,10 @@
 //! its `borrow_state` byte, which the account wrappers use to reject
 //! conflicting borrows of an aliased account.
 
-use pinocchio::account::{AccountView, RuntimeAccount, MAX_PERMITTED_DATA_INCREASE};
+use {
+    core::mem::MaybeUninit,
+    pinocchio::account::{AccountView, RuntimeAccount, MAX_PERMITTED_DATA_INCREASE},
+};
 
 /// Sentinel value in the serialized `borrow_state` byte indicating a
 /// non-duplicated account. Any other value (0..=254) indicates a
@@ -93,6 +96,30 @@ impl AccountCursor {
             self.next();
         }
         core::slice::from_raw_parts(self.lookup.add(start), n)
+    }
+
+    /// Walk N accounts into caller-provided storage and return the initialized
+    /// view slice. The storage may be sized to the current instruction rather
+    /// than the transaction-wide account limit.
+    ///
+    /// # Safety
+    ///
+    /// The output slice must have capacity for at least `n` views, and the
+    /// cursor must have at least `n` account records remaining.
+    #[inline(always)]
+    pub unsafe fn walk_n_into<'views>(
+        &mut self,
+        n: usize,
+        output: &'views mut [MaybeUninit<AccountView>],
+    ) -> (&'views [AccountView], Option<&AccountBitvec>) {
+        debug_assert!(output.len() >= n);
+        for slot in output.iter_mut().take(n) {
+            slot.write(self.next());
+        }
+        (
+            core::slice::from_raw_parts(output.as_ptr() as *const AccountView, n),
+            self.duplicate.as_ref(),
+        )
     }
 
     /// Advance past one account record and return its `AccountView`.
