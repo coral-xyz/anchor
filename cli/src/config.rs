@@ -1305,17 +1305,24 @@ impl Merge for _TestToml {
         let mut my_test = self.test.take();
         match &mut my_test {
             Some(my_test) => {
-                if let Some(other_test) = other.test {
-                    if let Some(startup_wait) = other_test.startup_wait {
+                if let Some(_TestValidator {
+                    genesis: other_genesis,
+                    validator: other_validator,
+                    startup_wait,
+                    shutdown_wait,
+                    upgradeable,
+                }) = other.test
+                {
+                    if let Some(startup_wait) = startup_wait {
                         my_test.startup_wait = Some(startup_wait);
                     }
-                    if let Some(shutdown_wait) = other_test.shutdown_wait {
+                    if let Some(shutdown_wait) = shutdown_wait {
                         my_test.shutdown_wait = Some(shutdown_wait);
                     }
-                    if let Some(upgradeable) = other_test.upgradeable {
+                    if let Some(upgradeable) = upgradeable {
                         my_test.upgradeable = Some(upgradeable);
                     }
-                    if let Some(other_genesis) = other_test.genesis {
+                    if let Some(other_genesis) = other_genesis {
                         match &mut my_test.genesis {
                             Some(my_genesis) => {
                                 for other_entry in other_genesis {
@@ -1333,9 +1340,9 @@ impl Merge for _TestToml {
                     }
                     let mut my_validator = my_test.validator.take();
                     match &mut my_validator {
-                        None => my_validator = other_test.validator,
+                        None => my_validator = other_validator,
                         Some(my_validator) => {
-                            if let Some(other_validator) = other_test.validator {
+                            if let Some(other_validator) = other_validator {
                                 my_validator.merge(other_validator)
                             }
                         }
