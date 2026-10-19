@@ -16,7 +16,7 @@ import { Callout } from "fumadocs-ui/components/callout";
 import { TypeTable } from "fumadocs-ui/components/type-table";
 import { Files, Folder, File } from "fumadocs-ui/components/files";
 import GithubIcon from "@/public/icons/github.svg";
-import { PlgrndFlow } from "@/app/components/plgrnd-flow";
+import { PdaSeedsFlow } from "@/app/components/pda-seeds-flow-lazy";
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -52,7 +52,7 @@ export default async function Page(props: {
             Files,
             Folder,
             File,
-            PlgrndFlow,
+            PdaSeedsFlow,
           }}
         />
         {page.data.index ? <DocsCategory page={page} from={source} /> : null}
