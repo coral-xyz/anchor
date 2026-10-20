@@ -16,6 +16,12 @@ use {
     solana_program_error::ProgramError,
 };
 
+// Keep exercising the legacy heap-backed wrapper on host builds. The SBF
+// fixture uses the underlying account type directly because `Box<T>` is
+// intentionally unavailable on allocator-free targets.
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+type Box<T> = T;
+
 declare_id!("Acc1111111111111111111111111111111111111111");
 
 const PROGRAM_OWNER: Address =

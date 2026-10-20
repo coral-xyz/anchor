@@ -1,5 +1,10 @@
 use anchor_lang::prelude::*;
 
+// The SBF fixture cannot expose the heap-backed wrapper; host builds still use
+// the standard Box implementation for compatibility coverage.
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+type Box<T> = T;
+
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[account]

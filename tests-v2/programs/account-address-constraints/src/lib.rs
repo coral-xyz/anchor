@@ -13,6 +13,11 @@ use {
     },
 };
 
+// Host tests retain the heap-backed wrapper; the SBF fixture uses the inner
+// account type so this target-only program does not require an allocator.
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+type Box<T> = T;
+
 declare_id!("Con9ukTn9BRPXWcjS2UBbuN3NnCwy1hcaDNZ9Hb8QMNp");
 
 #[account]

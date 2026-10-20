@@ -11,6 +11,11 @@ extern crate alloc;
 
 use anchor_lang::prelude::*;
 
+// Keep the host Box forwarding tests while compiling the SBF fixture with the
+// allocator-free account type directly.
+#[cfg(any(target_os = "solana", target_arch = "bpf"))]
+type Box<T> = T;
+
 declare_id!("CC111111111111111111111111111111111111111111");
 
 #[program]
