@@ -4,16 +4,107 @@ extern crate alloc;
 
 use {
     crate::token_shared::multisig_signer_addresses,
-    alloc::{string::String, vec::Vec},
-    anchor_lang::{require_eq, CpiContext, CpiHandle, CpiHandleMut, ToCpiAccounts},
+    anchor_lang::{
+        require_eq, CpiContext, CpiHandle, CpiHandleMut, FixedVec, InstructionDataBuffer,
+        ToCpiAccounts,
+    },
     pinocchio::address::Address,
     solana_program_error::ProgramError,
 };
 
 pub use anchor_lang::programs::Token2022;
-pub use spl_token_2022_interface::{
-    self as spl_token_2022, extension::ExtensionType, native_mint, ID,
-};
+pub use spl_token_2022_interface::{native_mint, ID};
+pub use spl_token_2022_interface::state::AccountState;
+
+pub(crate) use spl_token_2022_interface as spl_token_2022;
+
+/// Token-2022 extension identifiers exposed by Anchor's allocator-neutral API.
+///
+/// The canonical SPL interface crate is kept behind this module boundary
+/// because some of its convenience methods return heap-backed collections.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u16)]
+pub enum ExtensionType {
+    Uninitialized,
+    TransferFeeConfig,
+    TransferFeeAmount,
+    MintCloseAuthority,
+    ConfidentialTransferMint,
+    ConfidentialTransferAccount,
+    DefaultAccountState,
+    ImmutableOwner,
+    MemoTransfer,
+    NonTransferable,
+    InterestBearingConfig,
+    CpiGuard,
+    PermanentDelegate,
+    NonTransferableAccount,
+    TransferHook,
+    TransferHookAccount,
+    ConfidentialTransferFeeConfig,
+    ConfidentialTransferFeeAmount,
+    MetadataPointer,
+    TokenMetadata,
+    GroupPointer,
+    TokenGroup,
+    GroupMemberPointer,
+    TokenGroupMember,
+    ConfidentialMintBurn,
+    ScaledUiAmount,
+    Pausable,
+    PausableAccount,
+}
+
+const MAX_EXTENSION_TYPES: usize = 32;
+
+impl From<ExtensionType> for spl_token_2022_interface::extension::ExtensionType {
+    fn from(extension_type: ExtensionType) -> Self {
+        use spl_token_2022_interface::extension::ExtensionType as Canonical;
+
+        match extension_type {
+            ExtensionType::Uninitialized => Canonical::Uninitialized,
+            ExtensionType::TransferFeeConfig => Canonical::TransferFeeConfig,
+            ExtensionType::TransferFeeAmount => Canonical::TransferFeeAmount,
+            ExtensionType::MintCloseAuthority => Canonical::MintCloseAuthority,
+            ExtensionType::ConfidentialTransferMint => Canonical::ConfidentialTransferMint,
+            ExtensionType::ConfidentialTransferAccount => Canonical::ConfidentialTransferAccount,
+            ExtensionType::DefaultAccountState => Canonical::DefaultAccountState,
+            ExtensionType::ImmutableOwner => Canonical::ImmutableOwner,
+            ExtensionType::MemoTransfer => Canonical::MemoTransfer,
+            ExtensionType::NonTransferable => Canonical::NonTransferable,
+            ExtensionType::InterestBearingConfig => Canonical::InterestBearingConfig,
+            ExtensionType::CpiGuard => Canonical::CpiGuard,
+            ExtensionType::PermanentDelegate => Canonical::PermanentDelegate,
+            ExtensionType::NonTransferableAccount => Canonical::NonTransferableAccount,
+            ExtensionType::TransferHook => Canonical::TransferHook,
+            ExtensionType::TransferHookAccount => Canonical::TransferHookAccount,
+            ExtensionType::ConfidentialTransferFeeConfig => Canonical::ConfidentialTransferFeeConfig,
+            ExtensionType::ConfidentialTransferFeeAmount => Canonical::ConfidentialTransferFeeAmount,
+            ExtensionType::MetadataPointer => Canonical::MetadataPointer,
+            ExtensionType::TokenMetadata => Canonical::TokenMetadata,
+            ExtensionType::GroupPointer => Canonical::GroupPointer,
+            ExtensionType::TokenGroup => Canonical::TokenGroup,
+            ExtensionType::GroupMemberPointer => Canonical::GroupMemberPointer,
+            ExtensionType::TokenGroupMember => Canonical::TokenGroupMember,
+            ExtensionType::ConfidentialMintBurn => Canonical::ConfidentialMintBurn,
+            ExtensionType::ScaledUiAmount => Canonical::ScaledUiAmount,
+            ExtensionType::Pausable => Canonical::Pausable,
+            ExtensionType::PausableAccount => Canonical::PausableAccount,
+        }
+    }
+}
+
+fn canonical_extension_types(
+    extension_types: &[ExtensionType],
+) -> Result<FixedVec<spl_token_2022_interface::extension::ExtensionType, MAX_EXTENSION_TYPES>, ProgramError> {
+    let mut canonical = FixedVec::new();
+    for extension_type in extension_types {
+        canonical
+            .try_push((*extension_type).into())
+            .map_err(|_| ProgramError::InvalidArgument)?;
+    }
+    Ok(canonical)
+}
 
 pub use crate::token_shared::{
     approve, approve_checked, burn, burn_checked, close_account, freeze_account,
@@ -85,7 +176,7 @@ pub struct PermanentDelegateInitialize<'a> {
     pub mint: CpiHandleMut<'a>,
 }
 
-fn return_data_from(program: &Address) -> Result<Vec<u8>, ProgramError> {
+fn return_data_from(program: &Address) -> Result<InstructionDataBuffer, ProgramError> {
     let (return_program, data) = anchor_lang::solana_program::program::get_return_data()
         .ok_or(ProgramError::InvalidInstructionData)?;
     require_eq!(
@@ -93,17 +184,22 @@ fn return_data_from(program: &Address) -> Result<Vec<u8>, ProgramError> {
         program.as_ref(),
         ProgramError::IncorrectProgramId
     );
-    Ok(data.as_slice().to_vec())
+    let mut output = InstructionDataBuffer::new();
+    output
+        .try_extend_from_slice(data.as_slice())
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    Ok(output)
 }
 
 pub fn get_account_data_size<'a>(
     ctx: CpiContext<'a, GetAccountDataSize<'a>>,
     extension_types: &[ExtensionType],
 ) -> Result<u64, ProgramError> {
+    let extension_types = canonical_extension_types(extension_types)?;
     let ix = spl_token_2022::instruction::get_account_data_size(
         ctx.program,
         ctx.accounts.mint.address(),
-        extension_types,
+        extension_types.as_slice(),
     )?;
     ctx.invoke_ix(ix)?;
     let data = return_data_from(ctx.program)?;
@@ -139,15 +235,14 @@ pub fn initialize_immutable_owner<'a>(
 pub fn amount_to_ui_amount<'a>(
     ctx: CpiContext<'a, AmountToUiAmount<'a>>,
     amount: u64,
-) -> Result<String, ProgramError> {
+) -> Result<InstructionDataBuffer, ProgramError> {
     let ix = spl_token_2022::instruction::amount_to_ui_amount(
         ctx.program,
         ctx.accounts.account.address(),
         amount,
     )?;
     ctx.invoke_ix(ix)?;
-    String::from_utf8(return_data_from(ctx.program)?)
-        .map_err(|_| ProgramError::InvalidInstructionData)
+    Ok(return_data_from(ctx.program)?)
 }
 
 pub fn ui_amount_to_amount<'a>(
@@ -172,6 +267,7 @@ pub fn reallocate<'a>(
     ctx: CpiContext<'a, Reallocate<'a>>,
     extension_types: &[ExtensionType],
 ) -> Result<(), ProgramError> {
+    let extension_types = canonical_extension_types(extension_types)?;
     let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
     let ix = spl_token_2022::instruction::reallocate(
         ctx.program,
@@ -179,7 +275,7 @@ pub fn reallocate<'a>(
         ctx.accounts.payer.address(),
         ctx.accounts.authority.address(),
         &signer_addresses,
-        extension_types,
+        extension_types.as_slice(),
     )?;
     ctx.invoke_ix(ix)
 }

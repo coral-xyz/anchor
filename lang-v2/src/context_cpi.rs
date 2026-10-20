@@ -81,13 +81,19 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         // Append remaining accounts using the handle's writable/signer flags
         // so PDA remaining accounts marked with `as_signer()` emit signer metas.
         for handle in &self.remaining_accounts {
-            instruction_accounts.push(InstructionAccount::new(
-                handle.address(),
-                handle.is_writable(),
-                handle.is_signer(),
-            ));
-            handles.push(*handle);
-            optional_sentinel_flags.push(false);
+            instruction_accounts
+                .try_push(InstructionAccount::new(
+                    handle.address(),
+                    handle.is_writable(),
+                    handle.is_signer(),
+                ))
+                .map_err(|_| ProgramError::InvalidArgument)?;
+            handles
+                .try_push(*handle)
+                .map_err(|_| ProgramError::InvalidArgument)?;
+            optional_sentinel_flags
+                .try_push(false)
+                .map_err(|_| ProgramError::InvalidArgument)?;
         }
 
         crate::program::validate_instruction_accounts(
@@ -173,12 +179,17 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
         );
 
         let mut handles = self.accounts.to_cpi_handles()?;
-        handles.extend(self.remaining_accounts.iter().copied());
+        for handle in &self.remaining_accounts {
+            handles
+                .try_push(*handle)
+                .map_err(|_| ProgramError::InvalidArgument)?;
+        }
 
         let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags()?;
         let instruction_account_count = crate::program::instruction_account_count(&ix);
         require!(
-            optional_sentinel_flags.len() <= instruction_account_count,
+            optional_sentinel_flags.len() <= instruction_account_count
+                && instruction_account_count <= optional_sentinel_flags.capacity(),
             ProgramError::InvalidArgument
         );
         // Trailing metas (e.g. remaining accounts already baked into `ix`) are

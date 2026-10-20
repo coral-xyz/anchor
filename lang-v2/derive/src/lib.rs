@@ -412,11 +412,11 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
         match kind {
             CpiFieldKind::Phantom => quote! {},
             CpiFieldKind::Nested => quote! {
-                __accounts.extend(
-                    anchor_lang::ToCpiAccounts::to_instruction_accounts(&self.#ident)?
-                        .iter()
-                        .cloned(),
-                );
+                __accounts
+                    .try_extend_from_slice(
+                        anchor_lang::ToCpiAccounts::to_instruction_accounts(&self.#ident)?.as_slice(),
+                    )
+                    .map_err(|_| anchor_lang::Error::InvalidArgument)?;
             },
             CpiFieldKind::Readonly | CpiFieldKind::Writable => quote! {
                 __accounts.try_push(
@@ -453,11 +453,11 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
     let handle_steps = cpi_fields.iter().map(|(ident, kind, _)| match kind {
         CpiFieldKind::Phantom => quote! {},
         CpiFieldKind::Nested => quote! {
-            __handles.extend(
-                anchor_lang::ToCpiAccounts::to_cpi_handles(&self.#ident)?
-                    .iter()
-                    .cloned(),
-            );
+            __handles
+                .try_extend_from_slice(
+                    anchor_lang::ToCpiAccounts::to_cpi_handles(&self.#ident)?.as_slice(),
+                )
+                .map_err(|_| anchor_lang::Error::InvalidArgument)?;
         },
         CpiFieldKind::Readonly => quote! {
             __handles
@@ -488,11 +488,11 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
     let flag_steps = cpi_fields.iter().map(|(ident, kind, _)| match kind {
         CpiFieldKind::Phantom => quote! {},
         CpiFieldKind::Nested => quote! {
-            __flags.extend(
-                anchor_lang::ToCpiAccounts::optional_account_sentinel_flags(&self.#ident)?
-                    .iter()
-                    .copied(),
-            );
+            __flags
+                .try_extend_from_slice(
+                    anchor_lang::ToCpiAccounts::optional_account_sentinel_flags(&self.#ident)?.as_slice(),
+                )
+                .map_err(|_| anchor_lang::Error::InvalidArgument)?;
         },
         CpiFieldKind::Readonly | CpiFieldKind::Writable => quote! {
             __flags
@@ -2201,8 +2201,6 @@ fn impl_accounts(input: &DeriveInput) -> TokenStream2 {
             const HEADER_SIZE: usize = #header_size_expr;
             const MUT_MASK: [u64; 4] = #mut_mask_expr;
             const HAS_DYNAMIC_MUT_MASK: bool = #has_dynamic_mut_mask_expr;
-            type ViewStorage =
-                [::core::mem::MaybeUninit<anchor_lang::AccountView>; #header_size_expr];
 
             #[inline(always)]
             fn active_mut_mask(&self) -> [u64; 4] {

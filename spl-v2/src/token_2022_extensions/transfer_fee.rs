@@ -116,7 +116,7 @@ pub fn transfer_checked_with_fee<'a>(
 
 pub fn harvest_withheld_tokens_to_mint<'a>(
     ctx: CpiContext<'a, HarvestWithheldTokensToMint<'a>>,
-    sources: Vec<CpiHandleMut<'a>>,
+    sources: &[CpiHandleMut<'a>],
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
@@ -128,7 +128,7 @@ pub fn harvest_withheld_tokens_to_mint<'a>(
         &source_refs,
     )?;
     let mut remaining_accounts = anchor_lang::CpiHandleBuffer::new();
-    for source in sources {
+    for source in sources.iter().copied() {
         remaining_accounts
             .try_push(source.into())
             .map_err(|_| ProgramError::InvalidArgument)?;
@@ -160,7 +160,7 @@ pub fn withdraw_withheld_tokens_from_mint<'a>(
 
 pub fn withdraw_withheld_tokens_from_accounts<'a>(
     ctx: CpiContext<'a, WithdrawWithheldTokensFromAccounts<'a>>,
-    sources: Vec<CpiHandleMut<'a>>,
+    sources: &[CpiHandleMut<'a>],
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
     let program = *ctx.program;
@@ -177,7 +177,7 @@ pub fn withdraw_withheld_tokens_from_accounts<'a>(
             &source_refs,
         )?;
     let mut remaining_accounts = ctx.remaining_accounts.clone();
-    for source in sources {
+    for source in sources.iter().copied() {
         remaining_accounts
             .try_push(CpiHandle::from(source))
             .map_err(|_| ProgramError::InvalidArgument)?;

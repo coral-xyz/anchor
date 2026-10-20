@@ -4,34 +4,9 @@ use {
         cursor::{AccountBitvec, AccountCursor},
         loader::AccountLoader,
     },
-    core::mem::MaybeUninit,
     pinocchio::{account::AccountView, address::Address},
     solana_program_error::ProgramError,
 };
-
-/// Storage for the flattened account views declared by one instruction.
-/// Generated `Accounts` implementations provide an array sized to their
-/// compile-time `HEADER_SIZE`.
-#[doc(hidden)]
-pub trait AccountViewStorage {
-    fn new() -> Self
-    where
-        Self: Sized;
-
-    fn as_mut_slice(&mut self) -> &mut [MaybeUninit<AccountView>];
-}
-
-impl<const N: usize> AccountViewStorage for [MaybeUninit<AccountView>; N] {
-    #[inline]
-    fn new() -> Self {
-        [const { MaybeUninit::uninit() }; N]
-    }
-
-    #[inline]
-    fn as_mut_slice(&mut self) -> &mut [MaybeUninit<AccountView>] {
-        self
-    }
-}
 
 /// Trait that `#[derive(Accounts)]` implements on account structs.
 ///
@@ -69,10 +44,6 @@ pub trait TryAccounts: Bumps + Sized {
     /// Parsed instruction args carried alongside validated accounts.
     /// Accounts structs without `#[instruction(...)]` use `()`.
     type IxArgs<'ix>;
-
-    /// Compile-time-sized storage for the flattened declared account views.
-    /// The derive supplies an array sized to `HEADER_SIZE`.
-    type ViewStorage: AccountViewStorage;
 
     /// `base_offset` is the index of the first view in the global bitvec.
     /// Top-level callers pass 0; `Nested<T>` passes its field's offset so
@@ -126,10 +97,7 @@ pub fn run_handler<'a, T: TryAccounts, R>(
     }
     let (ctx_accounts, bumps, ix_args) = {
         let mut loader = AccountLoader::new(cursor);
-        let mut view_storage = T::ViewStorage::new();
-        let (views, duplicates) = unsafe {
-            loader.walk_n_into(T::HEADER_SIZE, view_storage.as_mut_slice())
-        };
+        let (views, duplicates) = loader.walk_n(T::HEADER_SIZE);
         // Single AND+test across the whole struct tree — replaces the
         // per-mut-field `__duplicates.get()` checks the derive used to
         // emit at each field site. `MUT_MASK == [0; 4]` (no mut fields

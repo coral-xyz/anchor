@@ -6,7 +6,7 @@
 pub use {
     crate::mint::Mint,
     anchor_lang::programs::Token,
-    spl_token_interface::{self as spl_token, ID},
+    spl_token_interface::{self as spl_token, instruction::AuthorityType, ID},
 };
 use {
     anchor_lang::{

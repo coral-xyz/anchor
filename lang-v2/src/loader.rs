@@ -3,7 +3,6 @@ use {
         cursor::{AccountBitvec, AccountCursor},
         AnchorAccount,
     },
-    core::mem::MaybeUninit,
     pinocchio::account::AccountView,
     solana_program_error::ProgramError,
 };
@@ -42,22 +41,6 @@ impl<'a> AccountLoader<'a> {
     #[inline(always)]
     pub fn walk_n(&mut self, n: usize) -> (&[AccountView], Option<&AccountBitvec>) {
         unsafe { self.cursor.walk_n(n) }
-    }
-
-    /// Walk N accounts into caller-provided storage, returning the initialized
-    /// views and duplicate tracking state.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure `n` does not exceed the remaining accounts and that
-    /// `output` has capacity for at least `n` initialized views.
-    #[inline(always)]
-    pub unsafe fn walk_n_into<'views>(
-        &mut self,
-        n: usize,
-        output: &'views mut [MaybeUninit<AccountView>],
-    ) -> (&'views [AccountView], Option<&AccountBitvec>) {
-        unsafe { self.cursor.walk_n_into(n, output) }
     }
 
     /// Walk one account from the cursor and return the raw `AccountView`.

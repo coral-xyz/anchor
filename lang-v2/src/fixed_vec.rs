@@ -1,7 +1,8 @@
 //! Small, fixed-capacity vectors for transient on-chain data.
 //!
-//! These buffers deliberately panic on overflow, matching the failure mode of
-//! the old heap-backed `Vec` while keeping the storage inline and bounded.
+//! These buffers keep transient storage inline and bounded. Callers that need
+//! normal error handling should use the `try_*` methods rather than the
+//! panic-on-overflow convenience methods.
 
 use core::{
     fmt,
@@ -137,17 +138,17 @@ impl<T, const N: usize> FixedVec<T, N> {
     #[inline]
     pub fn try_extend_from_slice(&mut self, values: &[T]) -> Result<(), ()>
     where
-        T: Copy,
+        T: Clone,
     {
         if self.len + values.len() > N {
             return Err(());
         }
         for value in values {
-            self.push(*value);
+            self.data[self.len].write(value.clone());
+            self.len += 1;
         }
         Ok(())
     }
-
 }
 
 impl<const N: usize> FixedVec<u8, N> {
