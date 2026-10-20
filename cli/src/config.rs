@@ -818,9 +818,13 @@ struct Provider {
 fn ser_cluster<S: Serializer>(cluster: &Cluster, s: S) -> Result<S::Ok, S::Error> {
     match cluster {
         Cluster::Custom(http, ws) => {
-            match (Url::parse(http), Url::parse(ws)) {
+            match (http.parse::<Cluster>(), Url::parse(ws)) {
                 // If `ws` was derived from `http`, serialize `http` as string
-                (Ok(h), Ok(w)) if h.domain() == w.domain() => s.serialize_str(http),
+                (Ok(Cluster::Custom(_, derived)), Ok(w))
+                    if Url::parse(&derived).ok().as_ref() == Some(&w) =>
+                {
+                    s.serialize_str(http)
+                }
                 _ => {
                     let mut map = s.serialize_map(Some(2))?;
                     map.serialize_entry("http", http)?;
@@ -1999,6 +2003,48 @@ mod tests {
         )
         .unwrap();
         assert!(!config.features.skip_lint);
+    }
+
+    fn round_trip_custom_cluster(http: &str, ws: &str) -> (String, Cluster) {
+        let config = Config::from_str(&format!(
+            "
+        [provider]
+        cluster = {{ http = \"{http}\", ws = \"{ws}\" }}
+        wallet = \"id.json\"
+    "
+        ))
+        .unwrap();
+        let serialized = config.to_string();
+        let reparsed = Config::from_str(&serialized).unwrap();
+        (serialized, reparsed.provider.cluster)
+    }
+
+    #[test]
+    fn custom_cluster_keeps_ws_with_same_domain_different_path() {
+        let (_, cluster) =
+            round_trip_custom_cluster("https://rpc.example.com", "wss://rpc.example.com/ws");
+        assert_eq!(cluster.ws_url(), "wss://rpc.example.com/ws");
+    }
+
+    #[test]
+    fn custom_cluster_keeps_ws_with_same_domain_different_port() {
+        let (_, cluster) =
+            round_trip_custom_cluster("https://rpc.example.com", "wss://rpc.example.com:9000");
+        assert_eq!(cluster.ws_url(), "wss://rpc.example.com:9000");
+    }
+
+    #[test]
+    fn custom_cluster_keeps_ws_with_different_ip_host() {
+        let (_, cluster) = round_trip_custom_cluster("http://127.0.0.1:8899", "ws://10.0.0.5:9999");
+        assert_eq!(cluster.ws_url(), "ws://10.0.0.5:9999");
+    }
+
+    #[test]
+    fn custom_cluster_with_derived_ws_serializes_as_string() {
+        let (serialized, cluster) =
+            round_trip_custom_cluster("http://127.0.0.1:8899", "ws://127.0.0.1:8900");
+        assert!(serialized.contains(r#"cluster = "http://127.0.0.1:8899""#));
+        assert_eq!(cluster.ws_url(), "ws://127.0.0.1:8900/");
     }
 
     #[test]
