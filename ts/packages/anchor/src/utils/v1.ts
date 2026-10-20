@@ -39,7 +39,7 @@ export type V1Transaction = {
   serialize(): Uint8Array;
 };
 
-/** A transaction-v1 signer from the Solana web3 rc3 client. */
+/** A transaction-v1 signer from the Solana web3 v3 client. */
 export type V1Signer = object;
 
 /** The inputs required to compile an existing Anchor transaction as v1. */
@@ -57,7 +57,7 @@ export type TransactionV1Options = {
  *
  * Anchor continues to expose the stable web3.js legacy API. This conversion is
  * intentionally isolated because transaction-v1 is currently available only
- * from the Solana web3 rc3 client.
+ * from the Solana web3 v3 client.
  */
 export function toTransaction(
   transaction: Transaction,
@@ -110,7 +110,7 @@ export async function signTransaction(
     const walletTransaction = VersionedTransaction.deserialize(
       v1Transaction.serialize()
     );
-    // web3.js 1.99 cannot serialize v1; retain the RC3 codec for wallet signing.
+    // web3.js 1.99 cannot serialize v1; retain the v3 codec for wallet signing.
     walletTransaction.message.serialize = () =>
       v1Transaction.message.serialize();
     walletTransaction.serialize = () => {
@@ -125,7 +125,7 @@ export async function signTransaction(
 /**
  * Deserialize a wire-format Solana transaction-v1 transaction.
  *
- * Anchor's normal @solana/web3.js dependency handles deserialization. RC3 is
+ * Anchor's normal @solana/web3.js dependency handles deserialization. web3.js v3 is
  * used only for compiling and serializing a new v1 message.
  */
 export function deserializeTransaction(
