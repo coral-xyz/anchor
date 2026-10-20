@@ -2280,6 +2280,43 @@ startup_wait = 3000
     }
 
     #[test]
+    fn test_toml_extends_overrides_with_zero_shutdown_wait_and_not_upgradeable() {
+        let dir = tempfile::tempdir().unwrap();
+        let suite_dir = dir.path().join("tests").join("suite");
+        fs::create_dir_all(&suite_dir).unwrap();
+
+        fs::write(
+            suite_dir.join("Base.toml"),
+            r#"
+[test]
+shutdown_wait = 1000
+upgradeable = true
+"#,
+        )
+        .unwrap();
+
+        let test_toml = suite_dir.join("Test.toml");
+        fs::write(
+            &test_toml,
+            r#"
+extends = ["Base.toml"]
+
+[scripts]
+test = "true"
+
+[test]
+shutdown_wait = 0
+upgradeable = false
+"#,
+        )
+        .unwrap();
+
+        let test = TestToml::from_path(test_toml).unwrap().test.unwrap();
+        assert_eq!(test.shutdown_wait, 0);
+        assert!(!test.upgradeable);
+    }
+
+    #[test]
     fn parse_skip_lint_no_value() {
         let string = BASE_CONFIG.to_owned() + "[features]";
         let config = Config::from_str(&string).unwrap();
