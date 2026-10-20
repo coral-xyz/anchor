@@ -288,22 +288,15 @@ export class AnchorProvider implements Provider {
       recentBlockhash,
       transactionConfig,
     });
-    const legacySigners = [
-      ...(this.wallet.payer ? [this.wallet.payer] : []),
-      ...(signers ?? []),
-    ].filter(
+    const legacySigners = (signers ?? []).filter(
       (signer, index, all) =>
         all.findIndex((other) => other.publicKey.equals(signer.publicKey)) ===
         index
     );
-    if (legacySigners.length === 0) {
-      throw new Error(
-        "transaction-v1 requires signers when the provider wallet has no Keypair payer"
-      );
-    }
     await signV1Transaction(
       v1Transaction,
-      await Promise.all(legacySigners.map(signerFromLegacyKeypair))
+      await Promise.all(legacySigners.map(signerFromLegacyKeypair)),
+      this.wallet
     );
     return v1Transaction;
   }

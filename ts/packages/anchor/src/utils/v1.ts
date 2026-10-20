@@ -10,6 +10,7 @@ import {
   Transaction,
   VersionedTransaction,
 } from "@solana/web3.js";
+import type { Wallet } from "../provider.js";
 
 /** Message-level resource limits and priority fee for transaction-v1. */
 export type V1TransactionConfig = {
@@ -97,14 +98,28 @@ export async function signerFromLegacyKeypair(
   return await V1Keypair.fromSecretKey(signer.secretKey);
 }
 
-/** Sign a v1 transaction with transaction-v1 signers. */
+/** Sign a v1 transaction with additional signers and optionally a wallet. */
 export async function signTransaction(
   transaction: V1Transaction,
-  signers: V1Signer[]
+  signers: V1Signer[],
+  wallet?: Wallet
 ): Promise<void> {
-  await (transaction as unknown as V1VersionedTransaction).sign(
-    signers as never
-  );
+  const v1Transaction = transaction as unknown as V1VersionedTransaction;
+  await v1Transaction.sign(signers as never);
+  if (wallet) {
+    const walletTransaction = VersionedTransaction.deserialize(
+      v1Transaction.serialize()
+    );
+    // web3.js 1.99 cannot serialize v1; retain the RC3 codec for wallet signing.
+    walletTransaction.message.serialize = () =>
+      v1Transaction.message.serialize();
+    walletTransaction.serialize = () => {
+      v1Transaction.signatures = walletTransaction.signatures;
+      return v1Transaction.serialize();
+    };
+    const signed = await wallet.signTransaction(walletTransaction);
+    v1Transaction.signatures = signed.signatures;
+  }
 }
 
 /**

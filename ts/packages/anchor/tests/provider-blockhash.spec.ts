@@ -8,7 +8,8 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 
-import { AnchorProvider, Wallet } from "../src";
+import { AnchorProvider, Wallet as NodeWallet } from "../src";
+import type { Wallet } from "../src/provider";
 import {
   deserializeTransaction as deserializeV1Transaction,
   toTransaction as toV1Transaction,
@@ -27,6 +28,7 @@ const STOP = new Error("__stop_after_blockhash_assignment__");
 
 function makeFixture() {
   const walletKp = Keypair.generate();
+  const nodeWallet = new NodeWallet(walletKp);
   let getLatestBlockhashCalls = 0;
   let rawTransaction: Uint8Array | undefined;
   let simulatedTransaction: VersionedTransaction | undefined;
@@ -56,14 +58,13 @@ function makeFixture() {
 
   const wallet: Wallet = {
     publicKey: walletKp.publicKey,
-    signTransaction: async (tx: any) => tx,
+    signTransaction: jest.fn(async (tx) => nodeWallet.signTransaction(tx)),
     // Reject after the sendAll loop has already mutated each tx — lets us
     // inspect the post-mutation state without exercising serialize / RPC.
     signAllTransactions: async () => {
       throw STOP;
     },
-    payer: walletKp,
-  } as any;
+  };
 
   return {
     provider: new AnchorProvider(connection, wallet),
@@ -71,6 +72,7 @@ function makeFixture() {
     rawTransaction: () => rawTransaction,
     simulatedTransaction: () => simulatedTransaction,
     payer: walletKp,
+    wallet,
   };
 }
 
@@ -125,37 +127,96 @@ describe("AnchorProvider blockhash handling (#3375)", () => {
       expect(deserializeV1Transaction(raw).version).toBe(1);
     });
 
-    it("signs with the provider payer and explicit signers", async () => {
-      const { provider, rawTransaction } = makeFixture();
-      const extraSigner = Keypair.generate();
-      const tx = new Transaction().add(
-        new TransactionInstruction({
-          programId: SystemProgram.programId,
-          keys: [
-            {
-              pubkey: extraSigner.publicKey,
-              isSigner: true,
-              isWritable: false,
-            },
-          ],
-          data: Buffer.alloc(0),
-        })
-      );
+    it.each(["sendV1", "simulateV1"] as const)(
+      "%s signs through the wallet interface and preserves extra signatures",
+      async (method) => {
+        const {
+          provider,
+          wallet,
+          payer,
+          rawTransaction,
+          simulatedTransaction,
+        } = makeFixture();
+        expect(wallet.payer).toBeUndefined();
+        wallet.signTransaction = jest.fn(async (tx) => {
+          expect(tx).toBeInstanceOf(VersionedTransaction);
+          const versioned = tx as VersionedTransaction;
+          expect(versioned.version).toBe(1);
+          expect(
+            versioned.message.staticAccountKeys[0].equals(wallet.publicKey)
+          ).toBe(true);
+          expect(versioned.serialize()[0]).toBe(0x81);
+          versioned.sign([payer]);
+          // Wallet adapters may return a new transaction rather than mutate the input.
+          return VersionedTransaction.deserialize(
+            versioned.serialize()
+          ) as typeof tx;
+        });
+        const extraSigner = Keypair.generate();
+        const tx = new Transaction().add(
+          new TransactionInstruction({
+            programId: SystemProgram.programId,
+            keys: [
+              {
+                pubkey: extraSigner.publicKey,
+                isSigner: true,
+                isWritable: false,
+              },
+            ],
+            data: Buffer.alloc(0),
+          })
+        );
 
-      await expect(provider.sendV1(tx, v1Config, [extraSigner])).resolves.toBe(
-        "fake-sig"
-      );
+        await provider[method](tx, v1Config, [extraSigner]);
+        expect(wallet.signTransaction).toHaveBeenCalledTimes(1);
 
-      const raw = rawTransaction();
-      if (!raw) throw new Error("Expected a serialized transaction");
-      const transaction = VersionedTransaction.deserialize(raw);
-      expect(transaction.signatures).toHaveLength(2);
-      expect(
-        transaction.signatures.every((signature) =>
-          signature.some((byte) => byte !== 0)
-        )
-      ).toBe(true);
-    });
+        const raw =
+          method === "sendV1"
+            ? rawTransaction()
+            : simulatedTransaction()?.serialize();
+        if (!raw) throw new Error("Expected a serialized transaction");
+        const transaction = VersionedTransaction.deserialize(raw);
+        expect(transaction.signatures).toHaveLength(2);
+        const messageBytes = raw.subarray(
+          0,
+          raw.length - transaction.signatures.length * 64
+        );
+        for (const [index, publicKey] of transaction.message.staticAccountKeys
+          .slice(0, 2)
+          .entries()) {
+          const key = await crypto.subtle.importKey(
+            "raw",
+            publicKey.toBytes(),
+            "Ed25519",
+            false,
+            ["verify"]
+          );
+          expect(
+            await crypto.subtle.verify(
+              "Ed25519",
+              key,
+              transaction.signatures[index],
+              messageBytes
+            )
+          ).toBe(true);
+        }
+      }
+    );
+
+    it.each(["sendV1", "simulateV1"] as const)(
+      "%s propagates wallet rejection before submitting the transaction",
+      async (method) => {
+        const { provider, wallet, rawTransaction, simulatedTransaction } =
+          makeFixture();
+        const rejection = new Error("Wallet rejected signing");
+        wallet.signTransaction = jest.fn().mockRejectedValue(rejection);
+        await expect(provider[method](legacyTx(), v1Config)).rejects.toBe(
+          rejection
+        );
+        expect(rawTransaction()).toBeUndefined();
+        expect(simulatedTransaction()).toBeUndefined();
+      }
+    );
 
     it("uses a durable nonce without fetching a recent blockhash", async () => {
       const { provider, getLatestBlockhashCalls, rawTransaction, payer } =
