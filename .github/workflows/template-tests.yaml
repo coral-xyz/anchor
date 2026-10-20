@@ -31,12 +31,10 @@ env:
   SOLANA_VERSION: "4.1.2"
   NODE_VERSION: "20"
   SURFPOOL_CLI_VERSION: "1.5.0"
-  ANCHOR_TEST_VALIDATOR: "legacy"
 
 jobs:
   # Build CLI once to share across test jobs
   build-cli:
-    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     name: Build CLI
     if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     runs-on: ubuntu-latest
@@ -76,7 +74,6 @@ jobs:
   # Rust-only test templates: `--javascript` and `--package-manager` don't
   # apply, so the matrix is just template x test-template (2 x 3 = 6 cells).
   template-rust-tests:
-    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     name: ${{ matrix.template }} + ${{ matrix.test_template }}
     if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     needs: build-cli
@@ -151,20 +148,12 @@ jobs:
           EOF
 
       - name: anchor test
-        if: matrix.test_template != 'litesvm'
         working-directory: /tmp/my_program
-        run: anchor test
-      - name: anchor test
-        if: matrix.test_template == 'litesvm'
-        working-directory: /tmp/my_program
-        env:
-          ANCHOR_BUILD_SBF_ARCH: "v2"
         run: anchor test
 
   # JS-based test templates: cross-product over template x language x
   # package manager (2 x 2 x 2 x 4 = 32 cells).
   template-js-tests:
-    if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     name: ${{ matrix.template }} + ${{ matrix.test_template }} + ${{ matrix.language }} + ${{ matrix.package_manager }}
     if: github.event_name != 'pull_request' || !startsWith(github.head_ref, 'release-bump/')
     needs: build-cli

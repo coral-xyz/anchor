@@ -53,8 +53,6 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
   });
   const buildEnv: NodeJS.ProcessEnv = {
     ...process.env,
-    // Current benchmarks use SBPFv3; historical versions retain their recorded architecture.
-    ANCHOR_BUILD_SBF_ARCH: "v3",
     RUSTC_BOOTSTRAP: "1",
     CARGO_TARGET_SBF_SOLANA_SOLANA_RUSTFLAGS: "-Z emit-stack-sizes",
     CARGO_TARGET_SBPF_SOLANA_SOLANA_RUSTFLAGS: "-Z emit-stack-sizes",
@@ -176,9 +174,7 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
     // Build the IDL once with the current CLI. The TypeScript tests use this
     // format even when a historical CLI starts the validator.
     await fs.rm(IDL_PATH, { force: true });
-    const buildResult = spawn("anchor", ["build", "--skip-lint"], {
-      env: buildEnv,
-    });
+    const buildResult = spawn("anchor", ["build", "--skip-lint"]);
     if (buildResult.status !== 0) {
       throw new Error("Failed to build the current benchmark program.");
     }
@@ -189,7 +185,7 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
       await setProjectVersion(version);
       const versionBuildEnv = {
         ...buildEnv,
-        ANCHOR_BUILD_SBF_ARCH: bench.get(version).sbpfArch ?? "v2",
+        ANCHOR_BUILD_SBF_ARCH: bench.get(version).sbpfArch ?? "v3",
         ANCHOR_TEST_VALIDATOR:
           bench.get(version).sbpfArch === "v3" ? "surfpool" : "legacy",
       };
@@ -264,7 +260,6 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
       }
 
       const testArgs = ["test", "--skip-lint", "--skip-build"];
-      // Use Surfpool for SBPFv3; preserve the legacy runtime for older measurements.
       if (version === "unreleased" || version >= "1.0.0") {
         testArgs.push("--validator", versionBuildEnv.ANCHOR_TEST_VALIDATOR);
       }

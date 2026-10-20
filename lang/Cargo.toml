@@ -116,7 +116,7 @@ solana-program-memory.workspace = true
 solana-program-option.workspace = true
 solana-program-pack.workspace = true
 solana-sdk-ids.workspace = true
-solana-system-interface = { workspace = true, features = ["bincode"] }
+solana-system-interface.workspace = true
 solana-sysvar-id.workspace = true
 
 # Cohort-specific. Exactly one column is ever activated; `src/compat.rs` aliases
