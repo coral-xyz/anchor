@@ -121,6 +121,14 @@ pub struct TestUnnamedStruct(
     pub TestBasicEnum,
 );
 
+#[derive(AnchorSerialize, AnchorDeserialize, InitSpace)]
+pub struct TestBorshSkippedStruct {
+    pub head: u8,
+    #[borsh(skip)]
+    pub skipped: u64,
+    pub tail: u16,
+}
+
 #[derive(InitSpace)]
 pub struct TestUnitStruct;
 
@@ -338,6 +346,11 @@ fn test_unnamed_struct() {
         TestUnnamedStruct::INIT_SPACE,
         1 + 4 + 4 * 4 + 4 + 10 + ChildStruct::INIT_SPACE + TestBasicEnum::INIT_SPACE
     )
+}
+
+#[test]
+fn test_borsh_skipped_struct() {
+    assert_eq!(TestBorshSkippedStruct::INIT_SPACE, 1 + 2);
 }
 
 #[test]
