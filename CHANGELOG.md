@@ -21,6 +21,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 
 ### Breaking
 
+- lang-v2: `SysvarLoad::read` is now `unsafe`. ([#5205](https://github.com/otter-sec/anchor/pull/5205)).
 - lang-v2: Default `#[event]` structs now derive `AnchorDeserialize` as well as `AnchorSerialize`. Remove any explicit `AnchorDeserialize` derive from these structs to avoid conflicting implementations; `#[event(bytemuck)]` is unchanged ([#5078](https://github.com/otter-sec/anchor/pull/5078)).
 
 ## [2.0.0-rc.2] - 2026-10-06
