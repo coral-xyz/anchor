@@ -162,7 +162,14 @@ describe("coder.types", () => {
   // 2^53 is the first integer past that, so JS has already rounded it.
   const maxSafeInteger = Number.MAX_SAFE_INTEGER;
   const firstUnsafeInteger = 2 ** 53;
-  const wideIntegerFields = ["u64", "i64", "u128", "i128", "u256", "i256"] as const;
+  const wideIntegerFields = [
+    "u64",
+    "i64",
+    "u128",
+    "i128",
+    "u256",
+    "i256",
+  ] as const;
   const wideIntegerZeros = {
     u64: 0n,
     i64: 0n,
