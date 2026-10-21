@@ -43,7 +43,7 @@ use {
 ///    pub data: Account<'info, ExampleAccount>,
 /// }
 /// ```
-#[proc_macro_derive(InitSpace, attributes(max_len))]
+#[proc_macro_derive(InitSpace, attributes(max_len, borsh))]
 pub fn derive_init_space(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -54,6 +54,9 @@ pub fn derive_init_space(item: TokenStream) -> TokenStream {
             let recurse = fields
                 .into_iter()
                 .map(|f| {
+                    if is_borsh_skipped(&f.attrs)? {
+                        return Ok(quote!(0));
+                    }
                     let mut max_len_args = get_max_len_args(&f.attrs)?;
                     Ok(len_from_type(f.ty, &mut max_len_args))
                 })
@@ -88,6 +91,9 @@ pub fn derive_init_space(item: TokenStream) -> TokenStream {
                             .fields
                             .into_iter()
                             .map(|f| {
+                                if is_borsh_skipped(&f.attrs)? {
+                                    return Ok(quote!(0));
+                                }
                                 let mut max_len_args = get_max_len_args(&f.attrs)?;
                                 Ok(len_from_type(f.ty, &mut max_len_args))
                             })
@@ -245,6 +251,21 @@ fn get_max_len_args(
         .find(|a| a.path().is_ident("max_len"))
         .map(|a| a.parse_args_with(parse_len_arg))
         .transpose()
+}
+
+fn is_borsh_skipped(attributes: &[Attribute]) -> Result<bool, syn::Error> {
+    for attribute in attributes.iter().filter(|a| a.path().is_ident("borsh")) {
+        let metas = attribute.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)?;
+
+        if metas
+            .iter()
+            .any(|meta| matches!(meta, syn::Meta::Path(path) if path.is_ident("skip")))
+        {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }
 
 fn get_next_arg(ident: &Ident, args: &mut Option<VecDeque<TokenStream2>>) -> TokenStream2 {
