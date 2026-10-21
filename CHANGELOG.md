@@ -45,6 +45,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 ### Breaking
 
 - cli: Display `None` as `null` when displaying account data ([#4758](https://github.com/otter-sec/anchor/pull/4758)).
+- lang: Require comma-separated expressions in `#[access_control(...)]`; the previously accepted undocumented whitespace-separated form, such as `#[access_control(a() b())]`, is no longer supported ([#4980](https://github.com/otter-sec/anchor/pull/4980)).
 
 ## [1.2.1] - 2026-10-05
 
