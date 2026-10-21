@@ -34,6 +34,35 @@ fn test_borsh_skip_is_excluded_from_idl() {
 }
 
 #[test]
+fn test_borsh_bound_is_accepted_by_idl_build() {
+    use anchor_lang::idl::{
+        types::{IdlDefinedFields, IdlTypeDefTy},
+        IdlBuild,
+    };
+
+    #[allow(dead_code)]
+    #[derive(AnchorSerialize, AnchorDeserialize)]
+    pub struct BoundField {
+        #[borsh(bound(
+            serialize = "u64: borsh::ser::BorshSerialize",
+            deserialize = "u64: borsh::de::BorshDeserialize"
+        ))]
+        pub value: u64,
+    }
+
+    let ty = BoundField::create_type().unwrap();
+    let IdlTypeDefTy::Struct {
+        fields: Some(IdlDefinedFields::Named(fields)),
+    } = ty.ty
+    else {
+        panic!("expected named struct fields in IDL");
+    };
+
+    assert_eq!(fields.len(), 1);
+    assert_eq!(fields[0].name, "value");
+}
+
+#[test]
 fn test_borsh_use_discriminant_false_keeps_default_idl_enum_layout() {
     use anchor_lang::idl::{types::IdlTypeDefTy, IdlBuild};
 
