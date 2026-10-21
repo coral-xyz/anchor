@@ -2211,7 +2211,7 @@ mod tests {
         assert!(!test.contains("counter: counter.publicKey"));
 
         let toolchain = rust_toolchain_toml(AnchorVersion::V1);
-        assert!(toolchain.contains("channel = \"1.89.0\""));
+        assert!(toolchain.contains("channel = \"1.95.0\""));
     }
 
     #[test]
