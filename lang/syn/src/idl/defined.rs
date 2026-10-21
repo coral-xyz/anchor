@@ -1128,7 +1128,6 @@ mod tests {
             deserialize_error,
             "IDL building does not support `#[borsh(deserialize_with = ...)]`"
         );
-
     }
 
     #[test]
