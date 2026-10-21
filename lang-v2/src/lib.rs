@@ -6,8 +6,7 @@
 extern crate alloc;
 extern crate self as anchor_lang;
 
-/// Hidden compatibility re-export used by generated and legacy V2 test
-/// programs which opt into the allocator-backed runtime.
+/// Hidden compatibility re-export used by generated V2 host and IDL code.
 #[doc(hidden)]
 #[cfg(feature = "alloc")]
 pub extern crate alloc as __alloc;
@@ -124,25 +123,6 @@ pub use wincode;
 
 pub use fixed_vec::FixedVec;
 pub use idl::{IdlAccountType, IdlEntries};
-/// Maximum number of account metas held by an on-chain V2 inline buffer.
-///
-/// Pinocchio permits up to 255 transaction accounts, but using that value for
-/// every allocator-free CPI buffer would place large `CpiAccount` arrays on
-/// the SBF stack. Keep the inline runtime bound deliberately small so common
-/// CPI paths remain within Solana's stack limit; callers needing more account
-/// metas must split the operation into smaller instructions.
-/// Public account-meta capacity used by generated builders and CPI helpers.
-///
-/// Keep this at the normal transaction account limit in the API PR. Smaller
-/// stack representations belong to the follow-up stack-optimization work;
-/// lowering this value here would turn valid larger account lists into
-/// `InvalidArgument` failures.
-pub const MAX_ACCOUNT_METAS: usize = 64;
-/// Inline capacity used by transient on-chain buffers in this API-focused
-/// PR. The follow-up stack work can replace these arrays with borrowed views
-/// without changing the public account-meta limit above.
-#[doc(hidden)]
-pub const MAX_RUNTIME_ACCOUNT_METAS: usize = 16;
 pub const MAX_INSTRUCTION_DATA: usize = 1232;
 /// Maximum encoded event-CPI payload kept inline by the generated `emit_cpi!`
 /// path. Direct event serialization still uses `MAX_INSTRUCTION_DATA`.
@@ -150,59 +130,25 @@ pub const MAX_EVENT_CPI_DATA: usize = 256 + 8;
 /// Maximum number of elements in an allocator-free collection emitted by
 /// generated on-chain IDL bindings.
 pub const MAX_IDL_SEQUENCE: usize = 256;
-/// Account-meta storage used by generated account builders. Both host and
-/// on-chain builds expose the bounded public API; host-only instruction
-/// builders convert this buffer into the SDK's owned `Vec` at the boundary.
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub type AccountMetaBuffer = FixedVec<AccountMeta, MAX_RUNTIME_ACCOUNT_METAS>;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub type AccountMetaBuffer = FixedVec<AccountMeta, MAX_ACCOUNT_METAS>;
-
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub type InstructionAccountBuffer<'a> =
-    FixedVec<pinocchio::instruction::InstructionAccount<'a>, MAX_RUNTIME_ACCOUNT_METAS>;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub type InstructionAccountBuffer<'a> =
-    FixedVec<pinocchio::instruction::InstructionAccount<'a>, MAX_ACCOUNT_METAS>;
-
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub type AccountViewBuffer = FixedVec<pinocchio::account::AccountView, MAX_RUNTIME_ACCOUNT_METAS>;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub type AccountViewBuffer = FixedVec<pinocchio::account::AccountView, MAX_ACCOUNT_METAS>;
-
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub type CpiHandleBuffer<'a> = FixedVec<CpiHandle<'a>, MAX_RUNTIME_ACCOUNT_METAS>;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub type CpiHandleBuffer<'a> = FixedVec<CpiHandle<'a>, MAX_ACCOUNT_METAS>;
-
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub type BoolBuffer = FixedVec<bool, MAX_RUNTIME_ACCOUNT_METAS>;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub type BoolBuffer = FixedVec<bool, MAX_ACCOUNT_METAS>;
+pub type AccountMetaBuffer<const N: usize> = FixedVec<AccountMeta, N>;
+pub type InstructionAccountBuffer<'a, const N: usize> =
+    FixedVec<pinocchio::instruction::InstructionAccount<'a>, N>;
+pub type AccountViewBuffer<const N: usize> =
+    FixedVec<pinocchio::account::AccountView, N>;
+pub type CpiHandleBuffer<'a, const N: usize> = FixedVec<CpiHandle<'a>, N>;
+pub type BoolBuffer<const N: usize> = FixedVec<bool, N>;
 pub type InstructionDataBuffer = FixedVec<u8, MAX_INSTRUCTION_DATA>;
-
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub type SignerBuffer<'a> = FixedVec<pinocchio::cpi::Signer<'a, 'a>, MAX_RUNTIME_ACCOUNT_METAS>;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub type SignerBuffer<'a> = FixedVec<pinocchio::cpi::Signer<'a, 'a>, MAX_ACCOUNT_METAS>;
-
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub type CpiAccountBuffer<'a> =
-    FixedVec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>, MAX_RUNTIME_ACCOUNT_METAS>;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub type CpiAccountBuffer<'a> =
-    FixedVec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>, MAX_ACCOUNT_METAS>;
-
-#[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub type AccountBindingBuffer = FixedVec<Option<usize>, MAX_RUNTIME_ACCOUNT_METAS>;
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub type AccountBindingBuffer = FixedVec<Option<usize>, MAX_ACCOUNT_METAS>;
+pub type SignerBuffer<'a, const N: usize> =
+    FixedVec<pinocchio::cpi::Signer<'a, 'a>, N>;
+pub type CpiAccountBuffer<'a, const N: usize> =
+    FixedVec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>, N>;
+pub type AccountBindingBuffer<const N: usize> = FixedVec<Option<usize>, N>;
 
 /// Append one instruction account without making the generated CPI builder
 /// rely on `FixedVec::push`'s panic-on-overflow compatibility behavior.
 #[inline]
-pub fn try_push_instruction_account<'a>(
-    buffer: &mut InstructionAccountBuffer<'a>,
+pub fn try_push_instruction_account<'a, const N: usize>(
+    buffer: &mut InstructionAccountBuffer<'a, N>,
     account: pinocchio::instruction::InstructionAccount<'a>,
 ) -> core::result::Result<(), solana_program_error::ProgramError> {
     buffer
@@ -213,8 +159,8 @@ pub fn try_push_instruction_account<'a>(
 /// Append one CPI handle without panicking when a generated account shape is
 /// larger than the SBF inline account budget.
 #[inline]
-pub fn try_push_cpi_handle<'a>(
-    buffer: &mut CpiHandleBuffer<'a>,
+pub fn try_push_cpi_handle<'a, const N: usize>(
+    buffer: &mut CpiHandleBuffer<'a, N>,
     handle: CpiHandle<'a>,
 ) -> core::result::Result<(), solana_program_error::ProgramError> {
     buffer
@@ -254,7 +200,7 @@ impl<const N: usize> OptionalSentinelFlags for [bool; N] {
     }
 }
 
-impl OptionalSentinelFlags for BoolBuffer {
+impl<const N: usize> OptionalSentinelFlags for BoolBuffer<N> {
     #[inline]
     fn len(&self) -> usize {
         FixedVec::len(self)
@@ -459,9 +405,15 @@ pub mod solana_program {
     }
 }
 
-/// Converts a struct of account addresses into a list of [`AccountMeta`]s.
+/// Converts a struct of account addresses into a host-side list of
+/// [`AccountMeta`]s.
+///
+/// This is intentionally a host/client API. Runtime CPI account storage is
+/// selected per invocation through [`ToCpiAccountsWithCapacity`] instead of
+/// imposing a global account-meta buffer on every caller.
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub trait ToAccountMetas {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> AccountMetaBuffer;
+    fn to_account_metas(&self, is_signer: Option<bool>) -> std::vec::Vec<AccountMeta>;
 }
 
 /// Serializes instruction data: discriminator prefix + LE-encoded args.

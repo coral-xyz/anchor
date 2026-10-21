@@ -41,7 +41,7 @@ pub fn invoke<'a, I: CpiInstruction + ?Sized>(
 
 /// Like [`invoke`], but marks instruction-account indices that are intentional
 /// optional `None` program-id sentinels (parallel to
-/// [`crate::ToCpiAccounts::optional_account_sentinel_flags`]).
+/// [`crate::ToCpiAccountsWithCapacity::optional_account_sentinel_flags_with_capacity`]).
 pub fn invoke_with_optional_sentinels<'a, I: CpiInstruction + ?Sized>(
     instruction: &I,
     account_handles: &[CpiHandle<'a>],

@@ -1,7 +1,9 @@
 extern crate alloc;
 
 use {
-    crate::{address_eq, require, CpiHandle, CpiInstruction, ToCpiAccounts},
+    crate::{
+        address_eq, require, CpiHandle, CpiInstruction, ToCpiAccountsWithCapacity,
+    },
     alloc::vec::Vec,
     core::mem::MaybeUninit,
     pinocchio::{
@@ -23,19 +25,29 @@ use {
 ///     data_acc: ctx.accounts.data_acc.cpi_handle_mut(),
 ///     authority: ctx.accounts.authority.cpi_handle(),
 /// };
-/// let cpi_ctx = CpiContext::new(ctx.accounts.callee.address(), cpi_accounts);
+/// let cpi_ctx = CpiContext::<_, 2>::new_with_capacity(
+///     ctx.accounts.callee.address(),
+///     cpi_accounts,
+/// );
 /// callee::cpi::set_data(cpi_ctx, data)?;
 /// ```
-pub struct CpiContext<'a, T: ToCpiAccounts<'a>> {
+pub struct CpiContext<'a, T, const N: usize>
+where
+    T: ToCpiAccountsWithCapacity<'a, N>,
+{
     pub accounts: T,
-    pub remaining_accounts: crate::CpiHandleBuffer<'a>,
+    pub remaining_accounts: crate::CpiHandleBuffer<'a, N>,
     pub program: &'a Address,
     pub signer_seeds: &'a [&'a [&'a [u8]]],
 }
 
-impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
+impl<'a, T, const N: usize> CpiContext<'a, T, N>
+where
+    T: ToCpiAccountsWithCapacity<'a, N>,
+{
+    /// Construct a CPI context with an explicitly selected inline capacity.
     #[must_use]
-    pub fn new(program: &'a Address, accounts: T) -> Self {
+    pub fn new_with_capacity(program: &'a Address, accounts: T) -> Self {
         Self {
             accounts,
             program,
@@ -45,7 +57,7 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     }
 
     #[must_use]
-    pub fn new_with_signer(
+    pub fn new_with_signer_capacity(
         program: &'a Address,
         accounts: T,
         signer_seeds: &'a [&'a [&'a [u8]]],
@@ -65,18 +77,19 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     }
 
     #[must_use]
-    pub fn with_remaining_accounts(mut self, ra: crate::CpiHandleBuffer<'a>) -> Self {
+    pub fn with_remaining_accounts(mut self, ra: crate::CpiHandleBuffer<'a, N>) -> Self {
         self.remaining_accounts = ra;
         self
     }
 
     /// Invoke the CPI with the given instruction data. Collects accounts
-    /// from [`ToCpiAccounts`], appends remaining accounts, validates borrow
+    /// from [`ToCpiAccountsWithCapacity`], appends remaining accounts, validates borrow
     /// state, then calls `invoke_signed_unchecked`.
     pub fn invoke(&self, data: &[u8]) -> ProgramResult {
-        let mut instruction_accounts = self.accounts.to_instruction_accounts()?;
-        let mut handles = self.accounts.to_cpi_handles()?;
-        let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags()?;
+        let mut instruction_accounts = self.accounts.to_instruction_accounts_with_capacity()?;
+        let mut handles = self.accounts.to_cpi_handles_with_capacity()?;
+        let mut optional_sentinel_flags =
+            self.accounts.optional_account_sentinel_flags_with_capacity()?;
 
         // Append remaining accounts using the handle's writable/signer flags
         // so PDA remaining accounts marked with `as_signer()` emit signer metas.
@@ -167,10 +180,11 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
     ///
     /// The instruction's program id must match this context's program. Account
     /// metas are taken from the instruction, while account handles are collected
-    /// from [`ToCpiAccounts`] and `remaining_accounts`.
+    /// from [`ToCpiAccountsWithCapacity`] and `remaining_accounts`.
     ///
     /// Optional `None` sentinel slots must appear in the same positions as in
-    /// [`ToCpiAccounts::to_instruction_accounts`]; only those indices may omit
+    /// [`ToCpiAccountsWithCapacity::to_instruction_accounts_with_capacity`];
+    /// only those indices may omit
     /// handles for readonly program-id metas.
     pub fn invoke_ix<I: CpiInstruction>(&self, ix: I) -> ProgramResult {
         require!(
@@ -178,14 +192,15 @@ impl<'a, T: ToCpiAccounts<'a>> CpiContext<'a, T> {
             ProgramError::IncorrectProgramId
         );
 
-        let mut handles = self.accounts.to_cpi_handles()?;
+        let mut handles = self.accounts.to_cpi_handles_with_capacity()?;
         for handle in &self.remaining_accounts {
             handles
                 .try_push(*handle)
                 .map_err(|_| ProgramError::InvalidArgument)?;
         }
 
-        let mut optional_sentinel_flags = self.accounts.optional_account_sentinel_flags()?;
+        let mut optional_sentinel_flags =
+            self.accounts.optional_account_sentinel_flags_with_capacity()?;
         let instruction_account_count = crate::program::instruction_account_count(&ix);
         require!(
             optional_sentinel_flags.len() <= instruction_account_count

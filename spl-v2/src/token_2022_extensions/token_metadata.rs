@@ -46,8 +46,8 @@ pub struct TokenMetadataRemoveKey<'a> {
     pub update_authority: CpiHandle<'a>,
 }
 
-pub fn token_metadata_initialize<'a>(
-    ctx: CpiContext<'a, TokenMetadataInitialize<'a>>,
+pub fn token_metadata_initialize<'a, const N: usize>(
+    ctx: CpiContext<'a, TokenMetadataInitialize<'a>, N>,
     name: &str,
     symbol: &str,
     uri: &str,
@@ -67,8 +67,8 @@ pub fn token_metadata_initialize<'a>(
     ctx.invoke_ix(ix)
 }
 
-pub fn token_metadata_update_authority<'a>(
-    ctx: CpiContext<'a, TokenMetadataUpdateAuthority<'a>>,
+pub fn token_metadata_update_authority<'a, const N: usize>(
+    ctx: CpiContext<'a, TokenMetadataUpdateAuthority<'a>, N>,
     new_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
     validate_token_2022_program(ctx.program)?;
@@ -84,8 +84,8 @@ pub fn token_metadata_update_authority<'a>(
     ctx.invoke_ix(ix)
 }
 
-pub fn token_metadata_update_field<'a>(
-    ctx: CpiContext<'a, TokenMetadataUpdateField<'a>>,
+pub fn token_metadata_update_field<'a, const N: usize>(
+    ctx: CpiContext<'a, TokenMetadataUpdateField<'a>, N>,
     field: Field<'_>,
     value: &str,
 ) -> Result<(), ProgramError> {
@@ -107,8 +107,8 @@ pub fn token_metadata_update_field<'a>(
     ctx.invoke_ix(ix)
 }
 
-pub fn token_metadata_remove_key<'a>(
-    ctx: CpiContext<'a, TokenMetadataRemoveKey<'a>>,
+pub fn token_metadata_remove_key<'a, const N: usize>(
+    ctx: CpiContext<'a, TokenMetadataRemoveKey<'a>, N>,
     key: &str,
     idempotent: bool,
 ) -> Result<(), ProgramError> {

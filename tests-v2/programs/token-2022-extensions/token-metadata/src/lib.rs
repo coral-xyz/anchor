@@ -15,7 +15,7 @@ pub mod token_2022_ext_token_metadata {
             mint_authority: ctx.accounts.mint_authority.cpi_handle(),
         };
         token_2022_ext::token_metadata_initialize(
-            CpiContext::new(ctx.accounts.token_program.address(), accs),
+            CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs),
             "name",
             "SYM",
             "https://example.invalid",
@@ -33,7 +33,7 @@ pub mod token_2022_ext_token_metadata {
             current_authority: ctx.accounts.current_authority.cpi_handle(),
         };
         token_2022_ext::token_metadata_update_authority(
-            CpiContext::new(ctx.accounts.token_program.address(), accs),
+            CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs),
             Some(&new_authority),
         )?;
         Ok(())
@@ -46,7 +46,7 @@ pub mod token_2022_ext_token_metadata {
             update_authority: ctx.accounts.update_authority.cpi_handle(),
         };
         token_2022_ext::token_metadata_update_field(
-            CpiContext::new(ctx.accounts.token_program.address(), accs),
+            CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs),
             token_2022_ext::token_metadata::Field::Key("field"),
             "value",
         )?;
@@ -60,7 +60,7 @@ pub mod token_2022_ext_token_metadata {
             update_authority: ctx.accounts.update_authority.cpi_handle(),
         };
         token_2022_ext::token_metadata_remove_key(
-            CpiContext::new(ctx.accounts.token_program.address(), accs),
+            CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs),
             "field",
             true,
         )?;

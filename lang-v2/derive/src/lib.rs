@@ -15,8 +15,8 @@ use {
     quote::quote,
     syn::{
         parse::{Parse, ParseStream, Parser}, parse_macro_input, spanned::Spanned, Data,
-        DeriveInput, Expr, ExprLit, ExprUnary, Fields, FnArg, Ident, ItemMod, ItemStruct, Lit,
-        LitStr, Meta, Pat, Token, Type, UnOp,
+        parse_quote, DeriveInput, Expr, ExprLit, ExprUnary, Fields, FnArg, GenericParam, Ident,
+        ItemMod, ItemStruct, Lit, LitStr, Meta, Pat, Token, Type, UnOp,
     },
 };
 
@@ -402,7 +402,13 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
     };
 
     let name = &input.ident;
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let (_, ty_generics, _) = input.generics.split_for_impl();
+    let cpi_capacity = Ident::new("__ANCHOR_CPI_CAPACITY", Span::call_site());
+    let mut cpi_generics = input.generics.clone();
+    cpi_generics.params.push(GenericParam::Const(parse_quote!(
+        const #cpi_capacity: usize
+    )));
+    let (impl_generics, _, where_clause) = cpi_generics.split_for_impl();
 
     let meta_steps = cpi_fields.iter().map(|(ident, kind, signer)| {
         let writable = matches!(
@@ -414,7 +420,7 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
             CpiFieldKind::Nested => quote! {
                 __accounts
                     .try_extend_from_slice(
-                        anchor_lang::ToCpiAccounts::to_instruction_accounts(&self.#ident)?.as_slice(),
+                    anchor_lang::ToCpiAccountsWithCapacity::<#cpi_lifetime, #cpi_capacity>::to_instruction_accounts_with_capacity(&self.#ident)?.as_slice(),
                     )
                     .map_err(|_| anchor_lang::Error::InvalidArgument)?;
             },
@@ -455,7 +461,7 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
         CpiFieldKind::Nested => quote! {
             __handles
                 .try_extend_from_slice(
-                    anchor_lang::ToCpiAccounts::to_cpi_handles(&self.#ident)?.as_slice(),
+                    anchor_lang::ToCpiAccountsWithCapacity::<#cpi_lifetime, #cpi_capacity>::to_cpi_handles_with_capacity(&self.#ident)?.as_slice(),
                 )
                 .map_err(|_| anchor_lang::Error::InvalidArgument)?;
         },
@@ -490,7 +496,7 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
         CpiFieldKind::Nested => quote! {
             __flags
                 .try_extend_from_slice(
-                    anchor_lang::ToCpiAccounts::optional_account_sentinel_flags(&self.#ident)?.as_slice(),
+                    anchor_lang::ToCpiAccountsWithCapacity::<#cpi_lifetime, #cpi_capacity>::optional_account_sentinel_flags_with_capacity(&self.#ident)?.as_slice(),
                 )
                 .map_err(|_| anchor_lang::Error::InvalidArgument)?;
         },
@@ -507,26 +513,26 @@ fn impl_to_cpi_accounts(input: &DeriveInput) -> TokenStream2 {
     });
 
     quote! {
-        impl #impl_generics anchor_lang::ToCpiAccounts<#cpi_lifetime>
+        impl #impl_generics anchor_lang::ToCpiAccountsWithCapacity<#cpi_lifetime, #cpi_capacity>
             for #name #ty_generics #where_clause
         {
-            fn to_instruction_accounts(
+            fn to_instruction_accounts_with_capacity(
                 &self,
-            ) -> anchor_lang::Result<anchor_lang::InstructionAccountBuffer<#cpi_lifetime>> {
+            ) -> anchor_lang::Result<anchor_lang::InstructionAccountBuffer<#cpi_lifetime, #cpi_capacity>> {
                 let mut __accounts = anchor_lang::InstructionAccountBuffer::new();
                 #(#meta_steps)*
                 Ok(__accounts)
             }
 
-            fn to_cpi_handles(
+            fn to_cpi_handles_with_capacity(
                 &self,
-            ) -> anchor_lang::Result<anchor_lang::CpiHandleBuffer<#cpi_lifetime>> {
+            ) -> anchor_lang::Result<anchor_lang::CpiHandleBuffer<#cpi_lifetime, #cpi_capacity>> {
                 let mut __handles = anchor_lang::CpiHandleBuffer::new();
                 #(#handle_steps)*
                 Ok(__handles)
             }
 
-            fn optional_account_sentinel_flags(&self) -> anchor_lang::Result<anchor_lang::BoolBuffer> {
+            fn optional_account_sentinel_flags_with_capacity(&self) -> anchor_lang::Result<anchor_lang::BoolBuffer<#cpi_capacity>> {
                 let mut __flags = anchor_lang::BoolBuffer::new();
                 #(#flag_steps)*
                 Ok(__flags)
@@ -2159,11 +2165,12 @@ fn impl_accounts(input: &DeriveInput) -> TokenStream2 {
         pub struct #resolved_name {
             #(#client_fields,)*
         }
+        #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         impl anchor_lang::ToAccountMetas for #resolved_name {
-            fn to_account_metas(&self, _is_signer: Option<bool>) -> anchor_lang::AccountMetaBuffer {
+            fn to_account_metas(&self, _is_signer: Option<bool>) -> ::std::vec::Vec<anchor_lang::AccountMeta> {
                 #(#required_locals)*
                 #(#derive_stmts)*
-                let mut __metas = anchor_lang::AccountMetaBuffer::new();
+                let mut __metas = ::std::vec::Vec::new();
                 #(#client_meta_steps)*
                 __metas
             }
@@ -2176,9 +2183,10 @@ fn impl_accounts(input: &DeriveInput) -> TokenStream2 {
             pub struct #name {
                 #(#all_client_fields,)*
             }
+            #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
             impl anchor_lang::ToAccountMetas for #name {
-                fn to_account_metas(&self, _is_signer: Option<bool>) -> anchor_lang::AccountMetaBuffer {
-                    let mut __metas = anchor_lang::AccountMetaBuffer::new();
+                fn to_account_metas(&self, _is_signer: Option<bool>) -> ::std::vec::Vec<anchor_lang::AccountMeta> {
+                    let mut __metas = ::std::vec::Vec::new();
                     #(#full_meta_steps)*
                     __metas
                 }
@@ -5722,9 +5730,15 @@ fn process_handler(
     // instruction struct's optional ref-args lifetime.
     let cpi_wrapper = {
         let (lt_decl, ix_lt_use_local) = if has_ref_args {
-            (quote! { <'a, 'ix> }, quote! { <'ix> })
+            (
+                quote! { <'a, 'ix, const __ANCHOR_CPI_CAPACITY: usize> },
+                quote! { <'ix> },
+            )
         } else {
-            (quote! { <'a> }, quote! {})
+            (
+                quote! { <'a, const __ANCHOR_CPI_CAPACITY: usize> },
+                quote! {},
+            )
         };
         let (ret_ty, ret_value) = if returns_value {
             (
@@ -5743,7 +5757,11 @@ fn process_handler(
             #accounts_program_id_check
             #(#handler_cfg_attrs)*
             pub fn #fn_name #lt_decl(
-                __ctx: anchor_lang::CpiContext<'a, accounts::#accounts_ident<'a>>,
+                __ctx: anchor_lang::CpiContext<
+                    'a,
+                    accounts::#accounts_ident<'a>,
+                    __ANCHOR_CPI_CAPACITY,
+                >,
                 #(#extra_arg_names: #extra_arg_types,)*
             ) #ret_ty {
                 // No lifetime arguments on the literal: a struct expression
@@ -6938,10 +6956,12 @@ pub fn emit_cpi(input: TokenStream) -> TokenStream {
                 event_authority: anchor_lang::CpiHandle<'a>,
             }
 
-            impl<'a> anchor_lang::ToCpiAccounts<'a> for __AnchorEventCpiAccounts<'a> {
-                fn to_instruction_accounts(
+            impl<'a, const N: usize> anchor_lang::ToCpiAccountsWithCapacity<'a, N>
+                for __AnchorEventCpiAccounts<'a>
+            {
+                fn to_instruction_accounts_with_capacity(
                     &self,
-                    ) -> anchor_lang::Result<anchor_lang::InstructionAccountBuffer<'a>> {
+                    ) -> anchor_lang::Result<anchor_lang::InstructionAccountBuffer<'a, N>> {
                     let mut __accounts = anchor_lang::InstructionAccountBuffer::new();
                     __accounts.try_push(
                         anchor_lang::pinocchio::instruction::InstructionAccount::readonly_signer(
@@ -6951,9 +6971,9 @@ pub fn emit_cpi(input: TokenStream) -> TokenStream {
                     Ok(__accounts)
                 }
 
-                fn to_cpi_handles(
+                fn to_cpi_handles_with_capacity(
                     &self,
-                ) -> anchor_lang::Result<anchor_lang::CpiHandleBuffer<'a>> {
+                ) -> anchor_lang::Result<anchor_lang::CpiHandleBuffer<'a, N>> {
                     let mut __handles = anchor_lang::CpiHandleBuffer::new();
                     __handles
                         .try_push(self.event_authority)
@@ -6961,9 +6981,9 @@ pub fn emit_cpi(input: TokenStream) -> TokenStream {
                     Ok(__handles)
                 }
 
-                fn optional_account_sentinel_flags(
+                fn optional_account_sentinel_flags_with_capacity(
                     &self,
-                ) -> anchor_lang::Result<anchor_lang::BoolBuffer> {
+                ) -> anchor_lang::Result<anchor_lang::BoolBuffer<N>> {
                     let mut __flags = anchor_lang::BoolBuffer::new();
                     __flags
                         .try_push(false)
@@ -6987,7 +7007,7 @@ pub fn emit_cpi(input: TokenStream) -> TokenStream {
             let __event_authority_seeds: &[&[u8]] =
                 &[b"__event_authority", __event_authority_bump.as_ref()];
             let __event_authority_signers: &[&[&[u8]]] = &[__event_authority_seeds];
-            anchor_lang::CpiContext::new_with_signer(
+            anchor_lang::CpiContext::<_, 1>::new_with_signer_capacity(
                 ctx.program_id,
                 __AnchorEventCpiAccounts { event_authority: __event_authority },
                 __event_authority_signers,

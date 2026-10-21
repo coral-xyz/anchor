@@ -191,8 +191,8 @@ fn return_data_from(program: &Address) -> Result<InstructionDataBuffer, ProgramE
     Ok(output)
 }
 
-pub fn get_account_data_size<'a>(
-    ctx: CpiContext<'a, GetAccountDataSize<'a>>,
+pub fn get_account_data_size<'a, const N: usize>(
+    ctx: CpiContext<'a, GetAccountDataSize<'a>, N>,
     extension_types: &[ExtensionType],
 ) -> Result<u64, ProgramError> {
     let extension_types = canonical_extension_types(extension_types)?;
@@ -210,8 +210,8 @@ pub fn get_account_data_size<'a>(
     Ok(u64::from_le_bytes(bytes))
 }
 
-pub fn initialize_mint_close_authority<'a>(
-    ctx: CpiContext<'a, InitializeMintCloseAuthority<'a>>,
+pub fn initialize_mint_close_authority<'a, const N: usize>(
+    ctx: CpiContext<'a, InitializeMintCloseAuthority<'a>, N>,
     close_authority: Option<&Address>,
 ) -> Result<(), ProgramError> {
     let ix = spl_token_2022::instruction::initialize_mint_close_authority(
@@ -222,8 +222,8 @@ pub fn initialize_mint_close_authority<'a>(
     ctx.invoke_ix(ix)
 }
 
-pub fn initialize_immutable_owner<'a>(
-    ctx: CpiContext<'a, InitializeImmutableOwner<'a>>,
+pub fn initialize_immutable_owner<'a, const N: usize>(
+    ctx: CpiContext<'a, InitializeImmutableOwner<'a>, N>,
 ) -> Result<(), ProgramError> {
     let ix = spl_token_2022::instruction::initialize_immutable_owner(
         ctx.program,
@@ -232,8 +232,8 @@ pub fn initialize_immutable_owner<'a>(
     ctx.invoke_ix(ix)
 }
 
-pub fn amount_to_ui_amount<'a>(
-    ctx: CpiContext<'a, AmountToUiAmount<'a>>,
+pub fn amount_to_ui_amount<'a, const N: usize>(
+    ctx: CpiContext<'a, AmountToUiAmount<'a>, N>,
     amount: u64,
 ) -> Result<InstructionDataBuffer, ProgramError> {
     let ix = spl_token_2022::instruction::amount_to_ui_amount(
@@ -245,8 +245,8 @@ pub fn amount_to_ui_amount<'a>(
     Ok(return_data_from(ctx.program)?)
 }
 
-pub fn ui_amount_to_amount<'a>(
-    ctx: CpiContext<'a, UiAmountToAmount<'a>>,
+pub fn ui_amount_to_amount<'a, const N: usize>(
+    ctx: CpiContext<'a, UiAmountToAmount<'a>, N>,
     ui_amount: &str,
 ) -> Result<u64, ProgramError> {
     let ix = spl_token_2022::instruction::ui_amount_to_amount(
@@ -263,8 +263,8 @@ pub fn ui_amount_to_amount<'a>(
     Ok(u64::from_le_bytes(bytes))
 }
 
-pub fn reallocate<'a>(
-    ctx: CpiContext<'a, Reallocate<'a>>,
+pub fn reallocate<'a, const N: usize>(
+    ctx: CpiContext<'a, Reallocate<'a>, N>,
     extension_types: &[ExtensionType],
 ) -> Result<(), ProgramError> {
     let extension_types = canonical_extension_types(extension_types)?;
@@ -280,8 +280,8 @@ pub fn reallocate<'a>(
     ctx.invoke_ix(ix)
 }
 
-pub fn withdraw_excess_lamports<'a>(
-    ctx: CpiContext<'a, WithdrawExcessLamports<'a>>,
+pub fn withdraw_excess_lamports<'a, const N: usize>(
+    ctx: CpiContext<'a, WithdrawExcessLamports<'a>, N>,
 ) -> Result<(), ProgramError> {
     let signer_addresses = multisig_signer_addresses(&ctx.remaining_accounts);
     let ix = spl_token_2022::instruction::withdraw_excess_lamports(
@@ -294,16 +294,16 @@ pub fn withdraw_excess_lamports<'a>(
     ctx.invoke_ix(ix)
 }
 
-pub fn create_native_mint<'a>(
-    ctx: CpiContext<'a, CreateNativeMint<'a>>,
+pub fn create_native_mint<'a, const N: usize>(
+    ctx: CpiContext<'a, CreateNativeMint<'a>, N>,
 ) -> Result<(), ProgramError> {
     let ix =
         spl_token_2022::instruction::create_native_mint(ctx.program, ctx.accounts.payer.address())?;
     ctx.invoke_ix(ix)
 }
 
-pub fn initialize_non_transferable_mint<'a>(
-    ctx: CpiContext<'a, InitializeNonTransferableMint<'a>>,
+pub fn initialize_non_transferable_mint<'a, const N: usize>(
+    ctx: CpiContext<'a, InitializeNonTransferableMint<'a>, N>,
 ) -> Result<(), ProgramError> {
     let ix = spl_token_2022::instruction::initialize_non_transferable_mint(
         ctx.program,
@@ -312,8 +312,8 @@ pub fn initialize_non_transferable_mint<'a>(
     ctx.invoke_ix(ix)
 }
 
-pub fn initialize_permanent_delegate<'a>(
-    ctx: CpiContext<'a, PermanentDelegateInitialize<'a>>,
+pub fn initialize_permanent_delegate<'a, const N: usize>(
+    ctx: CpiContext<'a, PermanentDelegateInitialize<'a>, N>,
     permanent_delegate: &Address,
 ) -> Result<(), ProgramError> {
     let ix = spl_token_2022::instruction::initialize_permanent_delegate(

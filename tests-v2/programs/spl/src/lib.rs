@@ -1123,7 +1123,7 @@ pub mod spl_test {
             mint: ctx.accounts.mint.cpi_handle_mut(),
             authority: ctx.accounts.authority.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::group_pointer_update(cpi_ctx, Some(&group_address))?;
         Ok(())
     }
@@ -1138,7 +1138,7 @@ pub mod spl_test {
             mint: ctx.accounts.mint.cpi_handle_mut(),
             authority: ctx.accounts.authority.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::group_member_pointer_update(cpi_ctx, Some(&member_address))?;
         Ok(())
     }
@@ -1154,7 +1154,7 @@ pub mod spl_test {
             system_program: ctx.accounts.system_program.cpi_handle(),
             authority: ctx.accounts.authority.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_cpi::reallocate(cpi_ctx, &[token_2022_cpi::ExtensionType::ImmutableOwner])?;
 
         Ok(())
@@ -1168,7 +1168,7 @@ pub mod spl_test {
         let accs = token_2022_cpi::InitializeImmutableOwner {
             account: ctx.accounts.token_account.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_cpi::initialize_immutable_owner(cpi_ctx)?;
         Ok(())
     }
@@ -1182,7 +1182,7 @@ pub mod spl_test {
         let accs = token_2022_cpi::InitializeMintCloseAuthority {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_cpi::initialize_mint_close_authority(cpi_ctx, Some(&close_authority))?;
         Ok(())
     }
@@ -1195,7 +1195,7 @@ pub mod spl_test {
         let accs = token_2022_cpi::InitializeNonTransferableMint {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_cpi::initialize_non_transferable_mint(cpi_ctx)?;
         Ok(())
     }
@@ -1209,7 +1209,7 @@ pub mod spl_test {
         let accs = token_2022_cpi::PermanentDelegateInitialize {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_cpi::initialize_permanent_delegate(cpi_ctx, &permanent_delegate)?;
         Ok(())
     }
@@ -1222,7 +1222,7 @@ pub mod spl_test {
         let accs = token_2022_cpi::GetAccountDataSize {
             mint: ctx.accounts.mint.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         let size = token_2022_cpi::get_account_data_size(
             cpi_ctx,
             &[token_2022_cpi::ExtensionType::ImmutableOwner],
@@ -1243,7 +1243,7 @@ pub mod spl_test {
         let accs = token_2022_cpi::AmountToUiAmount {
             account: ctx.accounts.mint.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         let ui_amount = token_2022_cpi::amount_to_ui_amount(cpi_ctx, 123456789)?;
         require!(
             ui_amount.as_bytes() == b"123.456789",
@@ -1260,7 +1260,7 @@ pub mod spl_test {
         let accs = token_2022_cpi::UiAmountToAmount {
             account: ctx.accounts.mint.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         let amount = token_2022_cpi::ui_amount_to_amount(cpi_ctx, "42.125")?;
         require_eq!(amount, 42125000u64, ProgramError::InvalidInstructionData);
         Ok(())
@@ -1274,7 +1274,7 @@ pub mod spl_test {
         let accs = token_2022_ext_cpi::ImmutableOwnerInitialize {
             token_account: ctx.accounts.token_account.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::immutable_owner_initialize(cpi_ctx)?;
         Ok(())
     }
@@ -1287,7 +1287,7 @@ pub mod spl_test {
         let accs = token_2022_ext_cpi::NonTransferableMintInitialize {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::non_transferable_mint_initialize(cpi_ctx)?;
         Ok(())
     }
@@ -1301,7 +1301,7 @@ pub mod spl_test {
         let accs = token_2022_ext_cpi::MintCloseAuthorityInitialize {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::mint_close_authority_initialize(cpi_ctx, Some(&close_authority))?;
         Ok(())
     }
@@ -1315,7 +1315,7 @@ pub mod spl_test {
         let accs = token_2022_ext_cpi::PermanentDelegateInitialize {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::permanent_delegate_initialize(cpi_ctx, &permanent_delegate)?;
         Ok(())
     }
@@ -1328,7 +1328,7 @@ pub mod spl_test {
         let accs = token_2022_ext_cpi::DefaultAccountStateInitialize {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::default_account_state_initialize(
             cpi_ctx,
             &token_2022_cpi::AccountState::Frozen,
@@ -1345,7 +1345,7 @@ pub mod spl_test {
             account: ctx.accounts.account.cpi_handle_mut(),
             owner: ctx.accounts.owner.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::memo_transfer_initialize(cpi_ctx)?;
         Ok(())
     }
@@ -1360,7 +1360,7 @@ pub mod spl_test {
         let accs = token_2022_ext_cpi::MetadataPointerInitialize {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::metadata_pointer_initialize(
             cpi_ctx,
             Some(&authority),
@@ -1379,7 +1379,7 @@ pub mod spl_test {
         let accs = token_2022_ext_cpi::TransferHookInitialize {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::transfer_hook_initialize(
             cpi_ctx,
             Some(&authority),
@@ -1397,7 +1397,7 @@ pub mod spl_test {
         let accs = token_2022_ext_cpi::InterestBearingMintInitialize {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::interest_bearing_mint_initialize(cpi_ctx, Some(&rate_authority), 125)?;
         Ok(())
     }
@@ -1411,7 +1411,7 @@ pub mod spl_test {
         let accs = token_2022_ext_cpi::PausableInitialize {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::pausable_initialize(cpi_ctx, &authority)?;
         Ok(())
     }
@@ -1425,7 +1425,7 @@ pub mod spl_test {
         let accs = token_2022_ext_cpi::TransferFeeInitialize {
             mint: ctx.accounts.mint.cpi_handle_mut(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::transfer_fee_initialize(
             cpi_ctx,
             Some(&config_authority),
@@ -1446,7 +1446,7 @@ pub mod spl_test {
             native_mint: ctx.accounts.native_mint.cpi_handle_mut(),
             system_program: ctx.accounts.system_program.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_cpi::create_native_mint(cpi_ctx)?;
         Ok(())
     }
@@ -1461,7 +1461,7 @@ pub mod spl_test {
             destination: ctx.accounts.destination.cpi_handle_mut(),
             authority: ctx.accounts.authority.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_cpi::withdraw_excess_lamports(cpi_ctx)?;
         Ok(())
     }
@@ -1475,7 +1475,7 @@ pub mod spl_test {
             metadata: ctx.accounts.metadata.cpi_handle_mut(),
             update_authority: ctx.accounts.update_authority.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::token_metadata_remove_key(cpi_ctx, "field", true)?;
         Ok(())
     }
@@ -1491,7 +1491,7 @@ pub mod spl_test {
             mint_authority: ctx.accounts.mint_authority.cpi_handle(),
             mint: ctx.accounts.mint.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::token_metadata_initialize(
             cpi_ctx,
             "name",
@@ -1511,7 +1511,7 @@ pub mod spl_test {
             metadata: ctx.accounts.metadata.cpi_handle_mut(),
             current_authority: ctx.accounts.current_authority.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::token_metadata_update_authority(cpi_ctx, Some(&new_authority))?;
         Ok(())
     }
@@ -1525,7 +1525,7 @@ pub mod spl_test {
             metadata: ctx.accounts.metadata.cpi_handle_mut(),
             update_authority: ctx.accounts.update_authority.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::token_metadata_update_field(
             cpi_ctx,
             token_2022_ext_cpi::token_metadata::Field::Name,
@@ -1544,7 +1544,7 @@ pub mod spl_test {
             mint: ctx.accounts.mint.cpi_handle(),
             mint_authority: ctx.accounts.mint_authority.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::token_group_initialize(cpi_ctx, None, 10)?;
         Ok(())
     }
@@ -1561,7 +1561,7 @@ pub mod spl_test {
             group: ctx.accounts.group.cpi_handle_mut(),
             group_update_authority: ctx.accounts.group_update_authority.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token_2022_ext_cpi::token_member_initialize(cpi_ctx)?;
         Ok(())
     }
@@ -1578,7 +1578,7 @@ pub mod spl_test {
             from: ctx.accounts.account.cpi_handle_mut(),
             authority: ctx.accounts.authority.cpi_handle(),
         };
-        let cpi_ctx = CpiContext::new(ctx.accounts.token_program.address(), accs);
+        let cpi_ctx = CpiContext::<_, 16>::new_with_capacity(ctx.accounts.token_program.address(), accs);
         token::burn(cpi_ctx, amount)?;
         Ok(())
     }

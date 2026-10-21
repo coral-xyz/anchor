@@ -3,7 +3,7 @@ use crate::fixed_vec::FixedVec;
 #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type IdlEntries = std::vec::Vec<&'static str>;
 #[cfg(any(target_os = "solana", target_arch = "bpf"))]
-pub type IdlEntries = FixedVec<&'static str, { crate::MAX_ACCOUNT_METAS }>;
+pub type IdlEntries = FixedVec<&'static str, { crate::MAX_IDL_SEQUENCE }>;
 
 /// Compile-time IDL metadata hooks. The registration surface is bounded so
 /// the runtime crate does not require a heap even when IDL support is disabled.

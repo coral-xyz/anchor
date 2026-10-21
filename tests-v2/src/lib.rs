@@ -3,7 +3,7 @@
 use {
     anchor_lang::{
         solana_program::instruction::{AccountMeta, Instruction},
-        AccountMeta as AnchorAccountMeta, AccountMetaBuffer,
+        AccountMeta as AnchorAccountMeta,
     },
     anchor_v2_testing::litesvm::LiteSVM,
     solana_keypair::Keypair,
@@ -29,18 +29,6 @@ impl IntoInstructionAccountMetas for Vec<AccountMeta> {
 impl IntoInstructionAccountMetas for Vec<AnchorAccountMeta> {
     fn into_instruction_account_metas(self) -> Vec<AccountMeta> {
         self.into_iter()
-            .map(|meta| AccountMeta {
-                pubkey: meta.pubkey,
-                is_signer: meta.is_signer,
-                is_writable: meta.is_writable,
-            })
-            .collect()
-    }
-}
-
-impl IntoInstructionAccountMetas for AccountMetaBuffer {
-    fn into_instruction_account_metas(self) -> Vec<AccountMeta> {
-        self.iter()
             .map(|meta| AccountMeta {
                 pubkey: meta.pubkey,
                 is_signer: meta.is_signer,

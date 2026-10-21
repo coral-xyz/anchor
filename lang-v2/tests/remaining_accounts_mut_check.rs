@@ -35,7 +35,7 @@ extern crate alloc;
 use {
     anchor_lang::{
         testing::{AccountRecord, SbfInputBuffer},
-        AccountCursor, AccountView, AccountViewBuffer, Bumps, Context, MutMask,
+        AccountCursor, AccountView, Bumps, Context, MutMask,
     },
     core::mem::MaybeUninit,
     solana_address::Address,
@@ -77,7 +77,7 @@ fn run_with(
     records: &[AccountRecord],
     header_size: usize,
     mut_mask: &'static [u64; 4],
-) -> Result<AccountViewBuffer, ProgramError> {
+) -> Result<usize, ProgramError> {
     let mut buf = SbfInputBuffer::build(records);
     let mut lookup: [MaybeUninit<AccountView>; MAX_ACCOUNTS] =
         [const { MaybeUninit::uninit() }; MAX_ACCOUNTS];
@@ -105,7 +105,7 @@ fn run_with(
         remaining_num,
         MutMask::Static(mut_mask),
     );
-    ctx.remaining_accounts()
+    ctx.remaining_accounts().map(|accounts| accounts.len())
 }
 
 // ---------------------------------------------------------------------------
@@ -133,7 +133,7 @@ fn trailing_account_aliasing_declared_mut_is_rejected() {
         Err(ProgramError::Custom(code)) if code == DUP_MUT_ERROR => {}
         other => panic!(
             "expected Err(ConstraintDuplicateMutableAccount), got {:?}",
-            other.map(|v| v.len())
+            other
         ),
     }
 }
@@ -145,7 +145,7 @@ fn trailing_account_aliasing_non_mut_declared_is_allowed() {
     let records = [fresh(1), fresh(2), AccountRecord::Dup { index: 0 }];
     let result = run_with(&records, /*header_size*/ 2, MUT_MASK_SLOT1);
     match result {
-        Ok(v) => assert_eq!(v.len(), 1),
+        Ok(len) => assert_eq!(len, 1),
         Err(e) => panic!("expected Ok, got Err({:?})", e),
     }
 }
@@ -158,7 +158,7 @@ fn two_trailing_dups_of_each_other_are_allowed() {
     let records = [fresh(1), fresh(2), AccountRecord::Dup { index: 1 }];
     let result = run_with(&records, /*header_size*/ 1, MUT_MASK_NONE);
     match result {
-        Ok(v) => assert_eq!(v.len(), 2),
+        Ok(len) => assert_eq!(len, 2),
         Err(e) => panic!("expected Ok, got Err({:?})", e),
     }
 }
@@ -170,7 +170,7 @@ fn fresh_trailing_accounts_are_allowed() {
     let records = [fresh(1), fresh(2), fresh(3)];
     let result = run_with(&records, /*header_size*/ 1, MUT_MASK_SLOT0);
     match result {
-        Ok(v) => assert_eq!(v.len(), 2),
+        Ok(len) => assert_eq!(len, 2),
         Err(e) => panic!("expected Ok, got Err({:?})", e),
     }
 }
@@ -189,10 +189,10 @@ fn trailing_account_aliasing_nested_mut_is_rejected() {
     let result = run_with(&records, /*header_size*/ 2, &NESTED_MUT_MASK);
     match result {
         Err(ProgramError::Custom(code)) if code == DUP_MUT_ERROR => {}
-        other => panic!(
-            "expected Err(ConstraintDuplicateMutableAccount), got {:?}",
-            other.map(|v| v.len())
-        ),
+            other => panic!(
+                "expected Err(ConstraintDuplicateMutableAccount), got {:?}",
+                other
+            ),
     }
 }
 
