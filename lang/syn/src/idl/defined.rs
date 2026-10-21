@@ -216,17 +216,30 @@ fn get_borsh_use_discriminant(attrs: &[syn::Attribute]) -> Result<bool> {
     let mut use_discriminant = None;
 
     for attr in attrs.iter().filter(|attr| attr.path().is_ident("borsh")) {
-        attr.parse_nested_meta(|meta| {
-            if !meta.path.is_ident("use_discriminant") {
-                return Ok(());
+        let metas = attr.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)?;
+
+        for meta in metas {
+            let syn::Meta::NameValue(name_value) = meta else {
+                continue;
+            };
+
+            if !name_value.path.is_ident("use_discriminant") {
+                continue;
             }
 
-            let value = meta.value()?;
-            let value: syn::LitBool = value.parse()?;
-            use_discriminant = Some(value.value);
+            let syn::Expr::Lit(syn::ExprLit {
+                lit: syn::Lit::Bool(value),
+                ..
+            }) = &name_value.value
+            else {
+                return Err(syn::Error::new_spanned(
+                    name_value.value,
+                    "expected a boolean literal",
+                ));
+            };
 
-            Ok(())
-        })?;
+            use_discriminant = Some(value.value);
+        }
     }
 
     Ok(use_discriminant.unwrap_or(false))
@@ -1115,6 +1128,19 @@ mod tests {
             deserialize_error,
             "IDL building does not support `#[borsh(deserialize_with = ...)]`"
         );
+    }
+
+    #[test]
+    fn test_gen_idl_type_def_enum_allows_borsh_init_attribute() {
+        let item: syn::ItemEnum = syn::parse_quote! {
+            #[borsh(init=initialization_method)]
+            enum Animal {
+                Cat,
+                Dog,
+            }
+        };
+
+        assert!(gen_idl_type_def_enum(&item).is_ok());
     }
 
     fn aliases_of(tag: &str, files: &[(&str, &str)]) -> (Vec<String>, Vec<String>) {
