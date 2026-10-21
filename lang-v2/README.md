@@ -88,6 +88,9 @@ with every v1 Borsh encoding:
 - Borsh rejects NaN during float serialization, while Wincode accepts it. Code
   migrating from v1 should validate float values explicitly when NaN is not a
   valid application value.
+- Borsh rejects a dynamically sized collection of zero-sized elements, such as
+  `Vec<()>`. Wincode accepts a `u32` length prefix and writes no element
+  bytes. Ordinary account types do not use this shape.
 
 These are intentional serialization differences in the Wincode path, not
 reasons to reject otherwise valid values with the former compatibility guard.
