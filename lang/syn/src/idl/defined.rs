@@ -3,7 +3,7 @@ use {
     crate::parser::docs,
     proc_macro2::TokenStream,
     quote::quote,
-    syn::{spanned::Spanned, Result},
+    syn::{punctuated::Punctuated, spanned::Spanned, Result, Token},
 };
 
 /// Generate `IdlBuild` impl for a struct.
@@ -236,13 +236,28 @@ fn is_borsh_skipped(attrs: &[syn::Attribute]) -> Result<bool> {
     let mut skipped = false;
 
     for attr in attrs.iter().filter(|attr| attr.path().is_ident("borsh")) {
-        attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("skip") {
-                skipped = true;
-            }
+        let metas = attr.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)?;
 
-            Ok(())
-        })?;
+        for meta in metas {
+            match meta {
+                syn::Meta::Path(path) if path.is_ident("skip") => skipped = true,
+                syn::Meta::NameValue(name_value)
+                    if name_value.path.is_ident("serialize_with")
+                        || name_value.path.is_ident("deserialize_with") =>
+                {
+                    let attribute = if name_value.path.is_ident("serialize_with") {
+                        "serialize_with"
+                    } else {
+                        "deserialize_with"
+                    };
+                    return Err(syn::Error::new_spanned(
+                        name_value.path,
+                        format!("IDL building does not support `#[borsh({attribute} = ...)]`"),
+                    ));
+                }
+                _ => {}
+            }
+        }
     }
 
     Ok(skipped)
