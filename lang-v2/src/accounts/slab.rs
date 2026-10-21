@@ -20,7 +20,7 @@ use {
 /// Disambiguation for failed owner checks: uninitialized placeholder vs.
 /// genuine wrong owner. Used by `SlabSchema`'s blanket impl (via `super::`).
 #[inline(always)]
-pub(super) fn cold_owner_error(view: &AccountView) -> ProgramError {
+pub(super) fn cold_owner_error(view: AccountView) -> ProgramError {
     if view.lamports() == 0 && view.owned_by(&crate::programs::System::id()) {
         ProgramError::UninitializedAccount
     } else {
@@ -30,7 +30,7 @@ pub(super) fn cold_owner_error(view: &AccountView) -> ProgramError {
 
 /// Whether the runtime account header reflects a completed close.
 #[inline(always)]
-pub(super) fn is_closed(view: &AccountView) -> bool {
+pub(super) fn is_closed(view: AccountView) -> bool {
     view.lamports() == 0 && view.data_len() == 0 && view.owned_by(&crate::programs::System::id())
 }
 
@@ -78,8 +78,8 @@ where
 
     #[inline(always)]
     fn create_and_initialize<'a>(
-        payer: &AccountView,
-        account: &AccountView,
+        payer: AccountView,
+        account: AccountView,
         space: usize,
         _owner: &Address,
         params: &Self::Params<'a>,
@@ -96,7 +96,7 @@ where
         )?;
         // SAFETY: `create_and_initialize` just created this account; no other
         // mutable reference to its data can exist yet.
-        unsafe { <Self as AnchorAccount>::load_mut_after_init(*account) }
+        unsafe { <Self as AnchorAccount>::load_mut_after_init(account) }
     }
 }
 
@@ -297,8 +297,8 @@ where
     /// The underlying `AccountView` — provided for CPI callers that need the
     /// raw view.
     #[inline(always)]
-    pub fn view(&self) -> &AccountView {
-        &self.view
+    pub fn view(&self) -> AccountView {
+        self.view
     }
 
     /// Enforce that this slab came from `load_mut` before any method mutates
@@ -324,7 +324,7 @@ where
     /// validate as `Slab<H, T>` before continuing.
     pub fn revalidate_after_cpi(&mut self) -> Result<(), ProgramError> {
         let data = unsafe { self.view.borrow_unchecked() };
-        H::validate(&self.view, data)?;
+        H::validate(self.view, data)?;
         if data.len() < Self::ITEMS_OFFSET {
             return Err(ProgramError::AccountDataTooSmall);
         }
@@ -374,7 +374,7 @@ where
         // (Solana runtime guarantee). The borrow-state check above rejects a live
         // mutable borrow before creating the shared view.
         let data = unsafe { view.borrow_unchecked() };
-        H::validate(&view, data)?;
+        H::validate(view, data)?;
         if data.len() < Self::ITEMS_OFFSET {
             return Err(ProgramError::AccountDataTooSmall);
         }
@@ -444,7 +444,7 @@ where
     ///
     /// Uses a `system::Transfer` CPI; `payer` must be a signer on the outer
     /// transaction (pinocchio enforces signerness at CPI time).
-    pub fn top_up(&mut self, payer: &AccountView) -> Result<(), ProgramError> {
+    pub fn top_up(&mut self, payer: AccountView) -> Result<(), ProgramError> {
         self.assert_mutable();
         let required = self.min_lamports()?;
         let current = self.view.lamports();
@@ -452,7 +452,7 @@ where
             return Ok(());
         }
         let deficit = required - current;
-        crate::cpi::transfer_lamports_unchecked(payer, &self.view, deficit)
+        crate::cpi::transfer_lamports_unchecked(payer, self.view, deficit)
     }
 
     /// Move excess lamports (current - min_lamports) from the account to
@@ -462,7 +462,7 @@ where
     ///
     /// Direct lamport arithmetic, no CPI — callers must only use this for
     /// accounts whose owner permits in-program lamport mutation.
-    pub fn refund(&mut self, recipient: &mut AccountView) -> Result<(), ProgramError> {
+    pub fn refund(&mut self, mut recipient: AccountView) -> Result<(), ProgramError> {
         self.assert_mutable();
         let required = self.min_lamports()?;
         let current = self.view.lamports();
@@ -864,7 +864,7 @@ where
         let slab = Self::load_mut_after_init(view)?;
         // SAFETY: build_mutable succeeded, so the data pointer is valid.
         let data: &[u8] = unsafe { slab.view.borrow_unchecked() };
-        H::validate(&slab.view, data)?;
+        H::validate(slab.view, data)?;
         if data.len() < Self::ITEMS_OFFSET {
             return Err(ProgramError::AccountDataTooSmall);
         }
@@ -893,8 +893,8 @@ where
     }
 
     #[inline(always)]
-    fn account(&self) -> &AccountView {
-        &self.view
+    fn account(&self) -> AccountView {
+        self.view
     }
 
     #[inline(always)]
@@ -979,7 +979,7 @@ where
         zero: bool,
     ) -> pinocchio::ProgramResult {
         self.assert_mutable();
-        let mut view = *self.account();
+        let mut view = self.account();
         if new_space != view.data_len() {
             if new_space < Self::MIN_DATA_LEN {
                 return Err(ProgramError::AccountDataTooSmall);
@@ -988,7 +988,7 @@ where
             // raw-pointer wrapper over the shared `RuntimeAccount` header, and
             // `crate::realloc_account` updates that header's `data_len` in
             // place. All `AccountView` copies therefore observe the new size.
-            crate::realloc_account(&mut view, new_space, &payer, zero)?;
+            crate::realloc_account(view, new_space, payer, zero)?;
             self.header_ptr = unsafe { view.data_mut_ptr().add(Self::HEADER_OFFSET) } as *mut H;
             if Self::HAS_TAIL {
                 let new_cap =

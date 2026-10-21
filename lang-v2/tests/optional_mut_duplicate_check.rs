@@ -33,8 +33,8 @@ impl AnchorAccount for SpyAccount {
         Ok(Self { view })
     }
 
-    fn account(&self) -> &AccountView {
-        &self.view
+    fn account(&self) -> AccountView {
+        self.view
     }
 }
 
