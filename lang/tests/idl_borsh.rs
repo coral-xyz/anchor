@@ -64,8 +64,10 @@ fn test_borsh_bound_is_accepted_by_idl_build() {
 
 #[test]
 fn test_borsh_init_is_accepted_by_idl_build_and_runs_on_deserialize() {
-    use anchor_lang::idl::{types::IdlTypeDefTy, IdlBuild};
-    use borsh::{from_slice, to_vec};
+    use {
+        anchor_lang::idl::{types::IdlTypeDefTy, IdlBuild},
+        borsh::{from_slice, to_vec},
+    };
 
     #[derive(AnchorSerialize, AnchorDeserialize, Debug, PartialEq)]
     #[borsh(init=initialization_method)]
