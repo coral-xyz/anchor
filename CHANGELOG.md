@@ -27,7 +27,7 @@ The minor version will be incremented upon a breaking change and the patch versi
 - lang-v2: Default `#[event]` structs now derive `AnchorDeserialize` as well as `AnchorSerialize`. Remove any explicit `AnchorDeserialize` derive from these structs to avoid conflicting implementations; `#[event(bytemuck)]` is unchanged ([#5078](https://github.com/otter-sec/anchor/pull/5078)).
 - lang-v2: Replace the duplicate mutable account check with borrow checks, so conflicting aliases fail with `AccountBorrowFailed`. Remove `#[account(unsafe(dup))]` and drop `?` on `ctx.remaining_accounts()`; a read-only `Account<T>` or `Slab<H, T>` used in a writable CPI needs `#[account(mut)]` ([#5091](https://github.com/otter-sec/anchor/pull/5091)).
 - ts: Build version 1 transaction messages by default.
-- ts: Append a compute budget instruction with the estimated compute unit limit to legacy and version 0 messages, and send estimated messages without a preflight simulation.
+- ts: Append a compute budget instruction with the estimated compute unit limit to legacy and version 0 messages.
 - ts: Require `@solana/kit` ^8.5.0.
 
 ## [2.0.0-rc.2] - 2026-10-06

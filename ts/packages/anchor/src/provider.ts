@@ -39,7 +39,6 @@ import {
   SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE,
   SOLANA_ERROR__TRANSACTION__FAILED_WHEN_SIMULATING_TO_ESTIMATE_RESOURCE_LIMITS,
   SOLANA_ERROR__TRANSACTION_ERROR__ALREADY_PROCESSED,
-  SolanaError,
   Transaction,
   TransactionMessage,
   TransactionMessageWithFeePayer,
@@ -317,14 +316,13 @@ export class AnchorProvider implements Provider {
    * of version 1 messages, or with a compute budget instruction appended to
    * legacy and version 0 ones. Limits set explicitly on the message are kept
    * as is, except for compute unit limits of 0 or 1,400,000, which Kit treats
-   * as placeholders and replaces with the estimate. A message simulated for
-   * its estimate is sent without a second preflight simulation, unless a
-   * signer may modify the transaction when signing it.
+   * as placeholders and replaces with the estimate.
    *
    * With `skipPreflight` or `estimateResourceLimits: false`, nothing is
    * simulated: legacy and version 0 messages are sent as is, and version 1
    * messages, which are budgeted zero compute units and zero loaded account
-   * bytes unless their config says otherwise, get the runtime maxima.
+   * bytes unless their config says otherwise, get the defaults the runtime
+   * applies to legacy and version 0 messages.
    *
    * @param message The transaction message to send.
    * @param signers Signers needed on top of those attached to the message.
@@ -347,12 +345,7 @@ export class AnchorProvider implements Provider {
       const [signed] = await this.#walletSign([
         await this.#signWithSigners(prepared.message, prepared.signers),
       ]);
-      return await this.#sendSigned(
-        signed,
-        opts,
-        commitment,
-        prepared.estimated
-      );
+      return await this.#sendSigned(signed, opts, commitment);
     }
 
     // Retry loop: on fast local validators (e.g. surfpool with 400ms slot
@@ -378,12 +371,7 @@ export class AnchorProvider implements Provider {
       ]);
 
       try {
-        return await this.#sendSigned(
-          signed,
-          opts,
-          commitment,
-          prepared.estimated
-        );
+        return await this.#sendSigned(signed, opts, commitment);
       } catch (err) {
         // The message check is a fallback: Kit strips human-readable error
         // messages from production builds, so control flow must rely on the
@@ -429,7 +417,6 @@ export class AnchorProvider implements Provider {
     let lifetime: BlockhashLifetime | undefined;
 
     const pending: (Transaction & TransactionWithLifetime)[] = [];
-    const estimated: boolean[] = [];
     for (const { message, signers } of messages) {
       const prepared = await this.#withResourceLimits(
         this.#prepare(message, signers ?? []),
@@ -450,16 +437,13 @@ export class AnchorProvider implements Provider {
         );
       }
       pending.push(await this.#signWithSigners(withLifetime, prepared.signers));
-      estimated.push(prepared.estimated);
     }
 
     const signedAll = await this.#walletSign(pending);
 
     const signatures: Signature[] = [];
-    for (const [index, signed] of signedAll.entries()) {
-      signatures.push(
-        await this.#sendSigned(signed, opts, commitment, estimated[index])
-      );
+    for (const signed of signedAll) {
+      signatures.push(await this.#sendSigned(signed, opts, commitment));
     }
     return signatures;
   }
@@ -468,8 +452,9 @@ export class AnchorProvider implements Provider {
    * Simulates the given transaction message, returning emitted logs from
    * execution.
    *
-   * Resource limits left unset on version 1 messages are set to the runtime
-   * maxima for the simulation.
+   * Resource limits left unset on version 1 messages are set to the defaults
+   * the runtime applies to legacy and version 0 messages, see
+   * {@link withDefaultResourceLimits}.
    *
    * @param message   The transaction message to simulate.
    * @param signers   Signers needed on top of those attached to the message.
@@ -492,7 +477,7 @@ export class AnchorProvider implements Provider {
     const sigVerify = !!signers && signers.length > 0;
 
     const prepared = this.#prepare(message, signers ?? []);
-    prepared.message = withMaxResourceLimits(prepared.message);
+    prepared.message = withDefaultResourceLimits(prepared.message);
     const withLifetime = hasLifetime(prepared.message)
       ? prepared.message
       : setTransactionMessageLifetimeUsingBlockhash(
@@ -579,27 +564,22 @@ export class AnchorProvider implements Provider {
    * Completes the resource limits a message leaves unset by simulating it,
    * unless estimation is disabled or preflight is skipped, so that failing
    * transactions can still be sent. A failed simulation is reported like a
-   * failed preflight, with the program logs. `estimated` tells whether the
-   * message was simulated and no signer can modify it afterwards, in which
-   * case its preflight simulation can be skipped.
+   * failed preflight, with the program logs.
    */
   async #withResourceLimits(
     prepared: PreparedMessage,
     opts: ConfirmOptions,
     commitment: Commitment
-  ): Promise<PreparedMessage & { estimated: boolean }> {
+  ): Promise<PreparedMessage> {
     if (opts.skipPreflight || opts.estimateResourceLimits === false) {
       return {
         ...prepared,
-        message: withMaxResourceLimits(prepared.message),
-        estimated: false,
+        message: withDefaultResourceLimits(prepared.message),
       };
     }
-    let estimated = false;
     const estimateAndSetResourceLimits = estimateAndSetResourceLimitsFactory(
       async (message, config) => {
         const estimate = await this.#estimateResourceLimits(message, config);
-        estimated = true;
         return {
           ...estimate,
           computeUnitLimit: Math.min(
@@ -617,11 +597,7 @@ export class AnchorProvider implements Provider {
         minContextSlot:
           opts.minContextSlot != null ? BigInt(opts.minContextSlot) : undefined,
       });
-      return {
-        ...prepared,
-        message,
-        estimated: estimated && !this.#canModify(prepared.signers),
-      };
+      return { ...prepared, message };
     } catch (err) {
       if (
         isSolanaError(
@@ -639,18 +615,6 @@ export class AnchorProvider implements Provider {
       }
       throw err;
     }
-  }
-
-  /**
-   * Whether the wallet or one of the given signers may modify the
-   * transaction when signing it, e.g. to add instructions, so that the
-   * signed transaction can differ from the simulated message.
-   */
-  #canModify(signers: TransactionSigner[]): boolean {
-    return (
-      !isTransactionPartialSigner(this.wallet) ||
-      signers.some(isTransactionModifyingSigner)
-    );
   }
 
   /**
@@ -743,40 +707,16 @@ export class AnchorProvider implements Provider {
     return value;
   }
 
-  /**
-   * Sends and confirms a signed transaction. A transaction whose message was
-   * simulated for its resource limits skips the preflight simulation, so it
-   * is first checked against the signature status cache: a byte-identical
-   * transaction, e.g. rebuilt from a blockhash that did not change, would
-   * otherwise be reported as confirmed without executing again.
-   */
   async #sendSigned(
     transaction: Transaction & TransactionWithLifetime,
     opts: ConfirmOptions,
-    commitment: Commitment,
-    estimated = false
+    commitment: Commitment
   ): Promise<Signature> {
     assertIsSendableTransaction(transaction);
     const signature = getSignatureFromTransaction(transaction);
-    if (estimated) {
-      const {
-        value: [status],
-      } = await this.rpc.getSignatureStatuses([signature]).send();
-      if (status) {
-        throw new ProviderError(
-          "This transaction has already been processed",
-          undefined,
-          {
-            cause: new SolanaError(
-              SOLANA_ERROR__TRANSACTION_ERROR__ALREADY_PROCESSED
-            ),
-          }
-        );
-      }
-    }
     const config = {
       commitment,
-      skipPreflight: estimated ? true : opts.skipPreflight,
+      skipPreflight: opts.skipPreflight,
       preflightCommitment: opts.preflightCommitment ?? commitment,
       maxRetries: opts.maxRetries != null ? BigInt(opts.maxRetries) : undefined,
       minContextSlot:
@@ -926,22 +866,51 @@ export function getDefaultComputeUnitLimitFromEstimate(
   );
 }
 
+// Programs the runtime budgets 3,000 compute units per instruction rather
+// than 200,000 when a transaction does not set its compute unit limit.
+const BUILTIN_PROGRAM_ADDRESSES = new Set<string>([
+  "11111111111111111111111111111111",
+  "ComputeBudget111111111111111111111111111111",
+  "BPFLoaderUpgradeab1e11111111111111111111111",
+  "BPFLoader1111111111111111111111111111111111",
+  "BPFLoader2111111111111111111111111111111111",
+  "LoaderV411111111111111111111111111111111111",
+  "KeccakSecp256k11111111111111111111111111111",
+  "Ed25519SigVerify111111111111111111111111111",
+]);
+const BUILTIN_INSTRUCTION_COMPUTE_UNIT_LIMIT = 3_000;
+const DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT = 200_000;
+
 /**
  * Sets the resource limits a version 1 message leaves unset, or provisory
- * (zero), to the runtime maxima.
+ * (zero), to the defaults the runtime applies to legacy and version 0
+ * messages: 3,000 compute units per builtin program instruction and 200,000
+ * per other instruction, capped at 1,400,000, and 64 MiB of loaded account
+ * data. Version 1 messages are otherwise budgeted zero for both.
  */
-function withMaxResourceLimits<TMessage extends TransactionMessage>(
+function withDefaultResourceLimits<TMessage extends TransactionMessage>(
   message: TMessage
 ): TMessage {
   if (message.version !== 1) {
     return message;
   }
+  const computeUnitLimit = Math.min(
+    MAX_COMPUTE_UNIT_LIMIT,
+    message.instructions.reduce(
+      (total, ix) =>
+        total +
+        (BUILTIN_PROGRAM_ADDRESSES.has(ix.programAddress)
+          ? BUILTIN_INSTRUCTION_COMPUTE_UNIT_LIMIT
+          : DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT),
+      0
+    )
+  );
   return pipe(
     message,
     (m) =>
       getTransactionMessageComputeUnitLimit(m)
         ? m
-        : setTransactionMessageComputeUnitLimit(MAX_COMPUTE_UNIT_LIMIT, m),
+        : setTransactionMessageComputeUnitLimit(computeUnitLimit, m),
     (m) =>
       getTransactionMessageLoadedAccountsDataSizeLimit(m)
         ? m

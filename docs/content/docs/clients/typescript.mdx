@@ -326,9 +326,6 @@ transaction message by simulating it with Kit's
 - Limits set explicitly on the message are kept as is, except for compute unit
   limits of 0 or 1,400,000, which Kit treats as placeholders and replaces with
   the estimate.
-- The estimate replaces the preflight simulation, so the message is simulated
-  once, unless a signer, such as a wallet implementing only
-  `modifyAndSignTransactions`, may modify the transaction when signing it.
 
 To set the limits yourself, add them to the message before sending it:
 
@@ -354,9 +351,12 @@ await program.methods.initialize(data).rpc({ estimateResourceLimits: false });
 ```
 
 Nothing is estimated either with `skipPreflight`, so failing transactions still
-land. In both cases, legacy and version 0 messages are sent as is, while version
-1 messages, which are budgeted zero for any limit left unset, use the runtime
-maxima. `provider.simulate` also uses the runtime maxima for version 1 messages.
+land. In both cases, legacy and version 0 messages are sent as is, and the
+runtime applies its defaults: 200,000 compute units per instruction, or 3,000
+for builtin programs such as the System program, capped at 1,400,000, and 64 MiB
+of loaded account data. Version 1 messages are budgeted zero for any limit left
+unset, so `AnchorProvider` sets those same defaults on them, as does
+`provider.simulate`.
 
 ### Transaction Versions
 
