@@ -254,18 +254,38 @@ fn get_max_len_args(
 }
 
 fn is_borsh_skipped(attributes: &[Attribute]) -> Result<bool, syn::Error> {
-    for attribute in attributes.iter().filter(|a| a.path().is_ident("borsh")) {
-        let metas = attribute.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)?;
+    let mut skipped = false;
 
-        if metas
-            .iter()
-            .any(|meta| matches!(meta, syn::Meta::Path(path) if path.is_ident("skip")))
-        {
-            return Ok(true);
+    for attribute in attributes.iter().filter(|a| a.path().is_ident("borsh")) {
+        let metas =
+            attribute.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated)?;
+
+        for meta in metas {
+            match meta {
+                syn::Meta::Path(path) if path.is_ident("skip") => skipped = true,
+                syn::Meta::NameValue(name_value)
+                    if name_value.path.is_ident("serialize_with")
+                        || name_value.path.is_ident("deserialize_with") =>
+                {
+                    let attribute = if name_value.path.is_ident("serialize_with") {
+                        "serialize_with"
+                    } else {
+                        "deserialize_with"
+                    };
+
+                    return Err(syn::Error::new_spanned(
+                        name_value.path,
+                        format!(
+                            "`#[derive(InitSpace)]` does not support `#[borsh({attribute} = ...)]`"
+                        ),
+                    ));
+                }
+                _ => {}
+            }
         }
     }
 
-    Ok(false)
+    Ok(skipped)
 }
 
 fn get_next_arg(ident: &Ident, args: &mut Option<VecDeque<TokenStream2>>) -> TokenStream2 {
@@ -315,5 +335,19 @@ mod tests {
             err.to_string(),
             "max_len only accepts integer literals, identifiers, or paths"
         );
+    }
+
+    #[test]
+    fn is_borsh_skipped_rejects_custom_serializers() {
+        for attr in [
+            syn::parse_quote!(#[borsh(serialize_with = serialize)]),
+            syn::parse_quote!(#[borsh(deserialize_with = deserialize)]),
+        ] {
+            let err = is_borsh_skipped(&[attr]).unwrap_err();
+
+            assert!(err
+                .to_string()
+                .contains("#[derive(InitSpace)]` does not support"));
+        }
     }
 }
