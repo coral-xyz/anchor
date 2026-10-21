@@ -846,6 +846,8 @@ fn generate_constraint_init_group(
                 Some(fa) => check_scope.generate_check(fa),
                 None => quote! {},
             };
+            let actual_freeze_authority = private_ident("actual_freeze_authority");
+            let expected_freeze_authority = private_ident("expected_freeze_authority");
 
             // extension checks
 
@@ -1139,7 +1141,7 @@ fn generate_constraint_init_group(
                         }
                         if #parsed_account.freeze_authority
                             .as_ref()
-                            .map(|fa| #freeze_authority.as_ref().map(|expected_fa| fa != *expected_fa).unwrap_or(true))
+                            .map(|#actual_freeze_authority| #freeze_authority.as_ref().map(|#expected_freeze_authority| #actual_freeze_authority != *#expected_freeze_authority).unwrap_or(true))
                             .unwrap_or(#freeze_authority.is_some()) {
                             return Err(anchor_lang::error::Error::from(anchor_lang::error::ErrorCode::ConstraintMintFreezeAuthority).with_account_name(#name_str));
                         }
