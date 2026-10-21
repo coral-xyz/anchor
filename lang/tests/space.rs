@@ -132,6 +132,54 @@ pub struct TestBorshSkippedStruct {
 #[derive(InitSpace)]
 pub struct TestUnitStruct;
 
+#[allow(dead_code)]
+#[derive(AnchorSerialize, AnchorDeserialize, InitSpace)]
+struct BorshSkippedStruct {
+    included: u8,
+    #[borsh(skip)]
+    skipped: u64,
+    tail: u16,
+}
+
+#[allow(dead_code)]
+#[derive(AnchorSerialize, AnchorDeserialize, InitSpace)]
+struct BorshSkippedTuple(u8, #[borsh(skip)] u64, u16);
+
+#[allow(dead_code)]
+#[derive(AnchorSerialize, AnchorDeserialize, InitSpace)]
+enum BorshSkippedEnum {
+    Fields {
+        included: u8,
+        #[borsh(skip)]
+        skipped: u64,
+        tail: u16,
+    },
+    Empty,
+}
+
+#[test]
+fn test_borsh_skipped_fields_are_excluded_from_init_space() {
+    let struct_value = BorshSkippedStruct {
+        included: 1,
+        skipped: 2,
+        tail: 3,
+    };
+    assert_eq!(BorshSkippedStruct::INIT_SPACE, 1 + 2);
+    assert_eq!(borsh::to_vec(&struct_value).unwrap().len(), 1 + 2);
+
+    let tuple_value = BorshSkippedTuple(1, 2, 3);
+    assert_eq!(BorshSkippedTuple::INIT_SPACE, 1 + 2);
+    assert_eq!(borsh::to_vec(&tuple_value).unwrap().len(), 1 + 2);
+
+    let enum_value = BorshSkippedEnum::Fields {
+        included: 1,
+        skipped: 2,
+        tail: 3,
+    };
+    assert_eq!(BorshSkippedEnum::INIT_SPACE, 1 + 1 + 2);
+    assert_eq!(borsh::to_vec(&enum_value).unwrap().len(), 1 + 1 + 2);
+}
+
 #[derive(InitSpace)]
 #[allow(clippy::type_complexity)]
 pub struct TestTupleStruct {
