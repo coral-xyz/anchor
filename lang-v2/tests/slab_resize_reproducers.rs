@@ -653,9 +653,9 @@ fn refund_moves_excess_lamports_to_recipient() {
 
     let view = unsafe { buf.view() };
     let mut slab = unsafe { CounterLedger::load_mut(view) }.unwrap();
-    let mut recipient_view = unsafe { recipient.view() };
+    let recipient_view = unsafe { recipient.view() };
 
-    slab.refund(&mut recipient_view).unwrap();
+    slab.refund(recipient_view).unwrap();
 
     assert_eq!(slab.view().lamports(), required);
     assert_eq!(recipient_view.lamports(), 25 + 500);
@@ -675,9 +675,9 @@ fn refund_panics_when_loaded_read_only() {
 
     let view = unsafe { buf.view() };
     let mut slab = CounterLedger::load(view).unwrap();
-    let mut recipient_view = unsafe { recipient.view() };
+    let recipient_view = unsafe { recipient.view() };
 
-    slab.refund(&mut recipient_view).unwrap();
+    slab.refund(recipient_view).unwrap();
 }
 
 #[test]
@@ -693,9 +693,9 @@ fn refund_is_noop_when_account_is_at_rent_floor() {
 
     let view = unsafe { buf.view() };
     let mut slab = unsafe { CounterLedger::load_mut(view) }.unwrap();
-    let mut recipient_view = unsafe { recipient.view() };
+    let recipient_view = unsafe { recipient.view() };
 
-    slab.refund(&mut recipient_view).unwrap();
+    slab.refund(recipient_view).unwrap();
 
     assert_eq!(slab.view().lamports(), required);
     assert_eq!(recipient_view.lamports(), 25);
@@ -714,9 +714,9 @@ fn refund_with_self_recipient_is_noop() {
     // `AccountView` is `Copy`, so a program can pass an alias of the slab as
     // the refund recipient. That must not burn the excess via credit-then-
     // overwrite on the shared lamport slot.
-    let mut self_recipient = unsafe { buf.view() };
+    let self_recipient = unsafe { buf.view() };
 
-    slab.refund(&mut self_recipient).unwrap();
+    slab.refund(self_recipient).unwrap();
 
     assert_eq!(
         slab.view().lamports(),
@@ -741,7 +741,7 @@ fn top_up_panics_when_loaded_read_only() {
     let mut slab = CounterLedger::load(view).unwrap();
     let payer_view = unsafe { payer.view() };
 
-    slab.top_up(&payer_view).unwrap();
+    slab.top_up(payer_view).unwrap();
 }
 
 #[test]
@@ -759,7 +759,7 @@ fn top_up_is_noop_when_account_already_has_enough_lamports() {
     let mut slab = unsafe { CounterLedger::load_mut(view) }.unwrap();
     let payer_view = unsafe { payer.view() };
 
-    slab.top_up(&payer_view).unwrap();
+    slab.top_up(payer_view).unwrap();
 
     assert_eq!(slab.view().lamports(), required + 123);
     assert_eq!(payer_view.lamports(), 999);

@@ -53,8 +53,8 @@ impl AnchorAccount for Signer {
     }
 
     #[inline(always)]
-    fn account(&self) -> &AccountView {
-        &self.view
+    fn account(&self) -> AccountView {
+        self.view
     }
 }
 

@@ -48,7 +48,7 @@ pub trait SysvarLoad: SysvarId + Sized {
     /// may skip any address check of their own.
     ///
     /// [`Sysvar<T>::load`]: AnchorAccount::load
-    fn read(view: &AccountView) -> Result<Self, ProgramError>;
+    fn read(view: AccountView) -> Result<Self, ProgramError>;
 }
 
 /// Registers a sysvar that the runtime exposes through `sol_get_sysvar`.
@@ -64,7 +64,7 @@ macro_rules! impl_syscall_sysvar {
 
         impl SysvarLoad for $ty {
             #[inline(always)]
-            fn read(_view: &AccountView) -> Result<Self, ProgramError> {
+            fn read(_view: AccountView) -> Result<Self, ProgramError> {
                 <$ty as PinocchioSysvar>::get().map_err(|_| ProgramError::UnsupportedSysvar)
             }
         }
@@ -124,7 +124,7 @@ pub type SysvarInstructions = pinocchio::sysvars::instructions::Instructions<Ref
 
 impl SysvarLoad for SysvarInstructions {
     #[inline(always)]
-    fn read(view: &AccountView) -> Result<Self, ProgramError> {
+    fn read(view: AccountView) -> Result<Self, ProgramError> {
         // A well-formed instructions sysvar is at minimum `[u16 num = 0]` +
         // `[u16 current_index]`. The address check in `Sysvar::load` already
         // guarantees this is the genuine runtime-populated sysvar; the guard
@@ -180,12 +180,12 @@ impl<T: SysvarLoad> AnchorAccount for Sysvar<T> {
             crate::address_eq(view.address(), &id),
             ProgramError::InvalidArgument
         );
-        let data = T::read(&view)?;
+        let data = T::read(view)?;
         Ok(Self { view, data })
     }
 
-    fn account(&self) -> &AccountView {
-        &self.view
+    fn account(&self) -> AccountView {
+        self.view
     }
 }
 
