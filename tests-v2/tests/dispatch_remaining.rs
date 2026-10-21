@@ -137,7 +137,7 @@ fn loading_remaining_alias_of_declared_mut_fails() {
         let result = call_raw(
             &mut svm,
             &payer,
-            data,
+            data.to_vec(),
             vec![
                 AccountMeta::new(counter, false),
                 AccountMeta::new(counter, false),
@@ -157,7 +157,7 @@ fn loading_remaining_alias_of_declared_readonly() {
     send_instruction(
         &mut svm,
         program_id(),
-        data,
+        data.to_vec(),
         vec![
             AccountMeta::new_readonly(counter, false),
             AccountMeta::new_readonly(counter, false),
@@ -171,7 +171,7 @@ fn loading_remaining_alias_of_declared_readonly() {
     let result = call_raw(
         &mut svm,
         &payer,
-        data,
+        data.to_vec(),
         vec![
             AccountMeta::new_readonly(counter, false),
             AccountMeta::new(counter, false),
