@@ -10,9 +10,13 @@ import {
   compileTransaction,
   createSolanaRpc,
   createSolanaRpcSubscriptions,
+  estimateAndSetResourceLimitsFactory,
+  estimateResourceLimitsFactory,
   getBase64EncodedWireTransaction,
   getSignatureFromTransaction,
   getSignersFromTransactionMessage,
+  getTransactionMessageComputeUnitLimit,
+  getTransactionMessageLoadedAccountsDataSizeLimit,
   isSolanaError,
   isTransactionMessageWithBlockhashLifetime,
   isTransactionMessageWithDurableNonceLifetime,
@@ -20,17 +24,22 @@ import {
   isTransactionPartialSigner,
   isTransactionWithDurableNonceLifetime,
   partiallySignTransactionWithSigners,
+  pipe,
   Rpc,
   RpcSubscriptions,
   sendAndConfirmDurableNonceTransactionFactory,
   sendAndConfirmTransactionFactory,
+  setTransactionMessageComputeUnitLimit,
   setTransactionMessageFeePayer,
   setTransactionMessageLifetimeUsingBlockhash,
+  setTransactionMessageLoadedAccountsDataSizeLimit,
   Signature,
   SolanaRpcApiMainnet,
   SolanaRpcSubscriptionsApi,
   SOLANA_ERROR__JSON_RPC__SERVER_ERROR_SEND_TRANSACTION_PREFLIGHT_FAILURE,
+  SOLANA_ERROR__TRANSACTION__FAILED_WHEN_SIMULATING_TO_ESTIMATE_RESOURCE_LIMITS,
   SOLANA_ERROR__TRANSACTION_ERROR__ALREADY_PROCESSED,
+  SolanaError,
   Transaction,
   TransactionMessage,
   TransactionMessageWithFeePayer,
@@ -39,6 +48,7 @@ import {
   TransactionModifyingSigner,
   TransactionPartialSigner,
   TransactionSigner,
+  TransactionVersion,
   TransactionWithLifetime,
 } from "@solana/kit";
 import { findSolanaError, isBrowser } from "./utils/common.js";
@@ -84,7 +94,39 @@ export type ConfirmOptions = {
   maxRetries?: number;
   /** The minimum slot the request may be evaluated at. */
   minContextSlot?: number;
+  /**
+   * Whether to estimate the resource limits left unset on the message by
+   * simulating it before sending. Defaults to `true`. Disable it for
+   * transactions close to the size limit, where the compute budget
+   * instruction added to legacy and version 0 messages would not fit.
+   */
+  estimateResourceLimits?: boolean;
 };
+
+/**
+ * Options used to construct an {@link AnchorProvider}: the default
+ * confirmation options, plus the version of the transaction messages built
+ * for it.
+ */
+export type ProviderOptions = ConfirmOptions & {
+  /**
+   * Version of the transaction messages built by programs using this
+   * provider. Defaults to {@link DEFAULT_TRANSACTION_VERSION}. Set it to `0`
+   * for wallets that do not support version 1 transactions.
+   */
+  transactionVersion?: TransactionVersion;
+  /**
+   * Maps the compute units consumed when simulating a message to the
+   * compute unit limit set on it, adding headroom for variation between
+   * simulation and execution. Defaults to
+   * {@link getDefaultComputeUnitLimitFromEstimate}. The result is capped at
+   * 1,400,000, the per-transaction maximum.
+   */
+  getComputeUnitLimitFromEstimate?: (estimatedComputeUnits: number) => number;
+};
+
+/** The version of the transaction messages built by default. */
+export const DEFAULT_TRANSACTION_VERSION: TransactionVersion = 1;
 
 /**
  * A transaction message together with the signers it needs on top of those
@@ -109,6 +151,11 @@ export default interface Provider {
    * client's own default.
    */
   readonly opts?: ConfirmOptions;
+  /**
+   * Version of the transaction messages built by programs using this
+   * provider. Defaults to {@link DEFAULT_TRANSACTION_VERSION} when unset.
+   */
+  readonly transactionVersion?: TransactionVersion;
 
   sendAndConfirm?(
     message: TransactionMessage,
@@ -140,7 +187,10 @@ export class AnchorProvider implements Provider {
    * commitment for sends and reads alike.
    */
   readonly opts: ConfirmOptions;
+  readonly transactionVersion: TransactionVersion;
 
+  #estimateResourceLimits: ReturnType<typeof estimateResourceLimitsFactory>;
+  #getComputeUnitLimitFromEstimate: (estimatedComputeUnits: number) => number;
   #sendAndConfirmTransaction: ReturnType<
     typeof sendAndConfirmTransactionFactory
   >;
@@ -153,14 +203,23 @@ export class AnchorProvider implements Provider {
    *               carrying `rpc` and `rpcSubscriptions` objects.
    * @param wallet The signer paying for and co-signing all transactions.
    * @param opts   Transaction confirmation options to use by default,
-   *               completed from {@link defaultOptions}.
+   *               completed from {@link defaultOptions}, and the version of
+   *               the transaction messages to build.
    */
   constructor(
     client: ClusterEndpoints | SolanaClient,
     readonly wallet: WalletSigner,
-    opts: ConfirmOptions = {}
+    opts: ProviderOptions = {}
   ) {
-    this.opts = { ...AnchorProvider.defaultOptions(), ...opts };
+    const {
+      transactionVersion,
+      getComputeUnitLimitFromEstimate,
+      ...confirmOptions
+    } = opts;
+    this.opts = { ...AnchorProvider.defaultOptions(), ...confirmOptions };
+    this.transactionVersion = transactionVersion ?? DEFAULT_TRANSACTION_VERSION;
+    this.#getComputeUnitLimitFromEstimate =
+      getComputeUnitLimitFromEstimate ?? getDefaultComputeUnitLimitFromEstimate;
     if (typeof client === "object" && "rpc" in client) {
       this.rpc = client.rpc;
       this.rpcSubscriptions = client.rpcSubscriptions;
@@ -174,6 +233,9 @@ export class AnchorProvider implements Provider {
         websocketUrl ?? makeWebsocketUrl(url)
       );
     }
+    this.#estimateResourceLimits = estimateResourceLimitsFactory({
+      rpc: this.rpc,
+    });
     this.#sendAndConfirmTransaction = sendAndConfirmTransactionFactory({
       rpc: this.rpc,
       rpcSubscriptions: this.rpcSubscriptions,
@@ -201,11 +263,12 @@ export class AnchorProvider implements Provider {
    *
    * @param url  The network cluster url.
    * @param opts The default transaction confirmation options, completed
-   *             from {@link defaultOptions}.
+   *             from {@link defaultOptions}, and the version of the
+   *             transaction messages to build.
    *
    * (This api is for Node only.)
    */
-  static local(url?: string, opts?: ConfirmOptions): AnchorProvider {
+  static local(url?: string, opts?: ProviderOptions): AnchorProvider {
     if (isBrowser) {
       throw new Error(`Provider local is not available on browser.`);
     }
@@ -248,6 +311,21 @@ export class AnchorProvider implements Provider {
    * `setTransactionMessageLifetimeUsingDurableNonce`), until the nonce
    * account advances.
    *
+   * Resource limits left unset are estimated by simulating the message (see
+   * Kit's `estimateAndSetResourceLimitsFactory`), with headroom added to the
+   * compute unit limit by `getComputeUnitLimitFromEstimate`: in the config
+   * of version 1 messages, or with a compute budget instruction appended to
+   * legacy and version 0 ones. Limits set explicitly on the message are kept
+   * as is, except for compute unit limits of 0 or 1,400,000, which Kit treats
+   * as placeholders and replaces with the estimate. A message simulated for
+   * its estimate is sent without a second preflight simulation, unless a
+   * signer may modify the transaction when signing it.
+   *
+   * With `skipPreflight` or `estimateResourceLimits: false`, nothing is
+   * simulated: legacy and version 0 messages are sent as is, and version 1
+   * messages, which are budgeted zero compute units and zero loaded account
+   * bytes unless their config says otherwise, get the runtime maxima.
+   *
    * @param message The transaction message to send.
    * @param signers Signers needed on top of those attached to the message.
    * @param opts    Transaction confirmation options.
@@ -259,13 +337,22 @@ export class AnchorProvider implements Provider {
   ): Promise<Signature> {
     opts = { ...this.opts, ...opts };
     const commitment = opts.commitment ?? "confirmed";
-    const prepared = this.#prepare(message, signers ?? []);
+    const prepared = await this.#withResourceLimits(
+      this.#prepare(message, signers ?? []),
+      opts,
+      commitment
+    );
 
     if (hasLifetime(prepared.message)) {
       const [signed] = await this.#walletSign([
         await this.#signWithSigners(prepared.message, prepared.signers),
       ]);
-      return await this.#sendSigned(signed, opts, commitment);
+      return await this.#sendSigned(
+        signed,
+        opts,
+        commitment,
+        prepared.estimated
+      );
     }
 
     // Retry loop: on fast local validators (e.g. surfpool with 400ms slot
@@ -291,7 +378,12 @@ export class AnchorProvider implements Provider {
       ]);
 
       try {
-        return await this.#sendSigned(signed, opts, commitment);
+        return await this.#sendSigned(
+          signed,
+          opts,
+          commitment,
+          prepared.estimated
+        );
       } catch (err) {
         // The message check is a fallback: Kit strips human-readable error
         // messages from production builds, so control flow must rely on the
@@ -322,7 +414,8 @@ export class AnchorProvider implements Provider {
    * The wallet co-signs the whole batch in a single request so that wallets
    * prompting the user for each signature only prompt once. As in v1, the
    * other signers sign before the wallet, so a modifying wallet that alters
-   * a message invalidates their signatures.
+   * a message invalidates their signatures. Resource limits are completed as
+   * in `sendAndConfirm`.
    *
    * @param messages Transaction messages, each with its extra signers.
    * @param opts     Transaction confirmation options.
@@ -336,8 +429,13 @@ export class AnchorProvider implements Provider {
     let lifetime: BlockhashLifetime | undefined;
 
     const pending: (Transaction & TransactionWithLifetime)[] = [];
+    const estimated: boolean[] = [];
     for (const { message, signers } of messages) {
-      const prepared = this.#prepare(message, signers ?? []);
+      const prepared = await this.#withResourceLimits(
+        this.#prepare(message, signers ?? []),
+        opts,
+        commitment
+      );
       let withLifetime: PreparedMessage["message"] &
         TransactionMessageWithLifetime;
       if (hasLifetime(prepared.message)) {
@@ -352,13 +450,16 @@ export class AnchorProvider implements Provider {
         );
       }
       pending.push(await this.#signWithSigners(withLifetime, prepared.signers));
+      estimated.push(prepared.estimated);
     }
 
     const signedAll = await this.#walletSign(pending);
 
     const signatures: Signature[] = [];
-    for (const signed of signedAll) {
-      signatures.push(await this.#sendSigned(signed, opts, commitment));
+    for (const [index, signed] of signedAll.entries()) {
+      signatures.push(
+        await this.#sendSigned(signed, opts, commitment, estimated[index])
+      );
     }
     return signatures;
   }
@@ -366,6 +467,9 @@ export class AnchorProvider implements Provider {
   /**
    * Simulates the given transaction message, returning emitted logs from
    * execution.
+   *
+   * Resource limits left unset on version 1 messages are set to the runtime
+   * maxima for the simulation.
    *
    * @param message   The transaction message to simulate.
    * @param signers   Signers needed on top of those attached to the message.
@@ -388,6 +492,7 @@ export class AnchorProvider implements Provider {
     const sigVerify = !!signers && signers.length > 0;
 
     const prepared = this.#prepare(message, signers ?? []);
+    prepared.message = withMaxResourceLimits(prepared.message);
     const withLifetime = hasLifetime(prepared.message)
       ? prepared.message
       : setTransactionMessageLifetimeUsingBlockhash(
@@ -468,6 +573,84 @@ export class AnchorProvider implements Provider {
     }
 
     return { message: withFeePayer, signers: [...signers.values()] };
+  }
+
+  /**
+   * Completes the resource limits a message leaves unset by simulating it,
+   * unless estimation is disabled or preflight is skipped, so that failing
+   * transactions can still be sent. A failed simulation is reported like a
+   * failed preflight, with the program logs. `estimated` tells whether the
+   * message was simulated and no signer can modify it afterwards, in which
+   * case its preflight simulation can be skipped.
+   */
+  async #withResourceLimits(
+    prepared: PreparedMessage,
+    opts: ConfirmOptions,
+    commitment: Commitment
+  ): Promise<PreparedMessage & { estimated: boolean }> {
+    if (opts.skipPreflight || opts.estimateResourceLimits === false) {
+      return {
+        ...prepared,
+        message: withMaxResourceLimits(prepared.message),
+        estimated: false,
+      };
+    }
+    let estimated = false;
+    const estimateAndSetResourceLimits = estimateAndSetResourceLimitsFactory(
+      async (message, config) => {
+        const estimate = await this.#estimateResourceLimits(message, config);
+        estimated = true;
+        return {
+          ...estimate,
+          computeUnitLimit: Math.min(
+            MAX_COMPUTE_UNIT_LIMIT,
+            Math.ceil(
+              this.#getComputeUnitLimitFromEstimate(estimate.computeUnitLimit)
+            )
+          ),
+        };
+      }
+    );
+    try {
+      const message = await estimateAndSetResourceLimits(prepared.message, {
+        commitment: opts.preflightCommitment ?? commitment,
+        minContextSlot:
+          opts.minContextSlot != null ? BigInt(opts.minContextSlot) : undefined,
+      });
+      return {
+        ...prepared,
+        message,
+        estimated: estimated && !this.#canModify(prepared.signers),
+      };
+    } catch (err) {
+      if (
+        isSolanaError(
+          err,
+          SOLANA_ERROR__TRANSACTION__FAILED_WHEN_SIMULATING_TO_ESTIMATE_RESOURCE_LIMITS
+        )
+      ) {
+        const message =
+          err.cause instanceof Error
+            ? `${err.message}: ${err.cause.message}`
+            : err.message;
+        throw new ProviderError(message, err.context.logs ?? undefined, {
+          cause: err,
+        });
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Whether the wallet or one of the given signers may modify the
+   * transaction when signing it, e.g. to add instructions, so that the
+   * signed transaction can differ from the simulated message.
+   */
+  #canModify(signers: TransactionSigner[]): boolean {
+    return (
+      !isTransactionPartialSigner(this.wallet) ||
+      signers.some(isTransactionModifyingSigner)
+    );
   }
 
   /**
@@ -560,16 +743,40 @@ export class AnchorProvider implements Provider {
     return value;
   }
 
+  /**
+   * Sends and confirms a signed transaction. A transaction whose message was
+   * simulated for its resource limits skips the preflight simulation, so it
+   * is first checked against the signature status cache: a byte-identical
+   * transaction, e.g. rebuilt from a blockhash that did not change, would
+   * otherwise be reported as confirmed without executing again.
+   */
   async #sendSigned(
     transaction: Transaction & TransactionWithLifetime,
     opts: ConfirmOptions,
-    commitment: Commitment
+    commitment: Commitment,
+    estimated = false
   ): Promise<Signature> {
     assertIsSendableTransaction(transaction);
     const signature = getSignatureFromTransaction(transaction);
+    if (estimated) {
+      const {
+        value: [status],
+      } = await this.rpc.getSignatureStatuses([signature]).send();
+      if (status) {
+        throw new ProviderError(
+          "This transaction has already been processed",
+          undefined,
+          {
+            cause: new SolanaError(
+              SOLANA_ERROR__TRANSACTION_ERROR__ALREADY_PROCESSED
+            ),
+          }
+        );
+      }
+    }
     const config = {
       commitment,
-      skipPreflight: opts.skipPreflight,
+      skipPreflight: estimated ? true : opts.skipPreflight,
       preflightCommitment: opts.preflightCommitment ?? commitment,
       maxRetries: opts.maxRetries != null ? BigInt(opts.maxRetries) : undefined,
       minContextSlot:
@@ -617,7 +824,7 @@ export class AnchorProvider implements Provider {
       .getTransaction(signature, {
         commitment: "confirmed",
         encoding: "json",
-        maxSupportedTransactionVersion: 0,
+        maxSupportedTransactionVersion: 1,
       })
       .send()
       .catch(() => null);
@@ -687,6 +894,63 @@ type BlockhashLifetime = Readonly<{
   blockhash: Blockhash;
   lastValidBlockHeight: bigint;
 }>;
+
+// The largest loaded accounts data size a transaction may request (64 MiB).
+const MAX_LOADED_ACCOUNTS_DATA_SIZE_LIMIT = 64 * 1024 * 1024;
+const MAX_COMPUTE_UNIT_LIMIT = 1_400_000;
+
+const MIN_COMPUTE_UNIT_BUFFER = 300;
+const COMPUTE_UNIT_MARGIN_CAP = 500_000;
+const MAX_COMPUTE_UNIT_MARGIN_BPS = 1_000;
+const MIN_COMPUTE_UNIT_MARGIN_BPS = 200;
+
+/**
+ * The default compute unit headroom added to simulation estimates, matching
+ * `@solana/kit-plugin-rpc`: the larger of 300 compute units and a margin
+ * decaying linearly from 10% of the estimate to 2% at 500,000 compute units
+ * and above.
+ */
+export function getDefaultComputeUnitLimitFromEstimate(
+  estimatedComputeUnits: number
+): number {
+  const progress = Math.min(estimatedComputeUnits / COMPUTE_UNIT_MARGIN_CAP, 1);
+  const marginBps =
+    MAX_COMPUTE_UNIT_MARGIN_BPS -
+    (MAX_COMPUTE_UNIT_MARGIN_BPS - MIN_COMPUTE_UNIT_MARGIN_BPS) * progress;
+  return (
+    estimatedComputeUnits +
+    Math.max(
+      MIN_COMPUTE_UNIT_BUFFER,
+      Math.ceil((estimatedComputeUnits * marginBps) / 10_000)
+    )
+  );
+}
+
+/**
+ * Sets the resource limits a version 1 message leaves unset, or provisory
+ * (zero), to the runtime maxima.
+ */
+function withMaxResourceLimits<TMessage extends TransactionMessage>(
+  message: TMessage
+): TMessage {
+  if (message.version !== 1) {
+    return message;
+  }
+  return pipe(
+    message,
+    (m) =>
+      getTransactionMessageComputeUnitLimit(m)
+        ? m
+        : setTransactionMessageComputeUnitLimit(MAX_COMPUTE_UNIT_LIMIT, m),
+    (m) =>
+      getTransactionMessageLoadedAccountsDataSizeLimit(m)
+        ? m
+        : setTransactionMessageLoadedAccountsDataSizeLimit(
+            MAX_LOADED_ACCOUNTS_DATA_SIZE_LIMIT,
+            m
+          )
+  );
+}
 
 function hasFeePayer(
   message: TransactionMessage
