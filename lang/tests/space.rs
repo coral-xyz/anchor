@@ -121,7 +121,7 @@ pub struct TestUnnamedStruct(
     pub TestBasicEnum,
 );
 
-#[derive(AnchorSerialize, AnchorDeserialize, InitSpace)]
+#[derive(AnchorSerialize, InitSpace)]
 pub struct TestBorshSkippedStruct {
     pub head: u8,
     #[borsh(skip)]
@@ -133,7 +133,7 @@ pub struct TestBorshSkippedStruct {
 pub struct TestUnitStruct;
 
 #[allow(dead_code)]
-#[derive(AnchorSerialize, AnchorDeserialize, InitSpace)]
+#[derive(AnchorSerialize, InitSpace)]
 struct BorshSkippedStruct {
     included: u8,
     #[borsh(skip)]
@@ -142,11 +142,11 @@ struct BorshSkippedStruct {
 }
 
 #[allow(dead_code)]
-#[derive(AnchorSerialize, AnchorDeserialize, InitSpace)]
+#[derive(AnchorSerialize, InitSpace)]
 struct BorshSkippedTuple(u8, #[borsh(skip)] u64, u16);
 
 #[allow(dead_code)]
-#[derive(AnchorSerialize, AnchorDeserialize, InitSpace)]
+#[derive(AnchorSerialize, InitSpace)]
 enum BorshSkippedEnum {
     Fields {
         included: u8,
