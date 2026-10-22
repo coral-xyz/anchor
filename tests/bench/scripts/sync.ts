@@ -6,6 +6,7 @@
  */
 
 import * as fs from "fs/promises";
+import os from "os";
 import path from "path";
 
 import {
@@ -50,10 +51,8 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
     console.log(`Skipping untagged release snapshot '${version}'.`);
     return false;
   });
-  const buildEnv = {
+  const buildEnv: NodeJS.ProcessEnv = {
     ...process.env,
-    // Current benchmarks use SBPFv3; historical versions retain their recorded architecture.
-    ANCHOR_BUILD_SBF_ARCH: "v3",
     RUSTC_BOOTSTRAP: "1",
     CARGO_TARGET_SBF_SOLANA_SOLANA_RUSTFLAGS: "-Z emit-stack-sizes",
     CARGO_TARGET_SBPF_SOLANA_SOLANA_RUSTFLAGS: "-Z emit-stack-sizes",
@@ -61,6 +60,8 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
     CARGO_TARGET_SBPFV2_SOLANA_SOLANA_RUSTFLAGS: "-Z emit-stack-sizes",
     CARGO_TARGET_SBPFV3_SOLANA_SOLANA_RUSTFLAGS: "-Z emit-stack-sizes",
   };
+  // Sync intentionally records changed measurements, unlike the CI test job.
+  delete buildEnv.CI;
 
   const setProjectVersion = async (version: Version) => {
     // Reopen the benchmark data because previous iterations update it in a
@@ -87,7 +88,7 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
         }
       );
       const platformToolsOutput = platformToolsResult.stdout.toString().trim();
-      if (!/^v\d+\.\d+$/.test(platformToolsOutput)) {
+      if (!/^v\d+\.\d+(?:\.\d+)?$/.test(platformToolsOutput)) {
         throw new Error(
           `AVM returned an invalid platform-tools version: ${platformToolsOutput}.`
         );
@@ -132,16 +133,48 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
     spawn("avm", ["solana", "install"], {
       throwOnError: { msg: `Failed to install Solana ${solanaVersion}.` },
     });
+
+    // AVM keeps explicit platform-tools installs under its own home directory,
+    // while older cargo-build-sbf releases look only in Solana's shared cache.
+    // Link the resolved release into that legacy location before building.
+    spawn("avm", ["platform-tools", "install", platformToolsVersion], {
+      throwOnError: {
+        msg: `Failed to install platform-tools ${platformToolsVersion}.`,
+      },
+    });
+    const avmHome = process.env.AVM_HOME ?? path.join(os.homedir(), ".avm");
+    const platformToolsSource = path.join(
+      avmHome,
+      "platform-tools",
+      platformToolsVersion
+    );
+    const platformToolsDestination = path.join(
+      os.homedir(),
+      ".cache",
+      "solana",
+      platformToolsVersion,
+      "platform-tools"
+    );
+    try {
+      await fs.lstat(platformToolsDestination);
+    } catch {
+      await fs.mkdir(path.dirname(platformToolsDestination), {
+        recursive: true,
+      });
+      await fs.symlink(
+        platformToolsSource,
+        platformToolsDestination,
+        process.platform === "win32" ? "junction" : "dir"
+      );
+    }
   };
 
   try {
     await setProjectVersion("unreleased");
-    // The current TypeScript client needs the current IDL format, including
-    // when a historical CLI is responsible for starting the validator.
+    // Build the IDL once with the current CLI. The TypeScript tests use this
+    // format even when a historical CLI starts the validator.
     await fs.rm(IDL_PATH, { force: true });
-    const buildResult = spawn("anchor", ["build", "--skip-lint"], {
-      env: buildEnv,
-    });
+    const buildResult = spawn("anchor", ["build", "--skip-lint"]);
     if (buildResult.status !== 0) {
       throw new Error("Failed to build the current benchmark program.");
     }
@@ -152,7 +185,7 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
       await setProjectVersion(version);
       const versionBuildEnv = {
         ...buildEnv,
-        ANCHOR_BUILD_SBF_ARCH: bench.get(version).sbpfArch ?? "v2",
+        ANCHOR_BUILD_SBF_ARCH: bench.get(version).sbpfArch ?? "v3",
         ANCHOR_TEST_VALIDATOR:
           bench.get(version).sbpfArch === "v3" ? "surfpool" : "legacy",
       };
@@ -198,10 +231,19 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
       }
 
       // Ensure the instrumented build replaces any artifact left by the
-      // initial current-IDL build or the previous iteration. Each selected
-      // Anchor CLI chooses its own historical build command.
-      await fs.rm(path.join("target", "deploy", "bench.so"), { force: true });
-      const buildArgs = ["build", "--skip-lint"];
+      // initial current-IDL build or the previous iteration. Remove the
+      // target-specific directories as well as target/deploy: Cargo otherwise
+      // considers the old uninstrumented fingerprint fresh.
+      await Promise.all([
+        ...["sbf", "sbpf", "sbpfv1", "sbpfv2", "sbpfv3"].map((target) =>
+          fs.rm(path.join("target", `${target}-solana-solana`), {
+            force: true,
+            recursive: true,
+          })
+        ),
+        fs.rm(path.join("target", "deploy", "bench.so"), { force: true }),
+      ]);
+      const buildArgs = ["build", "--skip-lint", "--no-idl"];
       // Program ID checks were added in v1.0.0. Historical benchmark builds
       // use a generated keypair, so they must not require it to match the
       // fixed benchmark program ID.
@@ -218,7 +260,6 @@ const IDL_PATH = path.join("target", "idl", "bench.json");
       }
 
       const testArgs = ["test", "--skip-lint", "--skip-build"];
-      // Use Surfpool for SBPFv3; preserve the legacy runtime for older measurements.
       if (version === "unreleased" || version >= "1.0.0") {
         testArgs.push("--validator", versionBuildEnv.ANCHOR_TEST_VALIDATOR);
       }

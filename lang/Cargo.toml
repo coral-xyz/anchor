@@ -7,7 +7,6 @@ edition = "2021"
 rust-version = "1.89"
 license = "Apache-2.0"
 description = "Solana Sealevel eDSL"
-readme.workspace = true
 homepage = "https://anchor-lang.com"
 
 [package.metadata.docs.rs]
@@ -117,7 +116,7 @@ solana-program-memory.workspace = true
 solana-program-option.workspace = true
 solana-program-pack.workspace = true
 solana-sdk-ids.workspace = true
-solana-system-interface = { workspace = true, features = ["bincode"] }
+solana-system-interface.workspace = true
 solana-sysvar-id.workspace = true
 
 # Cohort-specific. Exactly one column is ever activated; `src/compat.rs` aliases
