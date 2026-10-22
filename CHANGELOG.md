@@ -41,11 +41,14 @@ The minor version will be incremented upon a breaking change and the patch versi
 - ts: Stop the accounts resolver from failing with a max depth error when every account resolves on the last allowed pass ([#5155](https://github.com/otter-sec/anchor/pull/5155)).
 - cli: Fix generated projects with `--anchor-version v2` ([#5187](https://github.com/otter-sec/anchor/pull/5187)).
 - cli: Keep a custom provider `ws` URL when rewriting `Anchor.toml` ([#5193](https://github.com/otter-sec/anchor/issues/5193)).
+- lang: Read the `#[account]` namespace from the string value ([#5200](https://github.com/otter-sec/anchor/pull/5200)).
+- lang: Reject closing an account into itself from `close()` ([#5202](https://github.com/otter-sec/anchor/pull/5202)).
 - ts: Resolve the generic arguments of generic types nested in a generic type, so IDLs such as the generics test program can be decoded ([#5158](https://github.com/otter-sec/anchor/pull/5158)).
 
 ### Breaking
 
 - cli: Display `None` as `null` when displaying account data ([#4758](https://github.com/otter-sec/anchor/pull/4758)).
+- lang: Require comma-separated expressions in `#[access_control(...)]`; the previously accepted undocumented whitespace-separated form, such as `#[access_control(a() b())]`, is no longer supported ([#4980](https://github.com/otter-sec/anchor/pull/4980)).
 
 ## [1.2.1] - 2026-10-05
 
