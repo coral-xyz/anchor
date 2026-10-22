@@ -3,6 +3,8 @@
 //! `#![no_std]` compatible.
 
 #![cfg_attr(any(target_os = "solana", target_arch = "bpf"), no_std)]
+
+#[cfg(feature = "alloc")]
 extern crate alloc;
 extern crate self as anchor_lang;
 
@@ -13,6 +15,7 @@ pub extern crate alloc as __alloc;
 
 pub mod accounts;
 mod account_meta;
+mod buffers;
 pub mod context;
 mod context_cpi;
 pub mod cpi;
@@ -38,7 +41,7 @@ mod traits;
 
 // Re-export derive macros and bytemuck for generated code
 pub use cpi::realloc_account;
-pub use account_meta::AccountMeta;
+pub use account_meta::{AccountMeta, ToAccountMetas};
 /// Chunked 4×u64 equality compare for `Address`. Preferred over `==`
 /// on `&Address`. See <https://github.com/anza-xyz/solana-sdk/issues/345>.
 pub use pinocchio::address::address_eq;
@@ -49,56 +52,6 @@ pub use solana_address::{address, declare_id};
 /// Implementation detail of [`solana_msg`] - re-exported for macro access only.
 #[doc(hidden)]
 pub use solana_msg;
-#[doc(hidden)]
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub mod __idl {
-    pub use std::{
-        boxed,
-        boxed::Box,
-        collections, format, string,
-        string::{String, ToString},
-        vec,
-        vec::Vec,
-    };
-}
-
-/// Compatibility namespace used by generated declared-program bindings.
-///
-/// Host builds retain the standard-library collection types for client and
-/// IDL tooling. On-chain generated instruction types use bounded buffers so
-/// the bindings do not introduce an allocator dependency into the SBF graph.
-#[doc(hidden)]
-#[cfg(all(
-    any(target_os = "solana", target_arch = "bpf"),
-    feature = "alloc"
-))]
-pub mod __idl {
-    pub mod string {
-        pub use alloc::string::String;
-    }
-
-    pub mod vec {
-        pub use alloc::vec::Vec;
-    }
-}
-
-/// Bounded collection aliases used by generated bindings in a genuinely
-/// allocator-free target build. Alloc-enabled programs retain the existing
-/// owned collection types for compatibility with their runtime serializers.
-#[doc(hidden)]
-#[cfg(all(
-    any(target_os = "solana", target_arch = "bpf"),
-    not(feature = "alloc")
-))]
-pub mod __idl {
-    pub mod string {
-        pub type String = crate::FixedVec<u8, { crate::MAX_IDL_SEQUENCE }>;
-    }
-
-    pub mod vec {
-        pub type Vec<T> = crate::FixedVec<T, { crate::MAX_IDL_SEQUENCE }>;
-    }
-}
 #[macro_export]
 macro_rules! msg {
     ($($arg:tt)*) => {{
@@ -121,112 +74,9 @@ macro_rules! debug {
 // Re-export wincode for instruction data serialization
 pub use wincode;
 
+pub use buffers::*;
 pub use fixed_vec::FixedVec;
-pub use idl::{IdlAccountType, IdlEntries};
-pub const MAX_INSTRUCTION_DATA: usize = 1232;
-/// Maximum encoded event-CPI payload kept inline by the generated `emit_cpi!`
-/// path. Direct event serialization still uses `MAX_INSTRUCTION_DATA`.
-pub const MAX_EVENT_CPI_DATA: usize = 256 + 8;
-/// Maximum number of elements in an allocator-free collection emitted by
-/// generated on-chain IDL bindings.
-pub const MAX_IDL_SEQUENCE: usize = 256;
-pub type AccountMetaBuffer<const N: usize> = FixedVec<AccountMeta, N>;
-pub type InstructionAccountBuffer<'a, const N: usize> =
-    FixedVec<pinocchio::instruction::InstructionAccount<'a>, N>;
-pub type AccountViewBuffer<const N: usize> =
-    FixedVec<pinocchio::account::AccountView, N>;
-pub type CpiHandleBuffer<'a, const N: usize> = FixedVec<CpiHandle<'a>, N>;
-pub type BoolBuffer<const N: usize> = FixedVec<bool, N>;
-pub type InstructionDataBuffer = FixedVec<u8, MAX_INSTRUCTION_DATA>;
-pub type SignerBuffer<'a, const N: usize> =
-    FixedVec<pinocchio::cpi::Signer<'a, 'a>, N>;
-pub type CpiAccountBuffer<'a, const N: usize> =
-    FixedVec<core::mem::MaybeUninit<pinocchio::cpi::CpiAccount<'a>>, N>;
-pub type AccountBindingBuffer<const N: usize> = FixedVec<Option<usize>, N>;
-
-/// Append one instruction account without making the generated CPI builder
-/// rely on `FixedVec::push`'s panic-on-overflow compatibility behavior.
-#[inline]
-pub fn try_push_instruction_account<'a, const N: usize>(
-    buffer: &mut InstructionAccountBuffer<'a, N>,
-    account: pinocchio::instruction::InstructionAccount<'a>,
-) -> core::result::Result<(), solana_program_error::ProgramError> {
-    buffer
-        .try_push(account)
-        .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
-}
-
-/// Append one CPI handle without panicking when a generated account shape is
-/// larger than the SBF inline account budget.
-#[inline]
-pub fn try_push_cpi_handle<'a, const N: usize>(
-    buffer: &mut CpiHandleBuffer<'a, N>,
-    handle: CpiHandle<'a>,
-) -> core::result::Result<(), solana_program_error::ProgramError> {
-    buffer
-        .try_push(handle)
-        .map_err(|_| solana_program_error::ProgramError::InvalidArgument)
-}
-
-/// Read-only view of optional-account sentinel flags used by CPI validation.
-/// The bounded boolean representation is used by generated V2 code, while
-/// slices remain accepted by the lower-level public CPI helpers.
-pub trait OptionalSentinelFlags {
-    fn len(&self) -> usize;
-    fn get(&self, index: usize) -> bool;
-}
-
-impl OptionalSentinelFlags for [bool] {
-    #[inline]
-    fn len(&self) -> usize {
-        <[bool]>::len(self)
-    }
-
-    #[inline]
-    fn get(&self, index: usize) -> bool {
-        <[bool]>::get(self, index).copied().unwrap_or(false)
-    }
-}
-
-impl<const N: usize> OptionalSentinelFlags for [bool; N] {
-    #[inline]
-    fn len(&self) -> usize {
-        N
-    }
-
-    #[inline]
-    fn get(&self, index: usize) -> bool {
-        self.as_slice().get(index).copied().unwrap_or(false)
-    }
-}
-
-impl<const N: usize> OptionalSentinelFlags for BoolBuffer<N> {
-    #[inline]
-    fn len(&self) -> usize {
-        FixedVec::len(self)
-    }
-
-    #[inline]
-    fn get(&self, index: usize) -> bool {
-        self.as_slice().get(index).copied().unwrap_or(false)
-    }
-}
-
-/// Append bytes to an instruction/event buffer without allocating or
-/// panicking on the on-chain target.
-///
-/// The bounded `FixedVec` implementation reports capacity exhaustion as
-/// `InvalidInstructionData`, which lets generated serializers expose a
-/// genuinely fallible path without target-dependent public return types.
-#[inline]
-pub fn try_extend_instruction_data(
-    buffer: &mut InstructionDataBuffer,
-    bytes: &[u8],
-) -> core::result::Result<(), solana_program_error::ProgramError> {
-    buffer
-        .try_extend_from_slice(bytes)
-        .map_err(|_| solana_program_error::ProgramError::InvalidInstructionData)
-}
+pub use idl::{__idl, IdlAccountType, IdlEntries, MAX_IDL_SEQUENCE};
 
 #[doc(hidden)]
 #[macro_export]
@@ -403,17 +253,6 @@ pub mod solana_program {
     pub mod program {
         pub use crate::program::*;
     }
-}
-
-/// Converts a struct of account addresses into a host-side list of
-/// [`AccountMeta`]s.
-///
-/// This is intentionally a host/client API. Runtime CPI account storage is
-/// selected per invocation through [`ToCpiAccountsWithCapacity`] instead of
-/// imposing a global account-meta buffer on every caller.
-#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
-pub trait ToAccountMetas {
-    fn to_account_metas(&self, is_signer: Option<bool>) -> std::vec::Vec<AccountMeta>;
 }
 
 /// Serializes instruction data: discriminator prefix + LE-encoded args.

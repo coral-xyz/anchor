@@ -1,5 +1,50 @@
 use crate::fixed_vec::FixedVec;
 
+pub const MAX_IDL_SEQUENCE: usize = 256;
+
+#[doc(hidden)]
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+pub mod __idl {
+    pub use std::{
+        boxed,
+        boxed::Box,
+        collections, format, string,
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+}
+
+#[doc(hidden)]
+#[cfg(all(
+    any(target_os = "solana", target_arch = "bpf"),
+    feature = "alloc"
+))]
+pub mod __idl {
+    pub mod string {
+        pub use alloc::string::String;
+    }
+
+    pub mod vec {
+        pub use alloc::vec::Vec;
+    }
+}
+
+#[doc(hidden)]
+#[cfg(all(
+    any(target_os = "solana", target_arch = "bpf"),
+    not(feature = "alloc")
+))]
+pub mod __idl {
+    pub mod string {
+        pub type String = crate::FixedVec<u8, { crate::MAX_IDL_SEQUENCE }>;
+    }
+
+    pub mod vec {
+        pub type Vec<T> = crate::FixedVec<T, { crate::MAX_IDL_SEQUENCE }>;
+    }
+}
+
 #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 pub type IdlEntries = std::vec::Vec<&'static str>;
 #[cfg(any(target_os = "solana", target_arch = "bpf"))]

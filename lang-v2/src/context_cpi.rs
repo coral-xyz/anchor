@@ -201,7 +201,7 @@ where
 
         let mut optional_sentinel_flags =
             self.accounts.optional_account_sentinel_flags_with_capacity()?;
-        let instruction_account_count = crate::program::instruction_account_count(&ix);
+        let instruction_account_count = ix.with_instruction_accounts(|accounts| accounts.len());
         require!(
             optional_sentinel_flags.len() <= instruction_account_count
                 && instruction_account_count <= optional_sentinel_flags.capacity(),

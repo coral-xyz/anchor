@@ -559,7 +559,7 @@ impl<C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'_, C, 
     /// `accounts` argument can be:
     ///
     /// - Any type that implements [`ToAccountMetas`] trait
-    /// - A vector of [`AccountMeta`]s (for remaining accounts)
+    /// - A fixed array or [`anchor_lang::AccountMetaBuffer`] for remaining accounts
     ///
     /// Note that the given accounts are appended to the previous list of accounts instead of
     /// overriding the existing ones (if any).
@@ -576,7 +576,7 @@ impl<C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'_, C, 
     ///         system_program: system_program::ID,
     ///     })
     ///     // Remaining accounts
-    ///     .accounts(vec![AccountMeta {
+    ///     .accounts([anchor_lang::AccountMeta {
     ///         pubkey: remaining,
     ///         is_signer: true,
     ///         is_writable: true,
@@ -587,11 +587,12 @@ impl<C: Deref<Target = impl Signer> + Clone, S: AsSigner> RequestBuilder<'_, C, 
     #[must_use]
     pub fn accounts(mut self, accounts: impl ToAccountMetas) -> Self {
         let metas = accounts.to_account_metas(None);
-        self.accounts.extend(metas.iter().map(|meta| AccountMeta {
-            pubkey: meta.pubkey,
-            is_signer: meta.is_signer,
-            is_writable: meta.is_writable,
-        }));
+        self.accounts
+            .extend(metas.as_ref().iter().map(|meta| AccountMeta {
+                pubkey: meta.pubkey,
+                is_signer: meta.is_signer,
+                is_writable: meta.is_writable,
+            }));
         self
     }
 

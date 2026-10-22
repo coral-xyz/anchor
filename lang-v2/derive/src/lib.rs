@@ -1764,10 +1764,9 @@ fn impl_accounts(input: &DeriveInput) -> TokenStream2 {
             let field_ident = &field.name;
             if nested_client_accounts_type(&field.ty).is_some() {
                 quote! {
-                    __metas.extend(
+                    __metas.extend_from_slice(
                         anchor_lang::ToAccountMetas::to_account_metas(#field_ident, _is_signer)
-                            .iter()
-                            .cloned(),
+                            .as_ref(),
                     );
                 }
             } else if field.is_optional {
@@ -1922,13 +1921,12 @@ fn impl_accounts(input: &DeriveInput) -> TokenStream2 {
             let field_ident = &field.name;
             if nested_client_accounts_type(&field.ty).is_some() {
                 quote! {
-                    __metas.extend(
+                    __metas.extend_from_slice(
                         anchor_lang::ToAccountMetas::to_account_metas(
                             &self.#field_ident,
                             _is_signer,
                         )
-                        .iter()
-                            .cloned(),
+                        .as_ref(),
                     );
                 }
             } else if field.is_optional {
@@ -2071,10 +2069,15 @@ fn impl_accounts(input: &DeriveInput) -> TokenStream2 {
         }
         #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
         impl anchor_lang::ToAccountMetas for #resolved_name {
-            fn to_account_metas(&self, _is_signer: Option<bool>) -> ::std::vec::Vec<anchor_lang::AccountMeta> {
+            type Output = anchor_lang::AccountMetaBuffer<{ #header_size_expr }>;
+
+            fn to_account_metas(
+                &self,
+                _is_signer: Option<bool>,
+            ) -> Self::Output {
                 #(#required_locals)*
                 #(#derive_stmts)*
-                let mut __metas = ::std::vec::Vec::new();
+                let mut __metas = anchor_lang::AccountMetaBuffer::<{ #header_size_expr }>::new();
                 #(#client_meta_steps)*
                 __metas
             }
@@ -2089,8 +2092,13 @@ fn impl_accounts(input: &DeriveInput) -> TokenStream2 {
             }
             #[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
             impl anchor_lang::ToAccountMetas for #name {
-                fn to_account_metas(&self, _is_signer: Option<bool>) -> ::std::vec::Vec<anchor_lang::AccountMeta> {
-                    let mut __metas = ::std::vec::Vec::new();
+                type Output = anchor_lang::AccountMetaBuffer<{ #header_size_expr }>;
+
+                fn to_account_metas(
+                    &self,
+                    _is_signer: Option<bool>,
+                ) -> Self::Output {
+                    let mut __metas = anchor_lang::AccountMetaBuffer::<{ #header_size_expr }>::new();
                     #(#full_meta_steps)*
                     __metas
                 }
@@ -4093,8 +4101,10 @@ fn gen_declare_program_events(idl: &serde_json::Value) -> syn::Result<TokenStrea
                         let payload = anchor_lang::bytemuck::bytes_of(self);
                         let mut data =
                             anchor_lang::InstructionDataBuffer::new();
-                        anchor_lang::try_extend_instruction_data(&mut data, disc)?;
-                        anchor_lang::try_extend_instruction_data(&mut data, payload)?;
+                        data.try_extend_from_slice(disc)
+                            .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
+                        data.try_extend_from_slice(payload)
+                            .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
                         Ok(data)
                     }
 
@@ -4111,7 +4121,8 @@ fn gen_declare_program_events(idl: &serde_json::Value) -> syn::Result<TokenStrea
                         let disc = <Self as anchor_lang::Discriminator>::DISCRIMINATOR;
                         let mut data =
                             anchor_lang::InstructionDataBuffer::new();
-                        anchor_lang::try_extend_instruction_data(&mut data, disc)?;
+                        data.try_extend_from_slice(disc)
+                            .map_err(|_| anchor_lang::Error::InvalidInstructionData)?;
                         anchor_lang::wincode::config::serialize_into(
                             &mut data,
                             self,
@@ -5561,6 +5572,7 @@ fn process_handler(
             ) -> anchor_lang::solana_program::instruction::Instruction {
                 let account_metas = accounts
                     .to_account_metas(None)
+                    .as_ref()
                     .iter()
                     .map(|meta| anchor_lang::solana_program::instruction::AccountMeta {
                         pubkey: meta.pubkey,

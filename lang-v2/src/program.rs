@@ -67,14 +67,15 @@ pub fn invoke_signed_with_optional_sentinels<'a, 'seeds, I: CpiInstruction + ?Si
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
     optional_sentinel_flags: &[bool],
 ) -> ProgramResult {
-    let instruction_accounts = instruction_accounts(instruction)?;
-    validate_instruction_accounts(
-        &instruction_accounts,
-        instruction.program_id(),
-        account_handles,
-        optional_sentinel_flags,
-        signer_seeds.is_empty(),
-    )?;
+    instruction.with_instruction_accounts(|instruction_accounts| {
+        validate_instruction_accounts(
+            instruction_accounts,
+            instruction.program_id(),
+            account_handles,
+            optional_sentinel_flags,
+            signer_seeds.is_empty(),
+        )
+    })?;
 
     // SAFETY: Validation above proves every non-sentinel instruction account
     // has a matching handle, writable metas use writable handles, and
@@ -131,37 +132,38 @@ pub unsafe fn invoke_signed_unchecked_with_optional_sentinels<'a, 'seeds, I: Cpi
     signer_seeds: &'seeds [&'seeds [&'seeds [u8]]],
     optional_sentinel_flags: &[bool],
 ) -> ProgramResult {
-    let instruction_accounts = instruction_accounts(instruction)?;
-    let cpi_account_count = required_cpi_account_count(
-        &instruction_accounts,
-        instruction.program_id(),
-        account_handles,
-        optional_sentinel_flags,
-    )?;
-    let instruction_view = InstructionView {
-        program_id: instruction.program_id(),
-        accounts: &instruction_accounts,
-        data: instruction.data(),
-    };
-    let signers = signers(signer_seeds);
-    let _borrow_guards = crate::enter_cpi(account_handles);
-    let cpi_accounts = cpi_accounts(account_handles);
+    instruction.with_instruction_accounts(|instruction_accounts| {
+        let cpi_account_count = required_cpi_account_count(
+            instruction_accounts,
+            instruction.program_id(),
+            account_handles,
+            optional_sentinel_flags,
+        )?;
+        let instruction_view = InstructionView {
+            program_id: instruction.program_id(),
+            accounts: instruction_accounts,
+            data: instruction.data(),
+        };
+        let signers = signers(signer_seeds);
+        let _borrow_guards = crate::enter_cpi(account_handles);
+        let cpi_accounts = cpi_accounts(account_handles);
 
-    // SAFETY:
-    // - `cpi_accounts` was fully initialized from the provided handles.
-    // - This function's caller upholds the unchecked CPI aliasing contract.
-    unsafe {
-        pinocchio::cpi::invoke_signed_unchecked(
-            &instruction_view,
-            from_raw_parts(
-                cpi_accounts.as_ptr() as *const CpiAccount,
-                cpi_account_count,
-            ),
-            &signers,
-        );
-    }
+        // SAFETY:
+        // - `cpi_accounts` was fully initialized from the provided handles.
+        // - This function's caller upholds the unchecked CPI aliasing contract.
+        unsafe {
+            pinocchio::cpi::invoke_signed_unchecked(
+                &instruction_view,
+                from_raw_parts(
+                    cpi_accounts.as_ptr() as *const CpiAccount,
+                    cpi_account_count,
+                ),
+                &signers,
+            );
+        }
 
-    Ok(())
+        Ok(())
+    })
 }
 
 pub(crate) fn validate_fixed_instruction_accounts<'a, const N: usize>(
@@ -372,25 +374,6 @@ fn instruction_account_matches_handle(
 ) -> bool {
     address_eq(account.address, handle.address())
         && (!account.is_writable || handle.is_writable())
-}
-
-type InstructionAccountStorage<'a> = Vec<InstructionAccount<'a>>;
-
-pub(crate) fn instruction_accounts<'a, I: CpiInstruction + ?Sized>(
-    instruction: &'a I,
-) -> Result<InstructionAccountStorage<'a>, ProgramError> {
-    let mut accounts = InstructionAccountStorage::new();
-    instruction.for_each_account(&mut |address, is_writable, is_signer| {
-        let account = InstructionAccount::new(address, is_writable, is_signer);
-        accounts.push(account);
-    });
-    Ok(accounts)
-}
-
-pub(crate) fn instruction_account_count<I: CpiInstruction + ?Sized>(instruction: &I) -> usize {
-    let mut count = 0;
-    instruction.for_each_account(&mut |_, _, _| count += 1);
-    count
 }
 
 fn signers<'seeds>(signer_seeds: &'seeds [&'seeds [&'seeds [u8]]]) -> Vec<Signer<'seeds, 'seeds>> {

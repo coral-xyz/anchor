@@ -1,6 +1,10 @@
 //! Allocator-neutral instruction views used by the public CPI API.
 
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+extern crate alloc;
+
 use crate::Address;
+use pinocchio::instruction::InstructionAccount;
 
 /// A CPI instruction that can be inspected without taking ownership of a
 /// heap-backed instruction representation.
@@ -18,6 +22,14 @@ pub trait CpiInstruction {
 
     /// Visit instruction account metadata in wire order.
     fn for_each_account<'a>(&'a self, visit: &mut dyn FnMut(&'a Address, bool, bool));
+
+    /// Borrow instruction account metadata for the duration of a callback.
+    /// On-chain instruction views pass their existing slice directly; host
+    /// SDK instructions may build a compatibility view inside the callback.
+    fn with_instruction_accounts<R>(
+        &self,
+        visit: impl FnOnce(&[InstructionAccount<'_>]) -> R,
+    ) -> R;
 }
 
 impl<'a, 'b, 'c, 'd> CpiInstruction for pinocchio::instruction::InstructionView<'a, 'b, 'c, 'd>
@@ -40,8 +52,17 @@ where
             visit(account.address, account.is_writable, account.is_signer);
         }
     }
+
+    #[inline]
+    fn with_instruction_accounts<R>(
+        &self,
+        visit: impl FnOnce(&[InstructionAccount<'_>]) -> R,
+    ) -> R {
+        visit(self.accounts)
+    }
 }
 
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
 impl CpiInstruction for solana_instruction::Instruction {
     #[inline]
     fn program_id(&self) -> &Address {
@@ -58,5 +79,20 @@ impl CpiInstruction for solana_instruction::Instruction {
         for account in &self.accounts {
             visit(&account.pubkey, account.is_writable, account.is_signer);
         }
+    }
+
+    #[inline]
+    fn with_instruction_accounts<R>(
+        &self,
+        visit: impl FnOnce(&[InstructionAccount<'_>]) -> R,
+    ) -> R {
+        let accounts: alloc::vec::Vec<_> = self
+            .accounts
+            .iter()
+            .map(|account| {
+                InstructionAccount::new(&account.pubkey, account.is_writable, account.is_signer)
+            })
+            .collect();
+        visit(&accounts)
     }
 }
