@@ -175,7 +175,7 @@ pub fn find_program_address(seeds: &[&[u8]], program_id: &Address) -> (Address, 
 }
 
 /// Find a PDA, returning an error if none exists.
-#[inline(always)]
+#[inline(never)]
 pub fn try_find_program_address(
     seeds: &[&[u8]],
     program_id: &Address,
@@ -197,7 +197,7 @@ pub fn try_find_program_address(
 
 /// Find the canonical bump for `seeds` + `program_id` and verify that the
 /// derived PDA equals `expected`. Returns just the bump on success.
-#[inline(always)]
+#[inline(never)]
 pub fn find_and_verify_program_address(
     seeds: &[&[u8]],
     program_id: &Address,
@@ -312,7 +312,7 @@ fn check_off_curve(addr: &Address) -> Result<(), ProgramError> {
 
 /// Hash seeds into a PDA address (sha256 only, no curve check).
 #[cfg(target_os = "solana")]
-#[inline(always)]
+#[inline(never)]
 fn hash_pda_seeds(seeds: &[&[u8]], program_id: &Address) -> Result<Address, ProgramError> {
     use solana_sha256_hasher::sol_sha256;
     const PDA_MARKER: &[u8; 21] = b"ProgramDerivedAddress";
@@ -446,6 +446,7 @@ fn signer_from_seeds<'a>(seeds: &'a [&'a [u8]]) -> pinocchio::cpi::Signer<'a, 'a
 }
 
 #[doc(hidden)]
+#[inline(never)]
 pub fn create_account_with_signers(
     payer: &AccountView,
     target: &AccountView,

@@ -2099,7 +2099,7 @@ fn impl_accounts(input: &DeriveInput) -> TokenStream2 {
                 Ok((__accounts, __bumps, __ix_args))
             }
 
-            #[inline]
+            #[inline(never)]
             fn validate_accounts<'ix>(
                 __program_id: &anchor_lang::Address,
                 __views: &[anchor_lang::AccountView],
