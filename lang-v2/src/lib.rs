@@ -41,7 +41,9 @@ mod traits;
 
 // Re-export derive macros and bytemuck for generated code
 pub use cpi::realloc_account;
-pub use account_meta::{AccountMeta, ToAccountMetas};
+pub use account_meta::AccountMeta;
+#[cfg(not(any(target_os = "solana", target_arch = "bpf")))]
+pub use account_meta::ToAccountMetas;
 /// Chunked 4×u64 equality compare for `Address`. Preferred over `==`
 /// on `&Address`. See <https://github.com/anza-xyz/solana-sdk/issues/345>.
 pub use pinocchio::address::address_eq;
