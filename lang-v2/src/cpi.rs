@@ -527,7 +527,27 @@ pub fn create_account_signed(
 ///
 /// Requires Pinocchio's account-resize entrypoint hook so
 /// `original_data_len` tracking is available in `RuntimeAccount.padding`.
+/// Fails with `AccountBorrowFailed` while any borrow of the account's data is
+/// live.
 pub fn realloc_account(
+    account: &mut AccountView,
+    new_space: usize,
+    payer: &AccountView,
+    zero: bool,
+) -> Result<(), ProgramError> {
+    account.check_borrow_mut()?;
+    // SAFETY: the check above rules out any live borrow of the account's data.
+    unsafe { realloc_account_unchecked(account, new_space, payer, zero) }
+}
+
+/// [`realloc_account`] without the borrow check, for wrappers that hold the
+/// account's exclusive borrow themselves.
+///
+/// # Safety
+///
+/// The caller must hold the only borrow of the account's data and have no
+/// live reference into it.
+pub(crate) unsafe fn realloc_account_unchecked(
     account: &mut AccountView,
     new_space: usize,
     payer: &AccountView,
@@ -580,12 +600,8 @@ pub fn realloc_account(
         }
     }
 
-    // SAFETY: resize_unchecked writes data_len (a fixed-offset field
-    // before the data region) — disjoint from BorshAccount's RefMut
-    // which guards data[..]. Slab's borrow_state == 0 also triggers
-    // the checked path's rejection. The derive's realloc constraint
-    // does release/reacquire around this call; exit() has a fallback
-    // stale-length detector for non-derive callers.
+    // SAFETY: the caller rules out any other borrow of, or reference into,
+    // the account's data.
     unsafe { account.resize_unchecked(new_space)? };
 
     if zero && new_space > old_space {
