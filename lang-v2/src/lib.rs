@@ -106,6 +106,11 @@ pub use wincode;
 ///   intentionally follows wincode here, so floating-point values (including
 ///   NaN) are supported. Programs migrating from v1 should account for this
 ///   serialization difference when validating or comparing float values.
+/// - **Dynamic collections of zero-sized elements** (`Vec<()>`, and the same
+///   shape for any other zero-sized `T`): borsh rejects them. Wincode writes a
+///   `u32` length prefix and no element bytes, then reads that length back.
+///   This does not show up in ordinary account data. Wincode still bounds the
+///   length through its preallocation limit.
 ///
 /// Programs that don't use these types are unaffected.
 ///
