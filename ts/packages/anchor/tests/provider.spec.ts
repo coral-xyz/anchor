@@ -504,9 +504,8 @@ describe("AnchorProvider", () => {
   });
 
   describe("resource limits", () => {
-    // A single system program (builtin) instruction.
     const DEFAULT_LIMITS = {
-      computeUnitLimit: 3_000,
+      computeUnitLimit: 200_000,
       loadedAccountsDataSizeLimit: 64 * 1024 * 1024,
     };
 
@@ -696,7 +695,7 @@ describe("AnchorProvider", () => {
       expect(sentConfig(requests)).toEqual(DEFAULT_LIMITS);
     });
 
-    it("budgets 200,000 compute units per non-builtin instruction by default", async () => {
+    it("budgets 200,000 compute units regardless of instruction count by default", async () => {
       const { provider, wallet, requests } = mockProvider(
         confirmingResponders(),
         { opts: { estimateResourceLimits: false } }
@@ -714,8 +713,7 @@ describe("AnchorProvider", () => {
         )
       );
 
-      // 3,000 for the system transfer, 200,000 per memo instruction.
-      expect(sentConfig(requests)?.computeUnitLimit).toBe(403_000);
+      expect(sentConfig(requests)?.computeUnitLimit).toBe(200_000);
     });
 
     it("uses the runtime defaults without simulating when preflight is skipped", async () => {

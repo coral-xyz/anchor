@@ -321,8 +321,8 @@ export class AnchorProvider implements Provider {
    * With `skipPreflight` or `estimateResourceLimits: false`, nothing is
    * simulated: legacy and version 0 messages are sent as is, and version 1
    * messages, which are budgeted zero compute units and zero loaded account
-   * bytes unless their config says otherwise, get the defaults the runtime
-   * applies to legacy and version 0 messages.
+   * bytes unless their config says otherwise, get 200,000 compute units and
+   * 64 MiB of loaded account data.
    *
    * @param message The transaction message to send.
    * @param signers Signers needed on top of those attached to the message.
@@ -452,8 +452,8 @@ export class AnchorProvider implements Provider {
    * Simulates the given transaction message, returning emitted logs from
    * execution.
    *
-   * Resource limits left unset on version 1 messages are set to the defaults
-   * the runtime applies to legacy and version 0 messages, see
+   * Resource limits left unset on version 1 messages are set to 200,000
+   * compute units and 64 MiB of loaded account data, see
    * {@link withDefaultResourceLimits}.
    *
    * @param message   The transaction message to simulate.
@@ -866,27 +866,12 @@ export function getDefaultComputeUnitLimitFromEstimate(
   );
 }
 
-// Programs the runtime budgets 3,000 compute units per instruction rather
-// than 200,000 when a transaction does not set its compute unit limit.
-const BUILTIN_PROGRAM_ADDRESSES = new Set<string>([
-  "11111111111111111111111111111111",
-  "ComputeBudget111111111111111111111111111111",
-  "BPFLoaderUpgradeab1e11111111111111111111111",
-  "BPFLoader1111111111111111111111111111111111",
-  "BPFLoader2111111111111111111111111111111111",
-  "LoaderV411111111111111111111111111111111111",
-  "KeccakSecp256k11111111111111111111111111111",
-  "Ed25519SigVerify111111111111111111111111111",
-]);
-const BUILTIN_INSTRUCTION_COMPUTE_UNIT_LIMIT = 3_000;
-const DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT = 200_000;
+const DEFAULT_COMPUTE_UNIT_LIMIT = 200_000;
 
 /**
  * Sets the resource limits a version 1 message leaves unset, or provisory
- * (zero), to the defaults the runtime applies to legacy and version 0
- * messages: 3,000 compute units per builtin program instruction and 200,000
- * per other instruction, capped at 1,400,000, and 64 MiB of loaded account
- * data. Version 1 messages are otherwise budgeted zero for both.
+ * (zero), to 200,000 compute units and 64 MiB of loaded account data.
+ * Version 1 messages are otherwise budgeted zero for both.
  */
 function withDefaultResourceLimits<TMessage extends TransactionMessage>(
   message: TMessage
@@ -894,23 +879,12 @@ function withDefaultResourceLimits<TMessage extends TransactionMessage>(
   if (message.version !== 1) {
     return message;
   }
-  const computeUnitLimit = Math.min(
-    MAX_COMPUTE_UNIT_LIMIT,
-    message.instructions.reduce(
-      (total, ix) =>
-        total +
-        (BUILTIN_PROGRAM_ADDRESSES.has(ix.programAddress)
-          ? BUILTIN_INSTRUCTION_COMPUTE_UNIT_LIMIT
-          : DEFAULT_INSTRUCTION_COMPUTE_UNIT_LIMIT),
-      0
-    )
-  );
   return pipe(
     message,
     (m) =>
       getTransactionMessageComputeUnitLimit(m)
         ? m
-        : setTransactionMessageComputeUnitLimit(computeUnitLimit, m),
+        : setTransactionMessageComputeUnitLimit(DEFAULT_COMPUTE_UNIT_LIMIT, m),
     (m) =>
       getTransactionMessageLoadedAccountsDataSizeLimit(m)
         ? m

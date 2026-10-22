@@ -352,11 +352,9 @@ await program.methods.initialize(data).rpc({ estimateResourceLimits: false });
 
 Nothing is estimated either with `skipPreflight`, so failing transactions still
 land. In both cases, legacy and version 0 messages are sent as is, and the
-runtime applies its defaults: 200,000 compute units per instruction, or 3,000
-for builtin programs such as the System program, capped at 1,400,000, and 64 MiB
-of loaded account data. Version 1 messages are budgeted zero for any limit left
-unset, so `AnchorProvider` sets those same defaults on them, as does
-`provider.simulate`.
+runtime applies its defaults. Version 1 messages are budgeted zero for any limit
+left unset, so `AnchorProvider` sets 200,000 compute units and 64 MiB of loaded
+account data on them, as does `provider.simulate`.
 
 ### Transaction Versions
 
