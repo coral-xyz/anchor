@@ -104,6 +104,9 @@ pub(super) fn fetch_signatures_for_address(
     target_slot: Option<u64>,
     max_signatures: usize,
 ) -> Result<Vec<RpcConfirmedTransactionStatusWithSignature>> {
+    if max_signatures == 0 {
+        return Ok(Vec::new());
+    }
     let mut signatures = Vec::new();
     let mut cursor: Option<Signature> = None;
     let mut cap_reached = false;
@@ -114,7 +117,7 @@ pub(super) fn fetch_signatures_for_address(
         let config = GetConfirmedSignaturesForAddress2Config {
             before: cursor,
             until: None,
-            limit: Some(IDL_SIGNATURE_PAGE_SIZE),
+            limit: Some(IDL_SIGNATURE_PAGE_SIZE.min(max_signatures - signatures.len())),
             // The server defaults `commitment: None` to finalized, which lags fresh
             // localnet transactions; honor the client's configured commitment instead.
             commitment: Some(client.commitment()),
@@ -148,11 +151,11 @@ pub(super) fn fetch_signatures_for_address(
                     continue;
                 }
             }
+            signatures.push(sig);
             if signatures.len() >= max_signatures {
                 cap_reached = true;
                 break;
             }
-            signatures.push(sig);
         }
 
         // Stop paginating once the user-configured signature cap has been hit
@@ -224,5 +227,126 @@ pub(super) fn fetch_transaction(
                 std::thread::sleep(std::time::Duration::from_millis(backoff));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        std::{
+            io::{Read, Write},
+            net::TcpListener,
+            sync::{
+                atomic::{AtomicBool, Ordering},
+                Arc, Mutex,
+            },
+            time::{Duration, Instant},
+        },
+    };
+
+    fn capped_history(maximum: usize) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let stopped = Arc::new(AtomicBool::new(false));
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let server_stopped = stopped.clone();
+        let server_requests = requests.clone();
+        let signature = Signature::from([7u8; 64]).to_string();
+        let returned_signature = signature.clone();
+        let server = std::thread::spawn(move || {
+            let deadline = Instant::now() + Duration::from_secs(5);
+            while !server_stopped.load(Ordering::SeqCst) && Instant::now() < deadline {
+                let (mut stream, _) = match listener.accept() {
+                    Ok(value) => value,
+                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                        std::thread::sleep(Duration::from_millis(5));
+                        continue;
+                    }
+                    Err(error) => panic!("accept test RPC: {error}"),
+                };
+                stream.set_nonblocking(false).unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                let mut bytes = Vec::new();
+                let (body_start, length) = loop {
+                    let mut buffer = [0u8; 4096];
+                    let size = stream.read(&mut buffer).unwrap();
+                    assert!(size > 0, "test RPC request closed before headers");
+                    bytes.extend_from_slice(&buffer[..size]);
+                    if let Some(end) = bytes.windows(4).position(|value| value == b"\r\n\r\n") {
+                        let headers = std::str::from_utf8(&bytes[..end])
+                            .unwrap()
+                            .to_ascii_lowercase();
+                        let length = headers
+                            .lines()
+                            .find_map(|line| line.strip_prefix("content-length:"))
+                            .unwrap()
+                            .trim()
+                            .parse::<usize>()
+                            .unwrap();
+                        break (end + 4, length);
+                    }
+                };
+                while bytes.len() < body_start + length {
+                    let mut buffer = [0u8; 4096];
+                    let size = stream.read(&mut buffer).unwrap();
+                    assert!(size > 0, "test RPC request closed before body");
+                    bytes.extend_from_slice(&buffer[..size]);
+                }
+                let request: serde_json::Value =
+                    serde_json::from_slice(&bytes[body_start..body_start + length]).unwrap();
+                assert_eq!(request["method"], "getSignaturesForAddress");
+                let mut held = server_requests.lock().unwrap();
+                held.push(request.clone());
+                let response = if held.len() == 1 {
+                    serde_json::json!({"jsonrpc":"2.0","id":request["id"],"result":[{"signature":returned_signature,"slot":10,"err":null,"memo":null,"blockTime":1,"confirmationStatus":"finalized"}]})
+                } else {
+                    serde_json::json!({"jsonrpc":"2.0","id":request["id"],"error":{"code":-32602,"message":"unexpected request beyond signature cap"}})
+                }.to_string();
+                write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \
+                     {}\r\nConnection: close\r\n\r\n{}",
+                    response.len(),
+                    response
+                )
+                .unwrap();
+            }
+        });
+        let client = RpcClient::new_with_timeout(url, Duration::from_secs(2));
+        let result =
+            fetch_signatures_for_address(&client, &Pubkey::new_unique(), None, None, None, maximum);
+        stopped.store(true, Ordering::SeqCst);
+        server.join().unwrap();
+        let rows = result.unwrap();
+        let requests = requests.lock().unwrap();
+        if maximum == 0 {
+            assert!(rows.is_empty());
+            assert!(
+                requests.is_empty(),
+                "zero cap must not make a provider request"
+            );
+        } else {
+            assert_eq!(rows.len(), 1);
+            assert_eq!(rows[0].signature, signature);
+            assert_eq!(requests.len(), 1, "stop after collecting the cap");
+            assert_eq!(
+                requests[0]["params"][1]["limit"], 1,
+                "bound the RPC page itself"
+            );
+        }
+    }
+
+    #[test]
+    fn history_signature_cap_bounds_the_rpc_page_and_stops_at_the_cap() {
+        capped_history(1);
+    }
+
+    #[test]
+    fn history_signature_zero_cap_never_calls_the_provider() {
+        capped_history(0);
     }
 }
