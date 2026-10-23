@@ -353,3 +353,15 @@ The `[registry]` section is no longer supported and was removed in `1.0.0`. Remo
 [registry]
 url = "https://anchor.projectserum.com"
 ```
+
+### Account and genesis fixtures on Surfpool
+
+With `--skip-deploy`, declared account JSON files, directories and genesis
+programs load through the same initial snapshot as generated fixtures. Without
+that option, existing automatic deployment runbooks remain responsible for
+declared fixtures; Anchor does not install or compare them twice. An explicit
+account address wins over the file pubkey; `address = "-"` uses the file pubkey.
+Directory JSON files need their own pubkey. Invalid or duplicate snapshot images
+fail; Anchor verifies installed bytes, balances, owners and executable flags
+before running tests. `upgradeable = true` gives the workspace wallet authority;
+otherwise the program uses the validator-compatible default authority.

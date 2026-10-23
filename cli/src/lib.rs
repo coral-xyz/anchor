@@ -79,6 +79,7 @@ mod metadata;
 #[cfg(not(windows))]
 mod profile;
 mod program;
+mod surfpool_fixtures;
 pub mod template;
 
 // Version of the docker image.
@@ -4935,6 +4936,7 @@ fn run_test_suite(
                 let full_simnet_mode = false;
                 let flags = Some(surfpool_flags(
                     cfg,
+                    test_validator,
                     surfpool_config,
                     full_simnet_mode,
                     skip_deploy,
@@ -5208,8 +5210,18 @@ fn validator_supplied_account_pubkeys(
 
     if let Some(accounts) = &validator.account {
         for account in accounts {
+            let address = if account.address == "-" {
+                let path = resolve_workspace_path(cfg, &account.filename)?;
+                let image: JsonValue = serde_json::from_reader(File::open(&path)?)?;
+                image["pubkey"]
+                    .as_str()
+                    .ok_or_else(|| anyhow!("Account fixture {} has no pubkey", path.display()))?
+                    .to_string()
+            } else {
+                account.address.clone()
+            };
             pubkeys.insert(
-                Pubkey::try_from(account.address.as_str())
+                Pubkey::try_from(address.as_str())
                     .map_err(|_| anyhow!("Invalid account pubkey: {}", account.address))?,
             );
         }
@@ -5487,9 +5499,11 @@ fn generated_validator_accounts(
 /// Writes a Surfpool snapshot file for generated validator accounts and returns its path.
 fn write_surfpool_snapshot(
     cfg: &WithPath<Config>,
+    test_validator: &Option<TestValidator>,
     generated_accounts: &[GeneratedAccount],
 ) -> Result<Option<PathBuf>> {
-    if generated_accounts.is_empty() {
+    let snapshot = surfpool_fixtures::compile(cfg, test_validator, generated_accounts)?;
+    if snapshot.is_empty() {
         return Ok(None);
     }
 
@@ -5502,14 +5516,6 @@ fn write_surfpool_snapshot(
     })?;
 
     let snapshot_path = accounts_dir.join("surfpool.snapshot.json");
-    let mut snapshot = Map::new();
-    for account in generated_accounts {
-        snapshot.insert(
-            account.pubkey.to_string(),
-            account.surfpool_snapshot_value.clone(),
-        );
-    }
-
     let mut file = File::create(&snapshot_path).with_context(|| {
         format!(
             "Failed to create Surfpool snapshot file: {}",
@@ -5716,6 +5722,7 @@ fn validator_config_flags(test_validator: &Option<TestValidator>) -> Result<Vec<
 // This flags will be passed to the Surfpool, it allows to configure the validator.
 fn surfpool_flags(
     cfg: &WithPath<Config>,
+    test_validator: &Option<TestValidator>,
     surfpool_config: &Option<SurfpoolConfig>,
     full_simnet_mode: bool,
     skip_deploy: bool,
@@ -5741,7 +5748,12 @@ fn surfpool_flags(
         }
     }
 
-    if let Some(snapshot_path) = write_surfpool_snapshot(cfg, generated_accounts)? {
+    // Automatic deployment already installs declared fixtures through Surfpool's
+    // runbook. Do not install them twice; the snapshot fills the --skip-deploy gap.
+    let snapshot_fixtures = if skip_deploy { test_validator } else { &None };
+    if let Some(snapshot_path) =
+        write_surfpool_snapshot(cfg, snapshot_fixtures, generated_accounts)?
+    {
         flags.push("--snapshot".to_string());
         flags.push(snapshot_path.display().to_string());
     }
@@ -6057,9 +6069,10 @@ fn start_surfpool_validator(
         false => Stdio::null(),
     };
 
+    let flags = flags.unwrap_or_default();
     let mut validator_handle = std::process::Command::new("surfpool")
         .arg("start")
-        .args(flags.unwrap_or_default())
+        .args(&flags)
         .stdout(test_validator_stdout)
         .stderr(Stdio::inherit())
         .spawn()
@@ -6119,6 +6132,20 @@ fn start_surfpool_validator(
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+    if let Err(error) = if flags.iter().any(|flag| flag == "--no-deploy") {
+        surfpool_fixtures::verify(&client, &flags)
+    } else {
+        // Runbooks can legitimately change fixture balances and program data.
+        Ok(())
+    } {
+        validator_handle
+            .kill()
+            .context("stop Surfpool after fixture verification failure")?;
+        validator_handle
+            .wait()
+            .context("reap Surfpool after fixture verification failure")?;
+        return Err(error);
     }
     Ok(validator_handle)
 }
@@ -7085,6 +7112,7 @@ fn localnet(
                 let full_simnet_mode = true;
                 let flags = Some(surfpool_flags(
                     cfg,
+                    &cfg.test_validator,
                     &cfg.surfpool_config,
                     full_simnet_mode,
                     skip_deploy,
@@ -8062,7 +8090,16 @@ mod tests {
             ..Default::default()
         });
 
-        let flags = surfpool_flags(&cfg, &surfpool_config, false, true, None, &[]).unwrap();
+        let flags = surfpool_flags(
+            &cfg,
+            &cfg.test_validator,
+            &surfpool_config,
+            false,
+            true,
+            None,
+            &[],
+        )
+        .unwrap();
 
         assert!(flags
             .windows(expected.len())
@@ -8073,9 +8110,96 @@ mod tests {
     fn surfpool_flags_do_not_force_runtime_features() {
         let dir = tempdir().unwrap();
         let cfg = WithPath::new(Config::default(), dir.path().join("Anchor.toml"));
-        let flags = surfpool_flags(&cfg, &None, false, false, None, &[]).unwrap();
+        let flags =
+            surfpool_flags(&cfg, &cfg.test_validator, &None, false, false, None, &[]).unwrap();
 
         assert!(!flags.iter().any(|flag| flag == "--feature"));
+    }
+
+    #[test]
+    fn surfpool_legacy_fixtures_are_in_the_initial_snapshot() {
+        use crate::config::{AccountDirEntry, AccountEntry, GenesisEntry, Validator};
+        for kind in ["account", "account_dir", "genesis"] {
+            let root = tempdir().unwrap();
+            let address = Pubkey::new_unique();
+            let image = json!({"pubkey": address.to_string(), "account": {
+                "lamports": 1234, "owner": "11111111111111111111111111111111",
+                "executable": false, "rentEpoch": 0, "data": ["AQID", "base64"]
+            }});
+            let accounts = root.path().join("accounts");
+            fs::create_dir(&accounts).unwrap();
+            fs::write(accounts.join("fixture.json"), image.to_string()).unwrap();
+            fs::write(root.path().join("fixture.so"), b"\x7fELFfixture").unwrap();
+            let test = match kind {
+                "account" => TestValidator {
+                    validator: Some(Validator {
+                        account: Some(vec![AccountEntry {
+                            address: address.to_string(),
+                            filename: "accounts/fixture.json".into(),
+                        }]),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                "account_dir" => TestValidator {
+                    validator: Some(Validator {
+                        account_dir: Some(vec![AccountDirEntry {
+                            directory: "accounts".into(),
+                        }]),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                },
+                _ => TestValidator {
+                    genesis: Some(vec![GenesisEntry {
+                        address: address.to_string(),
+                        program: "fixture.so".into(),
+                        upgradeable: Some(false),
+                    }]),
+                    ..Default::default()
+                },
+            };
+            let cfg = WithPath::new(
+                Config {
+                    test_validator: Some(test),
+                    ..Config::default()
+                },
+                root.path().join("Anchor.toml"),
+            );
+            let flags =
+                surfpool_flags(&cfg, &cfg.test_validator, &None, false, true, None, &[]).unwrap();
+            let index = flags
+                .iter()
+                .position(|arg| arg == "--snapshot")
+                .unwrap_or_else(|| panic!("{kind} was silently omitted"));
+            let snapshot: JsonValue =
+                serde_json::from_reader(File::open(&flags[index + 1]).unwrap()).unwrap();
+            let account = &snapshot[address.to_string()];
+            assert!(account.is_object(), "{kind}: {snapshot}");
+            if kind == "genesis" {
+                assert_eq!(account["executable"], true);
+                let loader = bpf_loader_upgradeable::id();
+                assert_eq!(account["owner"], loader.to_string());
+                let (data_address, _) = Pubkey::find_program_address(&[address.as_ref()], &loader);
+                let bytes = STANDARD
+                    .decode(snapshot[data_address.to_string()]["data"].as_str().unwrap())
+                    .unwrap();
+                assert_eq!(
+                    &bytes[UpgradeableLoaderState::size_of_programdata_metadata()..],
+                    b"\x7fELFfixture"
+                );
+            } else {
+                assert_eq!(account["lamports"], 1234);
+                assert_eq!(account["data"], "AQID");
+            }
+            // Ordinary auto-deploy is already responsible for these fixtures.
+            let automatic =
+                surfpool_flags(&cfg, &cfg.test_validator, &None, false, false, None, &[]).unwrap();
+            assert!(!automatic.iter().any(|flag| flag == "--snapshot"));
+            assert!(automatic
+                .iter()
+                .any(|flag| flag == "--legacy-anchor-compatibility"));
+        }
     }
 
     #[test]
@@ -8097,7 +8221,16 @@ mod tests {
         });
 
         let generated_accounts = generated_validator_accounts(&cfg, &test_validator).unwrap();
-        let flags = surfpool_flags(&cfg, &None, false, false, None, &generated_accounts).unwrap();
+        let flags = surfpool_flags(
+            &cfg,
+            &test_validator,
+            &None,
+            false,
+            false,
+            None,
+            &generated_accounts,
+        )
+        .unwrap();
 
         let snapshot_index = flags.iter().position(|flag| flag == "--snapshot").unwrap();
         let snapshot_path = PathBuf::from(&flags[snapshot_index + 1]);
