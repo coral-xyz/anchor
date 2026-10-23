@@ -63,6 +63,27 @@ pub struct PrefixParent<'info> {
     pub child: Child<'info>,
 }
 
+/// Child declares only the trailing arg. Before the fix this worked by
+/// accident (the child got the slice the parent had already advanced).
+/// Now nested structs read from the start like top-level ones, so `b`
+/// here lands on the low bytes of the parent's `a`.
+#[derive(Accounts)]
+#[instruction(b: u32)]
+pub struct SuffixChild<'info> {
+    /// CHECK: test only
+    #[account(constraint = b == EXPECTED_B @ TestError::ChildWrongB)]
+    pub target: UncheckedAccount<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(a: u64)]
+pub struct SuffixParent<'info> {
+    /// CHECK: test only
+    #[account(constraint = a == EXPECTED_A @ TestError::ParentWrongA)]
+    pub first: UncheckedAccount<'info>,
+    pub child: SuffixChild<'info>,
+}
+
 /// Parent declares no args at all; only the child does.
 #[derive(Accounts)]
 pub struct NoArgsParent<'info> {
@@ -176,6 +197,16 @@ fn composite_constraints_run_before_parent_constraints() {
     // parent's own constraint block runs, so the child's error surfaces.
     let err = try_accounts!(Parent, ix_data(EXPECTED_A + 1, EXPECTED_B)).unwrap_err();
     assert_eq!(error_code(err), TestError::ChildWrongA as u32 + 6000);
+}
+
+#[test]
+fn child_declaring_only_trailing_args_reads_from_start() {
+    // Pins the new semantics: `b` is read from offset 0, so it sees the
+    // low bytes of `a` (7), not the real `b` (9), and the constraint fails.
+    let err = try_accounts!(SuffixParent, ix_data(EXPECTED_A, EXPECTED_B)).unwrap_err();
+    assert_eq!(error_code(err), TestError::ChildWrongB as u32 + 6000);
+    // Declaring the full prefix is the supported layout.
+    try_accounts!(PrefixParent, ix_data(EXPECTED_A, EXPECTED_B)).unwrap();
 }
 
 #[test]
