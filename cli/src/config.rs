@@ -371,6 +371,9 @@ pub struct Config {
     pub test_validator: Option<TestValidator>,
     pub test_config: Option<TestConfig>,
     pub surfpool_config: Option<SurfpoolConfig>,
+    /// Provider settings forwarded to SVM Replay; test code selects each
+    /// boundary.
+    pub historical: Option<toml::value::Table>,
     /// If `Some(true)`, `anchor test` won't auto-start a validator for this
     /// workspace. Emitted by `anchor init` for in-process test templates
     /// (litesvm / mollusk) where the test harness never opens an RPC.
@@ -803,6 +806,8 @@ struct _Config {
     test: Option<_TestValidator>,
     surfpool: Option<_SurfpoolConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    historical: Option<toml::value::Table>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     skip_local_validator: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     clients: Option<ClientsConfig>,
@@ -911,6 +916,7 @@ impl fmt::Display for Config {
             workspace: (!self.workspace.members.is_empty() || !self.workspace.exclude.is_empty())
                 .then(|| self.workspace.clone()),
             surfpool: self.surfpool_config.clone().map(Into::into),
+            historical: self.historical.clone(),
             skip_local_validator: self.skip_local_validator,
             clients: {
                 let clients = &self.clients;
@@ -947,6 +953,7 @@ impl TryFrom<_Config> for Config {
             programs: cfg.programs.map_or(Ok(BTreeMap::new()), deser_programs)?,
             workspace: cfg.workspace.unwrap_or_default(),
             surfpool_config: cfg.surfpool.map(Into::into),
+            historical: cfg.historical,
             skip_local_validator: cfg.skip_local_validator,
             clients: cfg.clients.unwrap_or_default(),
         })
@@ -2208,6 +2215,24 @@ amount = 2
         let string = BASE_CONFIG.to_owned() + "[features]\nskip-lint = true";
         let config = Config::from_str(&string).unwrap();
         assert!(config.features.skip_lint);
+    }
+
+    #[test]
+    fn historical_provider_settings_roundtrip_without_a_boundary_or_plaintext_key() {
+        let input = BASE_CONFIG.to_owned() + "[historical]\nprovider = 'archive'\n[historical.providers.archive]\nadapter = 'alchemy'\nkey_env = 'API_ALCHEMY'\nurl = 'https://solana-mainnet.g.alchemy.com/v2/{key}'\n";
+        let config = Config::from_str(&input).unwrap();
+        let serialized: toml::Value = toml::from_str(&config.to_string()).unwrap();
+        assert_eq!(
+            serialized["historical"]["provider"].as_str(),
+            Some("archive")
+        );
+        assert_eq!(
+            serialized["historical"]["providers"]["archive"]["key_env"].as_str(),
+            Some("API_ALCHEMY")
+        );
+        assert!(serialized["historical"].get("after").is_none());
+        let ordinary = Config::from_str(BASE_CONFIG).unwrap().to_string();
+        assert!(!ordinary.contains("[historical]"));
     }
 
     #[test]
