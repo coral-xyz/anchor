@@ -218,6 +218,7 @@ runbooks = ["./runbooks/setup.json"]               # Paths to runbook files to e
 slot_time = 400                                    # Simulated slot time in milliseconds.
 log_level = "info"                                 # Log level for Surfpool. Default: "none".
 block_production_mode = "clock"                    # Block production mode. Default: "transaction".
+extra_args = ["--feature", "<FEATURE_PUBKEY>"]      # Extra arguments passed through to `surfpool start`.
 ```
 
 ### `startup_wait`
@@ -299,6 +300,10 @@ Controls how Surfpool produces blocks. Default: `"transaction"`. Known values:
 block_production_mode = "clock"
 ```
 
+### `extra_args`
+
+Extra command-line arguments appended to `surfpool start`, for Surfpool options that have no dedicated key here, such as `--feature` or `--disable-feature`. Arguments are passed through unchanged.
+
 ## `[toolchain]`
 
 Overrides toolchain versions for the workspace, similar to [`rust-toolchain.toml{:file}`](https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file):
@@ -348,3 +353,15 @@ The `[registry]` section is no longer supported and was removed in `1.0.0`. Remo
 [registry]
 url = "https://anchor.projectserum.com"
 ```
+
+### Account and genesis fixtures on Surfpool
+
+With `--skip-deploy`, declared account JSON files, directories and genesis
+programs load through the same initial snapshot as generated fixtures. Without
+that option, existing automatic deployment runbooks remain responsible for
+declared fixtures; Anchor does not install or compare them twice. An explicit
+account address wins over the file pubkey; `address = "-"` uses the file pubkey.
+Directory JSON files need their own pubkey. Invalid or duplicate snapshot images
+fail; Anchor verifies installed bytes, balances, owners and executable flags
+before running tests. `upgradeable = true` gives the workspace wallet authority;
+otherwise the program uses the validator-compatible default authority.
