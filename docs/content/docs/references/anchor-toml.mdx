@@ -386,6 +386,16 @@ Example:
 block_production_mode = "clock"
 ```
 
+### extra_args
+
+Optional `[surfpool].extra_args` appends individual arguments to Surfpool's
+launch. Each array entry is one argument. This also works without `[historical]`.
+
+```toml
+[surfpool]
+extra_args = ["--no-studio"]
+```
+
 ## toolchain
 
 Override toolchain data in the workspace similar to

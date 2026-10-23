@@ -218,6 +218,7 @@ runbooks = ["./runbooks/setup.json"]               # Paths to runbook files to e
 slot_time = 400                                    # Simulated slot time in milliseconds.
 log_level = "info"                                 # Log level for Surfpool. Default: "none".
 block_production_mode = "clock"                    # Block production mode. Default: "transaction".
+extra_args = ["--feature", "<FEATURE_PUBKEY>"]      # Extra arguments passed through to `surfpool start`.
 ```
 
 ### `startup_wait`
@@ -298,6 +299,10 @@ Controls how Surfpool produces blocks. Default: `"transaction"`. Known values:
 [surfpool]
 block_production_mode = "clock"
 ```
+
+### `extra_args`
+
+Extra command-line arguments appended to `surfpool start`, for Surfpool options that have no dedicated key here, such as `--feature` or `--disable-feature`. Arguments are passed through unchanged.
 
 ## `[toolchain]`
 

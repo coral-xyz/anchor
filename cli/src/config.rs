@@ -1058,6 +1058,7 @@ pub struct SurfpoolConfig {
     pub slot_time: Option<u16>,
     pub log_level: Option<String>,
     pub block_production_mode: Option<String>,
+    pub extra_args: Option<Vec<String>>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -1102,6 +1103,9 @@ pub struct _SurfpoolConfig {
     pub log_level: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub block_production_mode: Option<String>,
+    // Extra arguments to pass through to `surfpool start`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extra_args: Option<Vec<String>>,
 }
 
 impl From<_SurfpoolConfig> for SurfpoolConfig {
@@ -1120,6 +1124,7 @@ impl From<_SurfpoolConfig> for SurfpoolConfig {
             slot_time: _surfpool_config.slot_time,
             log_level: _surfpool_config.log_level,
             block_production_mode: _surfpool_config.block_production_mode,
+            extra_args: _surfpool_config.extra_args,
         }
     }
 }
@@ -1140,6 +1145,7 @@ impl From<SurfpoolConfig> for _SurfpoolConfig {
             slot_time: surfpool_config.slot_time,
             log_level: surfpool_config.log_level,
             block_production_mode: surfpool_config.block_production_mode,
+            extra_args: surfpool_config.extra_args,
         }
     }
 }
@@ -2309,6 +2315,61 @@ rust = true
         assert_eq!(config.skip_local_validator, Some(true));
         let serialized = config.to_string();
         assert!(serialized.contains("skip_local_validator = true"));
+    }
+
+    #[test]
+    fn test_surfpool_extra_args_round_trips() {
+        let toml = BASE_CONFIG.to_owned()
+            + r#"
+[surfpool]
+extra_args = ["--match-datasource", "--feature", "ptokFjwyJtrwCa9Kgo9xoDS59V4QccBGEaRFnRPnSdP"]
+"#;
+        let config = Config::from_str(&toml).unwrap();
+        let extra_args = config
+            .surfpool_config
+            .as_ref()
+            .and_then(|surfpool| surfpool.extra_args.as_ref())
+            .unwrap();
+
+        assert_eq!(
+            extra_args,
+            &vec![
+                "--match-datasource".to_string(),
+                "--feature".to_string(),
+                "ptokFjwyJtrwCa9Kgo9xoDS59V4QccBGEaRFnRPnSdP".to_string(),
+            ]
+        );
+
+        let serialized = config.to_string();
+        let reparsed = Config::from_str(&serialized).unwrap();
+        let reparsed_extra_args = reparsed
+            .surfpool_config
+            .as_ref()
+            .and_then(|surfpool| surfpool.extra_args.as_ref())
+            .unwrap();
+        assert_eq!(reparsed_extra_args, extra_args);
+    }
+
+    #[test]
+    fn test_surfpool_extra_args_omitted_or_empty() {
+        for (section, expected) in [
+            ("[surfpool]\n", None),
+            ("[surfpool]\nextra_args = []\n", Some(vec![])),
+        ] {
+            let config = Config::from_str(&(BASE_CONFIG.to_owned() + section)).unwrap();
+            let extra_args = config
+                .surfpool_config
+                .as_ref()
+                .and_then(|surfpool| surfpool.extra_args.clone());
+            assert_eq!(extra_args, expected);
+
+            let reparsed = Config::from_str(&config.to_string()).unwrap();
+            let reparsed_extra_args = reparsed
+                .surfpool_config
+                .as_ref()
+                .and_then(|surfpool| surfpool.extra_args.clone());
+            assert_eq!(reparsed_extra_args, expected);
+        }
     }
 
     #[test]

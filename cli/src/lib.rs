@@ -5820,6 +5820,10 @@ fn surfpool_flags(
         flags.push("--no-studio".to_string());
     }
 
+    if let Some(extra_args) = surfpool_config.as_ref().and_then(|c| c.extra_args.as_ref()) {
+        flags.extend(extra_args.iter().cloned());
+    }
+
     match skip_deploy {
         true => flags.push("--no-deploy".to_string()),
         false => {
@@ -8042,6 +8046,27 @@ mod tests {
                 stream_program_logs: true,
             }
         );
+    }
+
+    #[test]
+    fn surfpool_flags_emits_extra_args() {
+        let workspace = tempdir().unwrap();
+        let cfg = WithPath::new(Config::default(), workspace.path().join("Anchor.toml"));
+        let expected = vec![
+            "--match-datasource".to_string(),
+            "--disable-feature".to_string(),
+            "ptokFjwyJtrwCa9Kgo9xoDS59V4QccBGEaRFnRPnSdP".to_string(),
+        ];
+        let surfpool_config = Some(SurfpoolConfig {
+            extra_args: Some(expected.clone()),
+            ..Default::default()
+        });
+
+        let flags = surfpool_flags(&cfg, &surfpool_config, false, true, None, &[]).unwrap();
+
+        assert!(flags
+            .windows(expected.len())
+            .any(|args| args == expected.as_slice()));
     }
 
     #[test]
