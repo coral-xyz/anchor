@@ -4074,6 +4074,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "memo"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+]
+
+[[package]]
+name = "memo-spy"
+version = "0.1.0"
+dependencies = [
+ "pinocchio",
+ "solana-msg 3.1.0",
+ "solana-program-error 3.0.1",
+]
+
+[[package]]
 name = "memoffset"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
